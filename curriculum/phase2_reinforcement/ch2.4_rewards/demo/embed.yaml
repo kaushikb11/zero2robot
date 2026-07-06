@@ -1,0 +1,33 @@
+# Demo embed stub — ch2.4 "quadruped_reward_hack".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: rewards.py currently
+# saves no policy checkpoint (it trains four throwaway agents for the comparison);
+# the demo needs two exported policies — the shaped walker and the height-hack —
+# which is a follow-up the author wires when this chapter graduates from draft to
+# drop. OUT OF SCOPE for the agent draft (per ch2.1 spike scope: no browser
+# demo/site embed on first pass).
+demo: quadruped_reward_hack
+scene: quadruped            # curriculum/common/envs/quadruped/quadruped.xml, verbatim
+# The hero is a SIDE-BY-SIDE: same robot, same PPO, two reward programs.
+policies:
+  shaped: shaped_walk.onnx  # PENDING export; contract v1: obs float32[1,23] -> action float32[1,8]
+  hack: height_hack.onnx    # PENDING export; same tensor contract
+camera:
+  lookat: [1.0, 0.0, 0.25]  # follow the torso; the walker drifts +x, the hack stays put
+  distance: 3.5
+  azimuth: 90
+  elevation: -10
+interaction: toggle-reward  # visitor flips between the two policies on the same start state
+hud:
+  - sim_time
+  - forward_dist            # shaped climbs; hack stays ~0 — the whole point, on screen
+  - torso_height            # hack rears UP (its reward), shaped holds ride height
+  - design_return           # hack's own number is huge while it goes nowhere
+notes: >
+  The contrast IS the lesson: both policies were trained by the identical PPO to
+  maximize a reward; the only difference is the reward PROGRAM. The shaped policy
+  walks forward; the height-hack rears up and stalls, scoring a huge reward while
+  covering ~0 forward distance. Letting the visitor toggle between them on one
+  shared start makes "the policy did what you SAID, not what you MEANT" visceral
+  rather than a claim. Reset re-seeds the pose.

@@ -1,0 +1,53 @@
+# Demo embed stub — ch1.9 "bridge_comparison".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Like ch1.6, the subject here is NOT a new policy
+# to drive in the browser — it is the COMPARISON, and every panel is a pure 2D plot
+# of numbers bridge.py already wrote to metrics.json / bridge.rrd. Nothing is
+# blocked on a contract-v2 sampler runtime: this embed is fully unblocked, no
+# MuJoCo/WASM. (The official ACT is a chunked, temporally-ensembled policy — same
+# contract-v1 mismatch 1.3 documented — so there is no single-step ONNX to drive
+# here either; the teaching artifact is the bars, not a live rollout.)
+demo: bridge_comparison
+panels:
+  - id: the_diff
+    kind: code_diff              # side-by-side, no browser deps
+    title: "380 lines vs 20"
+    shows: >
+      1.3's act.py `# --- region: model ---` (the hand-rolled encoder, decoder,
+      chunking head, temporal ensembler) beside bridge.py's `# --- region:
+      official ---` (ACTConfig + ACTPolicy + make_act_pre_post_processors). Same
+      algorithm; the left column is what you now UNDERSTAND, the right is what you
+      now GET to reach for. Annotate that the CVAE (use_vae) and the ResNet image
+      path are AVAILABLE in the official config but kept OFF here (use_vae=False,
+      env-state input) to match 1.3's cut — so the compare is apples-to-apples.
+    source: static               # the two files, region-sliced
+  - id: same_acts_same_bars
+    kind: intervals              # two rows of [point estimate + Wilson CI]
+    title: "The code shrank; the accuracy did not follow"
+    shows: >
+      Official lerobot ACT vs from-scratch 1.3 ACT, trained on the SAME demos and
+      evaluated on the SAME held-out seeds, each success rate drawn with its Wilson
+      interval (from 1.6). The from-scratch 1.3 ACT sits ABOVE the official's Wilson
+      interval — a real, separable gap at this episode count, not sampling noise.
+      The honest headline: 1.3's task-tuned entity-token bias beats the general
+      framework config; the framework buys the ecosystem, not a free higher number.
+    source: bridge.rrd           # entity eval/official/success_rate (+ CI); from-scratch rate from metrics.json
+  - id: the_break
+    kind: intervals
+    title: "One flag inflates the score"
+    shows: >
+      The official ACT evaluated on HELD-OUT seeds vs the same policy under
+      `--break train_dist` (evaluated on the TRAINING seeds). The train-distribution
+      bar sits at or above the held-out bar — the 1.6 sin committed on the official
+      stack, one flag away. The lesson the whole chapter turns on: graduating to a
+      framework does NOT graduate you out of held-out evaluation.
+    source: bridge.rrd           # eval/official/success_rate for both eval modes
+notes: >
+  Author: the strongest teaching artifact here is `the_diff` — the literal
+  380-vs-20 line count with the CVAE/ResNet annotations — paired with
+  `same_acts_same_bars` so the reader sees the dramatic code shrink came WITH a
+  lower number here (1.3's task-tuned bias wins): the framework bought
+  maintainability, a community, and a Hub, not accuracy on this task. Both are
+  UNBLOCKED (pure 2D / static text), so ship them. The publish path (push_to_hub)
+  is a natural place for a screenshot of the resulting Hub model card, but that is
+  human-gated and network-bound — keep it out of the CI'd embed.

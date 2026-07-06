@@ -1,0 +1,51 @@
+# Demo embed stub — ch1.8 "vla_rollout".
+# Playground integration point: playground/ owns the WASM runtime and embed
+# components; this file declares WHAT the embed shows. Coordinate at the
+# contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): like ch1.5's flow policy, this policy
+# does NOT fit tensor contract v1 (obs -> action, one stateless step). Sampling an action
+# is an ODE integration (flow_steps velocity evaluations), AND each velocity evaluation
+# needs the FUSED conditioning — a forward pass over [CLS, vision, state, tokens] through
+# the from-scratch transformer, which itself needs the frozen CNN's image feature. So the
+# live PushT rollout panel is BLOCKED on the same sampler-aware contract v2 the flow
+# chapter needs, PLUS an image-feature input. Until then, ship the recorded .rrd panels.
+#
+# The HERO is the fused-attention picture: what does the policy actually LOOK at?
+demo: vla_rollout
+panels:
+  - id: pusht_rollout
+    kind: rerun                    # renders the recorded vla.rrd (eval rollout scalars); live WASM rollout BLOCKED on contract v2
+    title: "The language-conditioned policy drives PushT"
+    shows: >
+      A PushT episode under the trained tiny VLA: the pusher moving the T toward the
+      target while the instruction ("push the t block onto the target") stays fixed.
+      From the recorded run: eval/trained/success_rate and eval/trained/mean_return vs
+      eval/untrained/*. Honest caption: the policy LEARNS PushT (~0.42-0.58 vs an
+      untrained 0.0), but PushT is solvable from state — see the attention panel.
+    source: vla.rrd
+  - id: cls_attention
+    kind: rerun                    # the money viz — the CLS token's attention over the fused inputs
+    title: "What the fusion looks at"
+    shows: >
+      fusion/cls_attention: a bar over the sequence [CLS, vision, state, tok_0..tok_15]
+      showing how much the CLS (read-out) token attends to the image feature vs the state
+      vs each instruction word. Pair with the Break-It: --break blind zeros vision and
+      PushT success is UNCHANGED — the random-init vision feature is not load-bearing.
+    source: vla.rrd
+  - id: from_scratch_vs_pretrained
+    kind: static-figure            # the chapter's thesis; author renders from meta.yaml reference_run
+    title: "From-scratch vs adapt-pretrained (the tradeoff)"
+    shows: >
+      Two bars: this from-scratch VLA's PushT success (~0.58, but blind==sighted, and
+      ALOHA 0.0) against a placeholder for the SmolVLA Scale Lab (pretrained SigLIP +
+      LM, fine-tuned on a GPU). The lesson is the TRADEOFF: from-scratch teaches the
+      mechanism; adapt-pretrained is what makes vision + language load-bearing.
+      Author: render the from-scratch bar from meta.yaml reference_run; the SmolVLA bar
+      lands when the Scale Lab study exists (do not assert it now).
+notes: >
+  Recommendation: ship the pusht_rollout + cls_attention panels from the recorded .rrd
+  (unblocked), and render from_scratch_vs_pretrained as a static figure from meta.yaml. Do
+  NOT wait on a live WASM rollout — it needs contract v2 (a flow sampler) PLUS an image
+  feature input, strictly more than ch1.5. The SmolVLA half of the tradeoff figure is the
+  Scale Lab and must be MEASURED before it is drawn.

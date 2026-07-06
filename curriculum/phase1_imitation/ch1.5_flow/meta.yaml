@@ -1,0 +1,144 @@
+id: ch1.5-flow
+title: "Generative Policies II: Flow Matching"
+artifact: flow.py            # target ~300 LOC (built to 438: the 2D toy + a from-scratch conditional flow-matching objective + an ODE sampler + an obs-conditioned flow policy, one file)
+task: pusht                  # same task as ch1.4 (curriculum/common/envs/pusht); multimodality shown on the same self-contained 2D ring toy
+objectives:
+  - Explain flow matching as the generative alternative to diffusion — learn a VELOCITY field along the straight noise->data line (target = data - noise), then SAMPLE by integrating an ODE forward — and why it escapes the same squared-error mode-collapse
+  - Build conditional flow matching from scratch in torch — the straight-line interpolation, the velocity MSE objective, and a forward-Euler ODE sampler — with NO noise schedule, NO posterior algebra, and no diffusers/einops
+  - Read it as a DIFF against ch1.4: same file structure, same toy, same policy; only the objective (predict velocity, not noise) and the sampler (integrate an ODE, not the DDPM posterior) change — ~60 lines
+  - Measure flow's efficiency: it covers all 8 ring modes at just 3-5 Euler steps, sampling steps are DECOUPLED from training (train loss is identical whatever the step count), and slashing the policy to 2 steps leaves it intact where ch1.4's diffusion policy collapsed
+
+scale_lab: false
+# Like ch1.4, this DRAFT ships the free-tier core only. The map's flow row does not
+# call for a distinct Scale Lab (it points at ch1.8's VLA action head, which reuses
+# this objective). scale_lab stays false; the scale knobs (--flow_steps, --model_dim,
+# --num_demos, --epochs) are the on-ramp. If the author later designs a 4090 study
+# (an action-horizon chunk + a bigger velocity net), set scale_lab: true + a ref and
+# have wallclock-bench MEASURE it — do not assert a scaling claim.
+
+# READ-THE-REAL-THING: the map pairs flow matching with the pi0-style objective. The
+# rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# sha and must never invent one. Two honest candidates for the author to choose and
+# pin (name the repo + a REAL commit):
+#   * Lipman et al. 2023, "Flow Matching for Generative Modeling" (the objective's
+#     origin) — reference impl facebookresearch/flow_matching.
+#   * pi0 / openpi (Physical Intelligence) — a flow-matching ACTION policy, the
+#     closest production analog to this chapter's policy (action-horizon + a real
+#     VLM backbone, the pieces we cut).
+# site RTRT.astro renders nothing until repo + commit both exist.
+read_the_real_thing: true
+# rtrt:
+#   repo: <author pins: facebookresearch/flow_matching  OR  Physical-Intelligence/openpi>
+#   commit: <author pins a real sha>
+#   focus:
+#     - the conditional flow path + velocity objective (our interpolate + flow_matching_loss)
+#     - the ODE sampler / solver (our ode_sample_loop — real code uses a torchdiffeq/ higher-order solver)
+#     - the action-horizon chunk + VLM conditioning we replaced with a single action on the state vector
+
+demo: flow_multimodality     # 2D toy panel (ring: flow vs regression, + the step-efficiency curve); PushT policy panel BLOCKED on contract v2
+
+# All reference metrics: seed 0, cpu, mujoco 3.10.0 / torch 2.10.0 / lerobot 0.4.4
+# / numpy 2.4.6. The demos are the deterministic scripted expert. As in ch1.4 the
+# THESIS is multimodality and it lives in the 2D TOY (flow 8/8 angular modes vs
+# regression 0/8) — decisive and seed-robust. NEW in this chapter and also measured:
+# the step-EFFICIENCY of flow (full mode coverage at 3-5 Euler steps; sampling steps
+# decoupled from training). The PushT policy is a working generative policy that
+# beats the untrained baseline AND, at the same 100-demo budget, modestly edges
+# ch1.4's diffusion policy. It does NOT beat ch1.1 BC (whose full 500-demo headline
+# is 62%, above flow). Eval is 20 episodes (noisy, ch1.6), so the robust headline is
+# the toy + the efficiency, not the policy %.
+reference_run:
+  provenance: "seed 0 on cpu; default config (flow_steps 100, model_dim 128, num_demos 100, epochs 300, eval_episodes 20); measured 2026-07-06"
+  # --- the multimodality proof (2D toy) — the decisive, reproducible result ---
+  toy_flow_modes_covered: 8           # of 8 angular sectors — flow covers the whole ring
+  toy_flow_mean_radius: 0.935944      # samples sit ON the ring (target radius 1.0)
+  toy_flow_ring_hit: 0.6685           # fraction within 0.2 of radius 1 (secondary; mode coverage is the headline)
+  toy_regress_modes_covered: 0        # the SAME same-width MSE regressor as ch1.4 covers NO modes
+  toy_regress_mean_radius: 0.058228   # it collapses to the dead center — the average of every direction
+  toy_final_loss: 1.026724            # velocity-MSE (higher than ch1.4's noise-MSE — a different target, not comparable)
+  # --- the flow-specific efficiency result (NEW vs ch1.4) — measured ---
+  toy_flow_lowstep_modes_covered: 8   # SAME trained net, sampled at only EFF_STEPS=5 Euler steps: still 8/8
+  toy_flow_lowstep_ring_hit: 0.5275   # 5-step ring_hit vs 0.6685 at 100 steps — quality saturates fast
+  toy_flow_lowstep_steps: 5
+  # Steps-to-quality curve (seed 0 toy, measured 2026-07-06): flow_steps 3->8/8 modes
+  # (ring_hit 0.33), 5->8/8 (0.51), 8->8/8 (0.63), 20->8/8 (0.67), 100->8/8 (0.67);
+  # only 2->3/8 (Euler too coarse — the few_steps Break-It) and 1->6/8 (one giant
+  # overshoot). Full mode coverage arrives at ~3 steps. Sampling steps are DECOUPLED
+  # from training: final_train_loss/toy_final_loss are BIT-IDENTICAL across step counts.
+  # --- the policy (working generative policy, beats the untrained baseline) ---
+  success_rate: 0.4                   # trained flow policy, held-out seeds
+  mean_return: -88.713954
+  baseline_success_rate: 0.0          # untrained (random-init) velocity net reference
+  baseline_mean_return: -106.230176
+  final_train_loss: 0.951594
+  # Seed robustness (default config, cpu, eval_episodes 20): seed0 0.40/-88.7,
+  # seed1 0.40/-86.9, seed2 0.55/-44.2 — trained beats baseline (0.0) on every seed.
+  # Break-It signatures (same seed 0, measured 2026-07-06 cpu):
+  break_few_steps_success_rate: 0.45       # flow_steps forced to 2: the POLICY is UNHARMED (0.40 -> 0.45) — flow's straight paths tolerate few steps
+  break_few_steps_toy_modes: 3             # but the demanding multimodal TOY degrades: 8/8 -> 3/8, radius 0.94 -> 0.51 (Euler overshoots the ring)
+  break_few_steps_train_loss: 0.951594     # NOTE: IDENTICAL to the default run — flow_steps is a SAMPLER-only knob; training never sees it (the decoupling, made concrete; contrast ch1.4 where few_steps changed train_loss)
+  break_wrong_target_success_rate: 0.0     # velocity target sign flipped (noise - data): the ODE integrates AWAY from the data -> policy collapses to baseline
+  break_wrong_target_toy_radius: 4.122682  # toy EXPLODES off the ring (radius 0.94 -> 4.12); train_loss stays low (0.935 — it fits the flipped target fine: low loss, wrong direction)
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The TOY multimodality result is the chapter's rock, SAME as ch1.4: 8/8 vs 0/8
+  #    modes, radius 0.94 vs 0.06, reproducible across seeds. Lead with it.
+  #  * The EFFICIENCY result is what's NEW and it is measured, not asserted: full
+  #    mode coverage at ~3-5 Euler steps, sampling steps DECOUPLED from training (sample
+  #    any count from one trained net). At MATCHED steps diffusion is comparable — the
+  #    honest form of the claim is the decoupling, not per-step superiority over diffusion.
+  #  * The POLICY: at the DEFAULT budget flow reaches 0.40-0.55, modestly EDGING ch1.4's
+  #    diffusion (0.15-0.25) at the matched 100-demo budget. It does NOT beat ch1.1 BC:
+  #    BC's full 500-demo headline is 62% (above flow); only a matched 100-demo BC falls
+  #    near flow. Plausibly straight-line ODE integration is a steadier controller than
+  #    DDPM's stochastic reverse walk on a near-unimodal task. REAL but MODEST, over a NOISY (20-episode) metric;
+  #    do NOT inflate it to a headline. At the reduced exercise config the policy is
+  #    0.0 for BOTH flow and diffusion (needs the full 100 demos / 300 epochs), which
+  #    is why the automated checks assert the seed-robust TOY direction, not the %.
+  #  * As in ch1.4 we DON'T cosine-decay the lr (measured: decaying undertrains the
+  #    velocity net). Do not "restore" a scheduler.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band
+# with provenance, not a bare magic number). checks.py reads these instead of
+# inlining tolerances. The reproduce checks train (~minutes on CPU) and are
+# @pytest.mark.slow — excluded from `make check`, which runs only the fast
+# math/prediction gates (ex3 interpolation bug-hunt, ex4 Euler-sampler completion).
+exercise_checks:
+  exercise_config:                 # shared reduced config for the slow reproduce checks (kept small so a check trains in a few minutes)
+    flow_steps: 50
+    model_dim: 64
+    num_demos: 30
+    epochs: 150
+    eval_episodes: 10
+    provenance: "measured 2026-07-06 with flow.py at this reduced config, seed 0, cpu: toy flow 8/8 modes (radius 0.929) vs regress 0/8 (radius 0.04); flow lowstep@5 8/8; diffusion --break few_steps 6/8. The DIRECTION is robust; the policy is 0.0 at this reduced budget for both models (default-budget numbers are in reference_run)."
+    min_radius_gap: 0.3            # toy: flow mean_radius must beat regression's by >= this (measured margin at reduced ~0.89; conservative here)
+    min_mode_gap: 4               # toy: flow must cover >= regression + this many angular modes (measured margin is 8)
+    min_fewstep_mode_gap: 1       # ex2: flow sampled at EFF_STEPS must cover >= diffusion's 2-step break + this (measured margin at reduced config is 2)
+  ex1:                             # ex1_predict_multimodality.py (predict-then-run)
+    answer: "B"                    # flow covers all modes; regression collapses to the empty center (same as ch1.4 — the point)
+  ex2:                             # ex2_predict_flow_vs_diffusion_steps.py (predict-then-run)
+    answer: "B"                    # flow covers the ring at 5 Euler steps (one trained net) where 2-step diffusion under-resolves — the DECOUPLING lesson (at matched steps diffusion matches)
+  ex3:                             # ex3_bughunt_interpolation.py (bug-hunt, fast)
+    provenance: "self-contained numpy fixture; the fix un-swaps the interpolation coefficients so the path runs noise (t=0) -> data (t=1)"
+  ex4:                             # ex4_completion_euler_sampler.py (code-completion, fast)
+    abs_tol: 1.0e-6               # a constant-velocity (straight) path must land exactly on the target under Euler
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab
+# variant is not built yet (ch1.5 is a draft pending the teaching-pass);
+# notebook-tier-test writes both on generation, and the gate skips a chapter that
+# carries neither key (never a PENDING placeholder, which reads as stale).
+
+# region_hashes intentionally omitted until the site build renders this chapter
+# (check_prose_code_drift passes a chapter with no region_hashes). The site records
+# them on first render; do not hand-write them.
+
+region_hashes:
+  setup: dc3dd00e801ddb4466c7a1288182c146582785a9bb1c54a2d9e7fdd9dc1bf248
+  core: eb779f9fda0597f25c2fa12ed42a213697db9555d4f3cf68789cb622813bd597
+  toy: 889a2ade0003d2a1d8d8b36fa0c2b08151881403f1a19e5f118f7e56e56496de
+  data: c377738636e60eaddc1fab4378f7f887b5f44328f4a3aea57088d5718e84e154
+  train: 44c85a21e5c479795dffe3c0c2b146b93c569e04a5528b8d455a87a05eaf6ff5
+  eval: 826cfdcb1f200aa19679b1db6a1703a10375eed815403552877443d04dc14243
+  report: b6798ba77882fab683958b3a6365b5d55ef8de6c65fc0ec2e1a2c923b11f5f26
+
+notebook_hash: 3e0d8c1374fc3f493c6825740a9517f6e7d9c7790e6a2aed6852cf3650a39fb0        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 7a1014a5a79d0b9ed8d68e667fc34a7a9353f602b69892f32eeceef4337d3e0d   # sha256 of the generated notebook bytes; mismatch => hand-edited

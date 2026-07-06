@@ -1,0 +1,34 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / playground
+node_modules/
+playground/dist/
+site/dist/
+
+# macOS
+.DS_Store
+
+# Artifacts never in git (HF Hub + manifests only — root CLAUDE.md invariant 5)
+*.rrd
+*.onnx
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+datasets/**/data/
+checkpoints/**/data/
+outputs/
+
+# Generated CI reports (contract: infra/ci/reports/ holds run outputs)
+infra/ci/reports/*
+!infra/ci/reports/.gitkeep
+
+# Kit archives
+*.zip
+.gstack/

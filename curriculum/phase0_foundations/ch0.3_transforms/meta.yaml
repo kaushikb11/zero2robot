@@ -1,0 +1,54 @@
+id: ch0.3-transforms
+title: "Spatial Reasoning Without Tears"
+artifact: transforms.py     # target ~180 LOC, CPU-only
+task: pusht                 # frames playground on the PushT block/pusher pose (no training this chapter)
+objectives:
+  - Build the rotation toolkit from scratch — quaternion multiply, quat<->matrix, rotate-a-vector — and trust it because it agrees with MuJoCo's mju_* functions to machine precision
+  - Compose and invert rigid Frames (rotation + translation) and read a point across frames, e.g. the pusher expressed in the block's frame vs the world
+  - Fix the book's quaternion convention as [w, x, y, z] and recognize the wxyz-vs-xyzw seam that pusht_env documents
+  - Diagnose the three bugs everyone writes — quaternion component order, composition order, point-vs-frame direction — by the error signature each leaves
+scale_lab: false
+read_the_real_thing: false
+demo: frames-drag
+
+# Reference values + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not bare magic numbers). checks.py reads
+# these instead of hardcoding tolerances. Provenance below is the exact stack
+# the numbers were measured on; re-measure if any of it moves.
+exercise_checks:
+  provenance: "seed 0 on cpu, mujoco 3.10.0 / numpy 2.4.6; --smoke (512 samples); measured 2026-07-04"
+  # The from-scratch ops agree with mju_* to ~1e-15; this is the ceiling a
+  # correct implementation must stay under (generous vs the ~1e-15 measured).
+  mju_agreement_max: 1.0e-6
+  ex1:                          # predict-then-run: does compose order commute?
+    provenance: "seed 0; world_from_tee(yaw 0.9) composed with a yaw-0.7 child, probed at the pusher point"
+    compose_order_gap: 0.091    # |correct - swapped| translation error the wrong order introduces
+    compose_order_band: 0.02    # |gap - reference| < band => the divergence reproduced
+  ex2:                          # bug-hunt: xyzw quaternion fed to a wxyz routine
+    provenance: "seed 0; the chapter's convention check, rotating the tee long-axis by the block quaternion"
+    buggy_break_err: 0.097      # error the injected wxyz/xyzw swap leaves (~0.10 m vs ~1e-16)
+    buggy_band: 0.02            # |break_max_err - buggy| < band => bug still present, SKIP
+    fixed_break_max: 1.0e-6     # a correct fix drops break_max_err back to ~0
+  ex3:                          # code-completion: rotate_vector from the quaternion sandwich
+    provenance: "seed 0; 256 random unit quaternions and points vs mju_rotVecQuat"
+    rotate_max_err: 1.0e-6      # completed rotate_vector must match mju_rotVecQuat within this
+
+# --break error signatures (objective: "diagnose the three bugs by the error
+# signature each leaves"). quat_convention / compose_order also back exercises
+# ex2 / ex1 above; point_vs_frame has no exercise but is measurable via --break.
+break_signatures:
+  provenance: "seed 0 on cpu, mujoco 3.10.0 / numpy 2.4.6; --smoke; measured 2026-07-04"
+  band: 0.02                    # |break_max_err - reference| < band => signature reproduced
+  quat_convention: 0.097
+  compose_order: 0.091
+  point_vs_frame: 0.138
+
+notebook_hash: df9767521183af6b8b0a204f9585bbd9286ecd6e1007146ffca65cab0642ba0e        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 35bd64af39e4c91368743e5b4f51832054d9c52137c0bc18c38544886639c28d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 329dc17ab99f7cdfd96a4131643fae56326bca009dfb0d1169602b8bf2be093f
+  quaternions: 7aca30aa3a98335e6f474121848ca4a8bfada57e473213b6dd9cc9d2c0fd4613
+  rotations: f72fde55d996f91d703799a91a1f78a0b3da1c7a610a1cc0088be721c64cb55a
+  frames: dde9d75c80e06294f572289f7e0ec6974f6a1c5febfefdff3bd2e5c8090a5713
+  demo: 0ca77f7a8a9731d3cdeebddd1bf563fb00d2718e215b0b986e17efc3dfa8344f

@@ -1,0 +1,186 @@
+/* ch0.4 "pusht-teleop" concept-toy — "an episode is (obs, action) over time;
+ * you are the expert." Self-contained styles for pusht-teleop.tsx. Prefix `pt-`
+ * so nothing collides with PlateIsland's `.ct-*`/`.bk-*` in the global sheet.
+ * Reuses the page design tokens (--paper, --ink*, --entity-*, --signal, …); the
+ * arrays are neutral ink, entities wear their page hues, and the ONE signal blue
+ * is the live record/scrub control + the action you generate (the label). */
+
+.pt {
+  display: grid;
+  gap: 0.9rem;
+}
+
+/* the arena — same square box for poster (SSR / JS-off) and live canvas, so
+   booting causes no reflow. */
+.pt-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none; /* drag the pusher, never scroll the page */
+}
+.pt-figure:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.pt-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+  pointer-events: none; /* live only while recording (see [data-recording]) */
+}
+.pt-figure[data-recording="true"] .pt-canvas { pointer-events: auto; }
+.pt-figure[data-recording="true"] .pt-canvas:active { cursor: grabbing; }
+.pt-canvas[hidden] { display: none; }
+
+.pt-poster { position: absolute; inset: 0; }
+.pt-poster[hidden] { display: none; }
+.pt-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* shared poster vocabulary (arena + graph paper + entities) */
+.pt-arena { fill: none; stroke: var(--rule-strong); stroke-width: 1.5; }
+.pt-grid line { stroke: color-mix(in srgb, var(--rule-strong) 55%, transparent); stroke-width: 1; }
+.pt-target rect { fill: none; stroke: var(--entity-target); stroke-width: 2; stroke-dasharray: 5 5; }
+.pt-target-label { fill: var(--entity-target); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; }
+.pt-tee rect { fill: var(--entity-block); }
+.pt-pusher-ring { fill: none; stroke: var(--entity-pusher); stroke-width: 1.5; opacity: 0.5; }
+.pt-pusher-core { fill: var(--entity-pusher); }
+
+/* the drag affordance + action cue — the one LIVE handle (signal blue) */
+.pt-drag { fill: none; stroke: var(--signal); stroke-width: 2; stroke-dasharray: 4 4; }
+.pt-drag-head { fill: var(--signal); }
+.pt-drag-label { fill: var(--signal); font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.02em; }
+
+/* a live status chip over the arena */
+.pt-badge {
+  position: absolute; top: 0.6rem; left: 0.6rem; right: 0.6rem;
+  display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline;
+  padding: 0.4rem 0.6rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono); font-size: 0.72rem;
+  color: var(--ink-mute);
+  pointer-events: none;
+}
+.pt-badge b { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.pt-badge .pt-rec { color: var(--signal); font-weight: 700; letter-spacing: 0.04em; }
+@media (prefers-reduced-motion: no-preference) {
+  .pt-badge .pt-rec::before {
+    content: "● "; animation: pt-blink 1.1s steps(1, end) infinite;
+  }
+}
+.pt-badge .pt-rec::before { content: "● "; }
+@keyframes pt-blink { 50% { opacity: 0.25; } }
+
+.pt-status {
+  position: absolute; left: 0.6rem; bottom: 0.6rem; right: 0.6rem;
+  font-family: var(--font-mono); font-size: 0.66rem; color: var(--ink-mute);
+  pointer-events: none;
+}
+.pt-status[data-failed="true"] { color: var(--alert); }
+
+/* ----- the scrubber: step through the frames you recorded ----- */
+.pt-scrub {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center;
+}
+.pt-scrub[hidden] { display: none; }
+.pt-scrub-count {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pt-range {
+  width: 100%; height: 1.4rem; margin: 0; cursor: pointer;
+  accent-color: var(--signal); /* the one live control — signal blue */
+}
+.pt-range:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.pt-step {
+  display: inline-flex; gap: 0.3rem;
+}
+
+/* ----- the arrays panel: obs[10] + action[2] for the scrubbed frame ----- */
+.pt-arrays {
+  display: grid; gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+}
+.pt-arrays-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-mute);
+}
+.pt-arrays-head b { color: var(--ink-soft); }
+.pt-obs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem 1.1rem; }
+@media (max-width: 30rem) { .pt-obs { grid-template-columns: 1fr; } }
+
+.pt-slot { display: grid; gap: 0.25rem; }
+.pt-slot-label {
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.05em;
+  text-transform: uppercase; font-weight: 700;
+}
+.pt-slot[data-entity="pusher"] .pt-slot-label { color: var(--entity-pusher); }
+.pt-slot[data-entity="block"]  .pt-slot-label { color: var(--entity-block); }
+.pt-slot[data-entity="target"] .pt-slot-label { color: var(--entity-target); }
+.pt-slot[data-entity="pusher"] { border-left: 2px solid color-mix(in srgb, var(--entity-pusher) 55%, transparent); padding-left: 0.5rem; }
+.pt-slot[data-entity="block"]  { border-left: 2px solid color-mix(in srgb, var(--entity-block)  55%, transparent); padding-left: 0.5rem; }
+.pt-slot[data-entity="target"] { border-left: 2px solid color-mix(in srgb, var(--entity-target) 55%, transparent); padding-left: 0.5rem; }
+
+.pt-cells { display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; }
+.pt-cell {
+  display: grid; gap: 0.05rem;
+  font-family: var(--font-mono); font-size: 0.72rem;
+}
+.pt-cell .pt-name { color: var(--ink-mute); font-size: 0.62rem; }
+.pt-cell .pt-val {
+  color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600;
+  transition: color 0.12s ease;
+}
+.pt-cell .pt-idx { color: var(--rule-strong); }
+
+/* the action — "your motion is the label": the one signal-blue array block */
+.pt-action {
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--signal-line, rgba(31, 86, 222, 0.34));
+  border-radius: 4px;
+  background: var(--signal-soft, rgba(31, 86, 222, 0.1));
+}
+.pt-action .pt-slot-label { color: var(--signal); }
+.pt-action .pt-val { color: var(--signal); }
+.pt-action-note { font-family: var(--font-mono); font-size: 0.62rem; color: var(--ink-mute); }
+
+/* ----- controls ----- */
+.pt-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+}
+.pt-btn {
+  font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pt-btn:hover { border-color: var(--signal); color: var(--ink); }
+.pt-btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.pt-btn--primary {
+  background: var(--signal); color: var(--signal-ink); border-color: var(--signal);
+  box-shadow: 0 1px 4px -1px var(--signal-line);
+}
+.pt-btn--primary:hover { color: #fff; background: color-mix(in srgb, var(--signal) 90%, #000); }
+.pt-btn--rec {
+  background: var(--alert); color: #fff; border-color: var(--alert);
+}
+.pt-btn--rec:hover { color: #fff; background: color-mix(in srgb, var(--alert) 90%, #000); border-color: var(--alert); }
+.pt-btn[disabled] { opacity: 0.5; cursor: default; }
+.pt-note {
+  font-family: var(--font-mono); font-size: 0.66rem; color: var(--ink-mute);
+  margin-left: auto;
+}
+@media (max-width: 34rem) { .pt-note { display: none; } }

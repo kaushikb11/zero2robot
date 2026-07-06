@@ -1,0 +1,1423 @@
+/* ============================================================================
+   book.css — Variant C: "Read like a book, code like a lab."
+
+   The zero2robot interactive-textbook design system (Variant C, "read like a
+   book, code like a lab"), now the SHARED ENGINE skin for every chapter.
+   Everything is prefixed bk- /
+   scoped under .book to stay in-lane; the site stores no prose or code of its
+   own — this file is only a lens over curriculum/.
+
+   The blend
+   ---------
+   SURFACE   Two deliberate worlds on one page:
+             · the READING is a warm off-white paper (soft ivory tint, never
+               stark white), set in a system book-serif — authored, calm, a
+               book you sit with;
+             · the CODE panels are crisp, dark, mono lab instruments mounted on
+               that page — code is the product, so it is the sharp element.
+   FONTS     book serif body + display serif titles (system stacks, no network)
+             · a system mono for code, labels, numerals, and every instrument.
+   COLOUR    · warm ink on ivory for the reading;
+             · one quiet OXBLOOD reserved for BOOK CHROME (margin numerals, the
+               drop cap, section rules, prose links) — clearly "old ink", never
+               "alive";
+             · ONE electric SIGNAL BLUE reserved strictly for LIVE / interactive
+               things (the hero handle, the drag halo, the control, focus rings,
+               copy) — nothing static ever wears it;
+             · a semantic ALERT RED for exactly one thing: the failing readout;
+             · three ENTITY hues (pusher / block=tee / target) identical across
+               the plate, the prose, and the code — tuned brighter on the dark
+               code surface so they read on both.
+   RHYTHM    A's book cadence — ~66ch measure, roman numerals hanging in the
+             margin, a drop cap opening "The problem", hairline rules, unhurried
+             vertical spacing — around B's crisp panels and instrument-grade
+             honesty (measured wall-clock + exposed sha256 provenance).
+   ========================================================================== */
+
+.book {
+  /* --- reading surface: warm paper & ink ------------------------------- */
+  --paper:       #f7f3ea;   /* warm ivory page — soft, not stark white       */
+  --paper-2:     #f0e9d9;   /* inset panels (objectives, tables, wall-clock)  */
+  --paper-3:     #e8e0cd;   /* deeper inset / plate mat                        */
+  --paper-edge:  #ded3ba;
+  --ink:         #23201b;   /* body text — ~13:1 on paper                     */
+  --ink-soft:    #473f34;   /* subheads, strong asides                        */
+  --ink-mute:    #6d6252;   /* captions, marginalia — ~5:1 on paper           */
+  --rule:        #ddd2ba;   /* hairline                                       */
+  --rule-strong: #c8bc9e;
+
+  /* --- book chrome accent (static; numerals, drop cap, rules, links) ---- */
+  --book:        #883322;   /* oxblood — "old ink", deliberately NOT a signal */
+  --book-soft:   #a9543f;
+
+  /* --- the ONE signal colour: LIVE / interactive only ------------------- */
+  --signal:      #1f56de;   /* electric blue — hero handle, controls, focus   */
+  --signal-ink:  #ffffff;
+  --signal-soft: rgba(31, 86, 222, 0.10);
+  --signal-line: rgba(31, 86, 222, 0.34);
+
+  /* --- semantic alert: the failing readout, and nothing else ------------ */
+  --alert:       #c0362a;
+
+  /* --- task entities (linked across plate + code + prose) --------------- */
+  --entity-pusher: #b0560f;  /* the agent / pusher — burnt amber             */
+  --entity-block:  #a5257d;  /* the T-block / tee   — magenta                */
+  --entity-tee:    var(--entity-block);
+  --entity-target: #0c7d5f;  /* the goal / target   — emerald                */
+  /* brighter variants for the dark code + instrument surfaces */
+  --entity-pusher-hi: #f0a25c;
+  --entity-block-hi:  #ec74c1;
+  --entity-target-hi: #45c79e;
+  /* darker variants for entity TEXT on the light paper-2/-3 insets (legend,
+     measured pill) — the base hues fall below WCAG AA there; these clear 4.5:1. */
+  --entity-pusher-ink: #9c4a0b;
+  --entity-target-ink: #096047;
+
+  /* --- dark code surface (crisp lab instrument, on the warm page) ------- */
+  --code-bg:    #0f1218;
+  --code-top:   #151922;   /* panel title bar                               */
+  --code-fg:    #cdd4de;
+  --code-dim:   #828b99;   /* comments — carry the WHY here, so AA (5.4:1)   */
+  --code-num:   #667490;   /* line numbers — recessive but clears 3:1 on code-bg */
+  --code-file:  #8a93a3;
+  --code-line:  #232a36;   /* panel border / hairlines                      */
+
+  /* --- type ------------------------------------------------------------- */
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+               "URW Palladio L", Georgia, Cambria, "Times New Roman", serif;
+  --font-display: "Hoefler Text", "Baskerville", "Big Caslon", "Palatino Linotype",
+               Palatino, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono",
+               "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --step--1: 0.86rem;
+  --step-0:  1.19rem;   /* book body                                        */
+  --step-1:  1.36rem;
+  --step-2:  1.62rem;
+  --step-3:  2.0rem;
+  --step-4:  clamp(2.5rem, 3.4vw + 1.6rem, 3.75rem);
+
+  --measure: 40rem;     /* ~66ch reading column                             */
+  --page:    54rem;     /* wider frame; hero + panels break out to this      */
+  --gutter:  3.75rem;   /* left margin for hanging section numerals          */
+
+  color-scheme: light;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.62;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1, "liga" 1, "onum" 1;   /* old-style figures */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.book *, .book *::before, .book *::after { box-sizing: border-box; }
+
+
+/* ---------------------------------------------------------------------------
+   Draft ribbon — an honest galley-proof band. Sticky, deliberately visible.
+   Not blue (it isn't interactive); warm paper with an oxblood keyline.
+   ------------------------------------------------------------------------ */
+.bk-ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.44rem 1rem;
+  background: color-mix(in srgb, var(--book) 7%, var(--paper));
+  border-bottom: 1px solid var(--rule-strong);
+  box-shadow: inset 0 3px 0 -2px var(--book-soft);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+/* On phones the full source path wraps the sticky band to three lines; keep the
+   essential reminder ("draft · pending author voice pass") to one line. */
+@media (max-width: 640px) {
+  .bk-ribbon-tail { display: none; }
+}
+.bk-ribbon b {
+  color: var(--book);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+}
+.bk-ribbon .bk-ribbon-src { color: var(--ink-mute); }
+
+/* ---------------------------------------------------------------------------
+   Running head + page frame
+   ------------------------------------------------------------------------ */
+.bk-runninghead {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.4rem 1.5rem 0.9rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--rule);
+  font-variant-caps: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--ink-mute);
+  font-size: var(--step--1);
+}
+.bk-runninghead .bk-folio { font-family: var(--font-display); font-style: italic; }
+.bk-runninghead .bk-imprint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; }
+
+.bk-page {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+}
+/* text-width blocks centre inside the wider page frame */
+.bk-titleblock,
+.book .bk-prose,
+.bk-lede { max-width: var(--measure); margin-left: auto; margin-right: auto; }
+
+/* ---------------------------------------------------------------------------
+   Title block
+   ------------------------------------------------------------------------ */
+.bk-titleblock { padding-top: 3.2rem; }
+.bk-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 1.1rem;
+  display: flex; align-items: center; gap: 0.9rem;
+}
+.bk-kicker::after {
+  content: ""; flex: 1 1 auto; height: 1px;
+  background: linear-gradient(90deg, var(--rule-strong), transparent);
+}
+.bk-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-4);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  margin: 0 0 0.9rem;
+  text-wrap: balance;
+  color: var(--ink);
+}
+.bk-title .bk-title-sub {
+  display: block;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: 0.5em;
+  letter-spacing: 0;
+  margin-top: 0.5rem;
+}
+.bk-draftnote {
+  font-size: var(--step--1);
+  color: var(--ink-mute);
+  font-style: italic;
+  margin: 0.4rem 0 1.8rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--book-soft);
+}
+.bk-draftnote code { font-family: var(--font-mono); font-style: normal; font-size: 0.9em; }
+
+/* Objectives — a marginal "what you'll be able to do" plate */
+.bk-objectives {
+  max-width: var(--measure);
+  margin: 0 auto 1rem;
+  padding: 1.3rem 1.5rem 1.4rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.bk-objectives .bk-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 0.7rem;
+}
+.bk-objectives ol { margin: 0; padding: 0; list-style: none; counter-reset: obj; }
+.bk-objectives li {
+  counter-increment: obj;
+  position: relative;
+  padding: 0.4rem 0 0.4rem 2.4rem;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+.bk-objectives li + li { border-top: 1px solid var(--rule); }
+.bk-objectives li::before {
+  content: counter(obj, decimal-leading-zero);
+  position: absolute; left: 0; top: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--book);
+  letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------------
+   The hero — "See it work". Breaks out to the wider frame.
+   A crisp lab instrument mounted inside a warm book plate mat.
+   ------------------------------------------------------------------------ */
+.bk-hero {
+  width: min(100%, var(--page));
+  margin: 3.4rem auto 3.4rem;
+}
+.bk-hero-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  margin: 0 0 1.05rem;
+}
+.bk-plate-heading {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--book);
+}
+/* the ONE live badge — signal blue, with a soft pulse */
+.bk-live {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+.bk-live::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 0 0 var(--signal-line);
+  animation: bk-pulse 2.4s ease-out infinite;
+}
+@keyframes bk-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--signal-line); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* warm letterpress plate mat around the instrument */
+.bk-plate {
+  margin: 0;
+  background: linear-gradient(180deg, #f5eeddff, #ede4cd);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  padding: 0.7rem;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 20px 44px -26px rgba(60, 34, 20, 0.5),
+    0 3px 10px -6px rgba(60, 34, 20, 0.22);
+  position: relative;
+}
+.bk-plate::before {
+  content: ""; position: absolute; inset: 0.34rem;
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px; pointer-events: none; z-index: 2;
+}
+
+/* --- the instrument stage (crisp, cool, graph-paper) --- */
+.bk-stage {
+  position: relative;
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+}
+.bk-figure { margin: 0; position: relative; }
+.bk-svg { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; }
+
+/* graph paper + arena */
+.bk-grid line { stroke: color-mix(in srgb, var(--rule-strong) 60%, transparent); stroke-width: 1; }
+.bk-arena {
+  fill: color-mix(in srgb, var(--signal) 2.5%, #fdfbf6);
+  stroke: var(--rule-strong); stroke-width: 1.5;
+}
+.bk-axis {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  fill: var(--ink-mute);
+}
+
+/* out-of-distribution corner */
+.bk-hatch-line { stroke: var(--entity-block); stroke-opacity: 0.24; stroke-width: 1; }
+.bk-ood { fill: url(#bk-hatch); stroke: var(--rule-strong); stroke-dasharray: 3 3; }
+.bk-ood-ghost { fill: var(--entity-block); fill-opacity: 0.14; }
+.bk-ood-label { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-mute); letter-spacing: 0.02em; }
+
+/* target pose */
+.bk-target rect { fill: none; stroke: var(--entity-target); stroke-width: 2; stroke-dasharray: 5 5; }
+.bk-target-label { fill: var(--entity-target); letter-spacing: 0.06em; }
+
+/* nominal plan path */
+.bk-path {
+  fill: none; stroke: var(--entity-pusher); stroke-width: 2;
+  stroke-dasharray: 2 6; stroke-linecap: round; opacity: 0.6;
+  transition: opacity 0.4s ease;
+}
+
+/* the block (tee) */
+.bk-tee rect { fill: var(--entity-block); }
+.bk-tee-group { transition: transform 0.75s cubic-bezier(.5,.02,.15,1); }
+
+/* the drag affordance — the one LIVE handle (signal blue) */
+.bk-halo { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.85; }
+.bk-drag-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; fill: var(--signal); }
+.bk-drag { transition: opacity 0.35s ease; }
+@media (prefers-reduced-motion: no-preference) {
+  .bk-halo { animation: bk-halo-spin 12s linear infinite; transform-box: fill-box; transform-origin: center; }
+}
+@keyframes bk-halo-spin { to { stroke-dashoffset: -80; } }
+
+/* the pusher (agent) */
+.bk-pusher { transition: transform 0.75s cubic-bezier(.5,.02,.15,1); }
+.bk-pusher-ring { fill: none; stroke: var(--entity-pusher); stroke-width: 1.5; opacity: 0.5; }
+.bk-pusher-core { fill: var(--entity-pusher); }
+
+/* drift: confident, wrong micro-strokes at empty table */
+.bk-wrong { opacity: 0; transition: opacity 0.3s ease; }
+.bk-stroke { fill: none; stroke: var(--entity-pusher); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.bk-stroke-faint { opacity: 0.6; }
+.bk-wrong-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; fill: var(--entity-pusher); }
+.bk-jitter { transform-box: fill-box; transform-origin: center; }
+
+/* state machine: nominal ⇄ drift, driven off the stage's data-state */
+.bk-stage[data-state="drift"] .bk-path,
+.bk-stage[data-state="drift"] .bk-drag { opacity: 0; }
+.bk-stage[data-state="drift"] .bk-wrong { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .bk-stage[data-state="drift"] .bk-jitter { animation: bk-jitter 0.9s steps(1) infinite; }
+}
+@keyframes bk-jitter {
+  0%,100% { transform: translate(0,0); }
+  25% { transform: translate(3px,-2px); }
+  50% { transform: translate(-2px,3px); }
+  75% { transform: translate(2px,2px); }
+}
+
+/* HUD readout — target hue nominal, alert red on drift */
+.bk-hud {
+  position: absolute; top: 0.9rem; left: 0.9rem;
+  display: grid; gap: 0.28rem;
+  padding: 0.5rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 84%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.bk-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; }
+.bk-hud .bk-k { color: var(--ink-mute); }
+.bk-hud .bk-v { font-variant-numeric: tabular-nums; }
+.bk-hud .bk-ok  { color: var(--entity-target); }
+.bk-hud .bk-bad { color: var(--alert); }
+
+/* control strip (JS-only affordance; poster reads without it) */
+.bk-controls {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  padding: 0.8rem 0.2rem 0.2rem;
+}
+.bk-seg {
+  display: inline-flex; padding: 3px; gap: 3px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  background: var(--paper);
+}
+.bk-seg button {
+  font-family: var(--font-mono);
+  font-size: 0.74rem; letter-spacing: 0.02em;
+  padding: 0.34rem 0.9rem;
+  border: 0; border-radius: 100px;
+  background: transparent; color: var(--ink-mute);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.bk-seg button[aria-pressed="true"] {
+  background: var(--signal); color: var(--signal-ink);
+  box-shadow: 0 1px 4px -1px var(--signal-line);
+}
+.bk-seg button:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.bk-control-note {
+  font-family: var(--font-mono); font-size: 0.68rem;
+  color: var(--ink-mute); margin-left: auto;
+}
+
+/* legend / entity key — the linking contract, always server-rendered */
+.bk-legend {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper-2);
+}
+.bk-legend-item { display: inline-flex; align-items: baseline; gap: 0.5rem; font-size: 0.86rem; color: var(--ink-soft); }
+.bk-legend-item .bk-swatch { width: 11px; height: 11px; border-radius: 3px; transform: translateY(1px); display: inline-block; }
+.bk-legend-item .bk-swatch-target { background: transparent !important; box-shadow: inset 0 0 0 2px var(--entity-target); }
+.bk-legend-item b { font-family: var(--font-mono); font-weight: 600; font-size: 0.78rem; letter-spacing: 0.02em; }
+.bk-legend-item .bk-e-pusher { color: var(--entity-pusher-ink); }
+.bk-legend-item .bk-e-block  { color: var(--entity-block); }
+.bk-legend-item .bk-e-target { color: var(--entity-target-ink); }
+.bk-legend-item .bk-role { color: var(--ink-mute); font-size: 0.82rem; }
+
+/* the See-it-work lede, set beside the plate */
+.bk-lede { margin: 1.4rem auto 0; }
+.bk-lede p { font-size: 1.06rem; color: var(--ink-soft); }
+.bk-lede p:first-of-type { font-size: 1.14rem; color: var(--ink); }
+
+/* ---------------------------------------------------------------------------
+   Prose — the book column
+   ------------------------------------------------------------------------ */
+.book .bk-prose { counter-reset: bk-sec; }
+.bk-prose > * { margin-left: auto; margin-right: auto; }
+
+.bk-prose p { margin: 0 0 1.15rem; hyphens: auto; -webkit-hyphens: auto; }
+
+.bk-prose h2 {
+  counter-increment: bk-sec;
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-3);
+  line-height: 1.1;
+  letter-spacing: -0.008em;
+  margin: 3.4rem 0 1.1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+}
+/* roman numeral hanging in the margin */
+.bk-prose h2::before {
+  content: counter(bk-sec, upper-roman);
+  position: absolute;
+  left: calc(-1 * var(--gutter));
+  top: 0.05em;
+  width: calc(var(--gutter) - 1rem);
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--book);
+  letter-spacing: 0;
+}
+.bk-prose h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-1);
+  margin: 2.4rem 0 0.5rem;
+  color: var(--ink);
+}
+.bk-prose h3::before { content: "§ "; color: var(--book-soft); font-style: italic; }
+
+/* drop cap on the first paragraph after the first H2 ("The problem") */
+.bk-prose h2:first-of-type + p::first-letter {
+  font-family: var(--font-display);
+  float: left;
+  font-size: 3.6em;
+  line-height: 0.78;
+  padding: 0.06em 0.12em 0 0;
+  color: var(--book);
+  font-weight: 600;
+}
+
+.bk-prose a {
+  color: var(--book);
+  text-decoration: none;
+  border-bottom: 1px solid var(--book-soft);
+}
+.bk-prose a:hover { background: color-mix(in srgb, var(--book) 8%, transparent); }
+
+.bk-prose strong { font-weight: 600; color: var(--ink); }
+.bk-prose em { font-style: italic; }
+
+/* inline code — quiet, book-margin tint (stays warm; only PANELS go dark) */
+.bk-prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  background: var(--paper-3);
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  padding: 0.06em 0.34em;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;   /* long paths (curriculum/…/x.py) wrap, never clip on mobile */
+}
+
+.bk-prose ul, .bk-prose ol { margin: 0 0 1.2rem; padding-left: 1.4rem; }
+.bk-prose li { margin: 0.3rem 0; padding-left: 0.3rem; }
+.bk-prose ul li::marker { color: var(--book-soft); }
+
+.bk-prose blockquote {
+  margin: 1.4rem 0; padding: 0.2rem 0 0.2rem 1.3rem;
+  border-left: 2px solid var(--book-soft);
+  color: var(--ink-soft); font-style: italic;
+}
+
+/* entity words in the prose — same three hues, quiet colored underline.
+   The running text stays ink-dark; only the rule carries the hue. */
+.bk-ent {
+  color: var(--ink);
+  border-bottom: 1.5px solid currentColor;
+  padding-bottom: 0.5px;
+}
+.bk-ent-pusher { border-color: var(--entity-pusher); }
+.bk-ent-block  { border-color: var(--entity-block); }
+.bk-ent-target { border-color: var(--entity-target); }
+
+/* ---------------------------------------------------------------------------
+   Code panels — crisp DARK lab instruments (the sharp, central element)
+   ------------------------------------------------------------------------ */
+.bk-panel {
+  max-width: var(--page);        /* break out a touch for breathing room */
+  margin: 1.5rem auto 1.7rem;
+  border: 1px solid var(--code-line);
+  border-radius: 8px;
+  background: var(--code-bg);
+  overflow: hidden;
+  position: relative;   /* anchor the right-edge scroll-affordance fade */
+  box-shadow: 0 22px 50px -34px rgba(30, 18, 8, 0.55), 0 2px 6px -4px rgba(30,18,8,0.3);
+}
+/* Long lines scroll horizontally; a right-edge fade + a visible thin scrollbar
+   signal "there is more →" so no line reads as clipped (every line is on the page). */
+.bk-panel::after {
+  content: ""; position: absolute; top: 2.1rem; right: 0; bottom: 0; width: 2.1rem;
+  background: linear-gradient(to right, transparent, var(--code-bg));
+  pointer-events: none; border-radius: 0 8px 8px 0;
+}
+.bk-panel pre::-webkit-scrollbar { height: 9px; }
+.bk-panel pre::-webkit-scrollbar-thumb {
+  background: var(--code-line); border-radius: 6px; border: 2px solid var(--code-bg);
+}
+.bk-panel pre::-webkit-scrollbar-thumb:hover { background: #3a4556; }
+.bk-panel pre::-webkit-scrollbar-track { background: transparent; }
+.bk-panel-bar {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--code-top);
+  border-bottom: 1px solid var(--code-line);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+.bk-panel-file { color: var(--code-file); }
+.bk-panel-region { color: #aeb7c4; font-weight: 600; }
+.bk-panel-region .bk-hash-sym { color: var(--code-num); }
+.bk-panel-hash {
+  margin-left: auto; color: var(--code-file); font-size: 0.68rem; letter-spacing: 0.02em;
+  cursor: help;
+}
+.bk-copy {
+  display: none;
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em;
+  color: var(--code-file);
+  background: transparent;
+  border: 1px solid var(--code-line);
+  border-radius: 5px;
+  padding: 0.2rem 0.5rem; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+:root[data-bk-js="on"] .bk-copy { display: inline-block; }
+.bk-copy:hover { color: #fff; border-color: var(--signal); }
+.bk-copy:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.bk-panel pre { margin: 0; padding: 0.9rem 0; overflow-x: auto; counter-reset: ln; }
+.bk-panel code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem; line-height: 1.62;
+  color: var(--code-fg); tab-size: 4;
+}
+.bk-cl { counter-increment: ln; display: grid; grid-template-columns: 3rem 1fr; }
+.bk-cl::before {
+  content: counter(ln);
+  text-align: right; padding-right: 1rem;
+  color: var(--code-num); font-size: 0.74rem;
+  user-select: none; -webkit-user-select: none;
+}
+.bk-cx { white-space: pre; padding-right: 1.1rem; }
+.bk-cmt { color: var(--code-dim); font-style: italic; }
+/* entity-linked identifiers, brightened for the dark surface */
+.bk-panel .bk-e-pusher { color: var(--entity-pusher-hi); }
+.bk-panel .bk-e-block  { color: var(--entity-block-hi); }
+.bk-panel .bk-e-target { color: var(--entity-target-hi); }
+
+/* orienting sentence lift: the <p> right before a panel */
+.bk-prose p:has(+ .bk-panel) { color: var(--ink); font-style: italic; }
+
+/* free-standing shell commands in prose also go dark — one rule: monospace
+   in a box is a lab instrument. (Region includes are placeholders, so the only
+   <pre> marked emits here are the shell/command fences.) */
+.bk-prose pre {
+  margin: 1.4rem 0; padding: 0.95rem 1.1rem; overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--code-line);
+  border-left: 3px solid var(--signal-line);
+  border-radius: 8px;
+  max-width: var(--page);
+  box-shadow: 0 18px 40px -32px rgba(30,18,8,0.5);
+}
+.bk-prose pre code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem; line-height: 1.6;
+  color: var(--code-fg);
+  background: none; border: none; padding: 0;
+  white-space: pre;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables (Break It measurements) — book ledger on the warm surface
+   ------------------------------------------------------------------------ */
+.bk-prose table {
+  width: 100%; border-collapse: collapse;
+  margin: 1.5rem 0; font-size: 0.96rem;
+  display: block; overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+}
+.bk-prose th, .bk-prose td {
+  text-align: left; padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+.bk-prose thead th {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-mute);
+  border-bottom: 1.5px solid var(--rule-strong);
+  font-weight: 400;
+}
+.bk-prose tbody tr:last-child td { border-bottom: 1.5px solid var(--rule-strong); }
+.bk-prose td:not(:first-child) { font-family: var(--font-mono); font-size: 0.88rem; }
+
+/* ---------------------------------------------------------------------------
+   Wall-clock — an honest instrument ledger (injected into "Run it")
+   ------------------------------------------------------------------------ */
+.bk-wall {
+  max-width: var(--measure);
+  margin: 1.6rem auto;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.bk-wall-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  background: var(--paper-3);
+  border-bottom: 1px solid var(--rule);
+}
+.bk-wall-eyebrow {
+  font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute);
+}
+.bk-wall table { width: 100%; border-collapse: collapse; }
+.bk-wall td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
+.bk-wall tr:last-child td { border-bottom: 0; }
+.bk-wall .bk-tier { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); width: 9rem; }
+.bk-wall .bk-line { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.bk-wall tr[data-measured="false"] .bk-line { color: var(--ink-mute); font-style: italic; }
+.bk-pill {
+  font-family: var(--font-mono); font-size: 0.62rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.14rem 0.5rem; border-radius: 100px; white-space: nowrap;
+}
+.bk-pill[data-measured="true"] { color: var(--entity-target-ink); background: color-mix(in srgb, var(--entity-target) 14%, transparent); }
+.bk-pill[data-measured="false"] { color: var(--ink-mute); background: color-mix(in srgb, var(--ink-mute) 12%, transparent); }
+
+/* ---------------------------------------------------------------------------
+   Colophon (region_hashes fingerprint + imprint)
+   ------------------------------------------------------------------------ */
+.bk-colophon {
+  max-width: var(--measure);
+  margin: 4.5rem auto 0;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-mute);
+}
+.bk-colophon h2 {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-mute); margin: 0 0 0.9rem;
+}
+.bk-colophon p { font-size: var(--step--1); font-style: italic; margin: 0 0 0.9rem; }
+.bk-colophon p code { font-style: normal; font-family: var(--font-mono); font-size: 0.9em; color: var(--ink-soft); }
+.bk-colophon dl {
+  margin: 0.8rem 0 0;
+  display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem;
+  font-family: var(--font-mono); font-size: 0.72rem;
+}
+.bk-colophon dt { color: var(--book); }
+.bk-colophon dd { margin: 0; color: var(--ink-mute); overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------------------
+   Focus + a11y
+   ------------------------------------------------------------------------ */
+.book a:focus-visible,
+.book button:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------------ */
+@media (max-width: 62rem) {
+  .book { --gutter: 0rem; }
+  .bk-prose h2 { padding-left: 0; }
+  .bk-prose h2::before {
+    position: static; display: inline-block; width: auto;
+    margin-right: 0.6rem; font-size: 0.85em; vertical-align: 0.05em;
+  }
+}
+@media (max-width: 34rem) {
+  .book { font-size: 1.1rem; line-height: 1.58; }
+  .bk-page { padding: 0 1.15rem 4rem; }
+  .bk-runninghead { padding: 1.1rem 1.15rem 0.8rem; }
+  .bk-runninghead .bk-imprint { display: none; }
+  .bk-titleblock { padding-top: 2rem; }
+  .bk-plate { padding: 0.45rem; }
+  .bk-plate::before { inset: 0.22rem; }
+  .bk-hud { font-size: 0.62rem; padding: 0.36rem 0.5rem; top: 0.55rem; left: 0.55rem; }
+  .bk-cl { grid-template-columns: 2.2rem 1fr; }
+  .bk-cl::before { padding-right: 0.6rem; }
+  .bk-panel code, .bk-prose pre code { font-size: 0.74rem; }
+  .bk-control-note { display: none; }
+  .bk-lede p:first-of-type { font-size: 1.08rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book *, .book *::before, .book *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@media print {
+  .bk-ribbon, .bk-controls, .bk-copy { display: none; }
+  body.book::before { display: none; }
+}
+
+/* ===========================================================================
+   ENGINE CHROME — the multi-chapter frame Variant C never had.
+   Variant C was one standalone page; the shared engine adds a sidebar, a
+   breadcrumb, prev/next, a reading-progress bar and a landing TOC. These are
+   styled in C's own language (warm paper, oxblood chrome, mono instruments,
+   one signal blue) so the whole site reads as the single won design system.
+   The reading column itself (title, objectives, hero, prose, panels, wall,
+   colophon) is Variant C verbatim, above.
+   ======================================================================== */
+
+/* --- global surface + paper grain on the page body ---------------------- */
+:root {
+  /* Entity tokens re-exposed at :root as the shared design-system foundation
+     for P2 toys/diagrams. .book (above) is the authoritative source; these
+     mirror it so a component outside a .book subtree can still reach them. */
+  --entity-pusher: #b0560f;
+  --entity-block:  #a5257d;
+  --entity-tee:    var(--entity-block);
+  --entity-target: #0c7d5f;
+}
+html { background: #f7f3ea; }
+/* smooth anchor scroll only when the reader hasn't asked to reduce motion
+   (html is outside the .book * reduced-motion reset) */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+/* visually-hidden live region for screen-reader status announcements */
+.bk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; margin: -1px; }
+body.book { min-height: 100vh; }
+/* faint paper grain across the whole viewport (C's grain, lifted to body) */
+body.book::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  opacity: 0.5; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+body.book > * { position: relative; z-index: 1; }
+
+/* --- reading-progress bar (JS-enhanced; invisible without JS) ------------ */
+.progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  z-index: 50; background: transparent;
+}
+.progress__bar {
+  height: 100%; width: 0; background: var(--signal);
+  transition: width 0.1s linear;
+}
+
+/* --- skip link ---------------------------------------------------------- */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--signal); color: var(--signal-ink);
+  font-family: var(--font-mono); font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+}
+.skip-link:focus { left: 0; }
+
+/* --- shell: sidebar + reading column ------------------------------------ */
+.shell {
+  display: grid;
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  max-width: 76rem;
+  margin: 0 auto;
+}
+.shell__sidebar { border-right: 1px solid var(--rule); }
+.shell__main { min-width: 0; }
+
+/* the reading column mirrors Variant C's .bk-page frame */
+.book .reading {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.2rem 1.5rem 6rem;
+}
+
+/* --- sidebar (warm paper, mono instruments, oxblood chrome) -------------- */
+.sidebar {
+  position: sticky; top: 0;
+  max-height: 100vh; overflow-y: auto;
+  padding: 1.6rem 1.15rem 2.4rem;
+}
+.sidebar__brand {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600; font-size: 1.15rem; letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+  margin-bottom: 1.6rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+.sidebar__brand::first-letter { color: var(--book); }
+
+/* Search affordance (JS-only; revealed by SidebarNav's enhancer). Opens the
+   overlay island — the "/" and ⌘K keybinds do the same. */
+/* brand + theme toggle row */
+.sidebar__top {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  margin-bottom: 1.2rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--rule);
+}
+.sidebar__top .sidebar__brand { margin: 0; padding: 0; border: 0; }
+
+/* search + help affordances (JS-only) */
+.sidebar__util { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; }
+.sidebar__search {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  flex: 1; margin: 0; padding: 0.42rem 0.7rem;
+  font: inherit; font-size: 0.82rem; color: var(--ink-soft);
+  background: var(--paper-2); border: 1px solid var(--rule); border-radius: 7px;
+  cursor: pointer; text-align: left;
+}
+.sidebar__search:hover { color: var(--ink); border-color: var(--ink-mute); }
+.sidebar__search:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.sidebar__search kbd {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-mute);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 0.02rem 0.34rem;
+}
+
+/* quick links (start here / progress) */
+.sidebar__quicklinks { list-style: none; margin: 0 0 1.4rem; padding: 0; display: flex; gap: 0.9rem; }
+.sidebar__quicklinks a {
+  font-size: 0.82rem; color: var(--ink-soft); text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.sidebar__quicklinks a:hover { color: var(--book); border-color: var(--book-soft); }
+.sidebar__quicklinks a:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.sidebar__quicklinks a[aria-current="page"] { color: var(--book); }
+
+.sidebar__phase { margin-bottom: 1.5rem; }
+.sidebar__phase-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 0.5rem; padding: 0 0.3rem;
+}
+.sidebar__list { list-style: none; margin: 0; padding: 0; }
+.sidebar__link {
+  display: flex; gap: 0.55rem; align-items: baseline;
+  padding: 0.36rem 0.5rem; border-radius: 3px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.95rem; line-height: 1.35;
+}
+.sidebar__link:hover { background: color-mix(in srgb, var(--book) 6%, transparent); }
+.sidebar__link[aria-current="page"] {
+  background: color-mix(in srgb, var(--book) 10%, transparent);
+  color: var(--book); font-weight: 600;
+}
+.sidebar__num {
+  font-family: var(--font-mono);
+  font-size: 0.74rem; color: var(--ink-mute);
+  min-width: 2.2em; font-variant-numeric: tabular-nums;
+}
+.sidebar__link[aria-current="page"] .sidebar__num { color: inherit; }
+.sidebar__title { color: inherit; }
+/* reading-progress decorates read chapters with a target-green check (JS) */
+.sidebar__link[data-read="true"] .sidebar__title::after {
+  content: " ✓"; color: var(--entity-target);
+}
+
+/* --- breadcrumb --------------------------------------------------------- */
+.breadcrumb {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; letter-spacing: 0.03em;
+  color: var(--ink-mute);
+  margin: 0 auto 0.4rem;
+  max-width: var(--page);
+}
+.breadcrumb__list {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 0.45rem;
+  margin: 0; padding: 0;
+}
+.breadcrumb__item a { color: var(--ink-mute); text-decoration: none; }
+.breadcrumb__item a:hover { color: var(--book); }
+.breadcrumb__item + .breadcrumb__item::before {
+  content: "/"; margin-right: 0.45rem; color: var(--rule-strong);
+}
+.breadcrumb__item--current { color: var(--ink-soft); }
+
+/* --- prev / next -------------------------------------------------------- */
+.prevnext {
+  display: flex; justify-content: space-between; gap: 1rem;
+  max-width: var(--measure);
+  margin: 4rem auto 0;
+  padding: 1.4rem 1.5rem 0;
+  border-top: 1px solid var(--rule);
+}
+.prevnext__link {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  max-width: 48%; text-decoration: none;
+  color: var(--ink);
+}
+.prevnext__link--next { text-align: right; margin-left: auto; }
+.prevnext__dir {
+  font-family: var(--font-mono);
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--book);
+}
+.prevnext__label {
+  font-family: var(--font-display); font-size: 1.05rem; color: var(--ink-soft);
+}
+.prevnext__link:hover .prevnext__label { color: var(--book); }
+.prevnext__spacer { flex: 1; }
+
+/* --- running head (per-chapter; folio + imprint) ------------------------ */
+/* .bk-runninghead is styled in the Variant C core above. */
+
+/* --- the hero when JS is off / non-BC chapters: the generic poster ------- */
+/* Reuses the Variant C stage (.bk-stage / .bk-arena / .bk-grid / .bk-tee /
+   .bk-pusher / .bk-target) so every chapter's poster reads as one instrument.
+   The BC chapter mounts the interactive drift toggle; every other chapter
+   shows this static, captioned poster (the real toy lands in P2). */
+.bk-poster-cap {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.8rem; flex-wrap: wrap;
+  padding: 0.7rem 0.2rem 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem; color: var(--ink-mute);
+}
+.bk-poster-demo { color: var(--ink-soft); }
+.bk-poster-demo b { color: var(--book); font-weight: 600; letter-spacing: 0.02em; }
+.bk-poster-p2 {
+  margin-left: auto; color: var(--signal);
+  letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.66rem;
+}
+.bk-plot-caption {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+  fill: var(--ink-mute);
+}
+.bk-target-fill { fill: color-mix(in srgb, var(--entity-target) 12%, transparent); }
+
+/* --- home / table of contents ------------------------------------------- */
+.home-header { max-width: var(--measure); margin: 3.2rem auto 3rem; }
+.home-header__kicker {
+  font-family: var(--font-mono);
+  font-size: var(--step--1); letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 1rem;
+  display: flex; align-items: center; gap: 0.9rem;
+}
+.home-header__kicker::after {
+  content: ""; flex: 1 1 auto; height: 1px;
+  background: linear-gradient(90deg, var(--rule-strong), transparent);
+}
+.home-header__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--step-4); line-height: 1.02; letter-spacing: -0.015em;
+  margin: 0 0 0.9rem; color: var(--ink);
+}
+.home-header__lede {
+  font-size: 1.14rem; color: var(--ink-soft); font-style: italic; margin: 0;
+}
+.home-phase { max-width: var(--measure); margin: 0 auto 2.6rem; }
+.home-phase__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 0.4rem; padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+.home-chapters { list-style: none; margin: 0; padding: 0; }
+.home-chapter { counter-increment: none; }
+.home-chapter__link {
+  display: flex; gap: 1.1rem; align-items: baseline;
+  padding: 0.9rem 0.5rem; border-radius: 3px;
+  color: var(--ink); text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.home-chapter:last-child .home-chapter__link { border-bottom: 0; }
+.home-chapter__link:hover { background: color-mix(in srgb, var(--book) 6%, transparent); }
+.home-chapter__num {
+  font-family: var(--font-mono); font-size: 0.85rem;
+  color: var(--book); min-width: 2.8em; font-variant-numeric: tabular-nums;
+}
+.home-chapter__body { display: flex; flex-direction: column; gap: 0.25rem; }
+.home-chapter__title {
+  font-family: var(--font-display); font-weight: 600; font-size: 1.22rem;
+  color: var(--ink);
+}
+.home-chapter__link:hover .home-chapter__title { color: var(--book); }
+.home-chapter__meta {
+  font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-mute);
+}
+.home-chapter__meta code {
+  font-family: var(--font-mono); background: var(--paper-3);
+  border: 1px solid var(--paper-edge); border-radius: 2px;
+  padding: 0.02em 0.3em; color: var(--ink-soft);
+}
+
+/* --- shell responsive: collapse the sidebar with the gutter ------------- */
+@media (max-width: 62rem) {
+  .shell { grid-template-columns: 1fr; max-width: var(--page); }
+  .shell__sidebar {
+    border-right: 0; border-bottom: 1px solid var(--rule);
+  }
+  .sidebar {
+    position: static; max-height: none;
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; align-items: baseline;
+    padding: 1rem 1.5rem;
+  }
+  .sidebar__top { width: 100%; margin-bottom: 0.8rem; }
+  .sidebar__util, .sidebar__quicklinks { width: 100%; margin-bottom: 0.4rem; }
+  .sidebar__phase { margin-bottom: 0; }
+  /* ≥44px tap targets on the collapsed horizontal nav (WCAG 2.5.5) */
+  .sidebar__link { min-height: 44px; align-items: center; }
+}
+
+/* ===========================================================================
+   CONCEPT-TOY ISLAND (.ct-*) — the ch1.1 covariate-shift toy, and the FROZEN
+   skin every P5 chapter toy reuses. A crisp SQUARE lab stage (the arena is
+   square: ±0.45 m) mounted in the same warm .bk-plate mat as every hero.
+
+   Two co-located layers in one square figure, so booting causes NO layout
+   shift: the SSR poster (JS-off fallback + pre-boot) and the live MuJoCo-WASM
+   canvas (shown only once booted). All colour comes from the shared design
+   tokens: --entity-* for the three task entities, one --signal blue for the
+   live/interactive handle, --alert red for the failing readout, neutral ink
+   for the "make-invisible-visible" coverage region (it is a map, not an
+   entity and not live, so it wears neither an entity hue nor signal blue).
+   ======================================================================== */
+.ct {
+  display: grid;
+  gap: 0;
+}
+.ct-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;          /* square arena — no reflow poster⇄canvas */
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;           /* pointer-drag the block, never scroll the page */
+}
+.ct-figure:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+/* the live canvas — square, fills the figure, hidden until the sim boots */
+.ct-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+}
+.ct-canvas[data-dragging="true"] { cursor: grabbing; }
+.ct-canvas[hidden] { display: none; }
+
+/* the SSR poster (JS-off + pre-boot) — same square box as the canvas */
+.ct-poster { position: absolute; inset: 0; }
+.ct-poster[hidden] { display: none; }
+.ct-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* graph paper + arena, shared poster/none */
+.ct-grid line { stroke: color-mix(in srgb, var(--rule-strong) 55%, transparent); stroke-width: 1; }
+.ct-arena { fill: none; stroke: var(--rule-strong); stroke-width: 1.5; }
+.ct-axis {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em;
+  fill: var(--ink-mute);
+}
+
+/* the demonstrated-coverage region — the training distribution made visible.
+   Neutral warm ink (a MAP), dashed boundary; never an entity hue, never blue. */
+.ct-coverage {
+  fill: color-mix(in srgb, var(--ink-mute) 12%, transparent);
+  stroke: var(--ink-mute);
+  stroke-width: 1.4;
+  stroke-dasharray: 5 4;
+  stroke-opacity: 0.72;
+}
+.ct-coverage-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.02em;
+  fill: var(--ink-mute);
+}
+
+/* entities on the poster — the three page hues */
+.ct-target rect { fill: none; stroke: var(--entity-target); stroke-width: 2; stroke-dasharray: 5 5; }
+.ct-target-label { fill: var(--entity-target); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; }
+.ct-tee rect { fill: var(--entity-block); }
+.ct-pusher-ring { fill: none; stroke: var(--entity-pusher); stroke-width: 1.5; opacity: 0.5; }
+.ct-pusher-core { fill: var(--entity-pusher); }
+
+/* the drag affordance — the one LIVE handle (signal blue) */
+.ct-halo { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.85; }
+.ct-drag-label { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.02em; fill: var(--signal); }
+@media (prefers-reduced-motion: no-preference) {
+  .ct-halo { animation: bk-halo-spin 12s linear infinite; transform-box: fill-box; transform-origin: center; }
+}
+
+/* HUD — the live instrument readout (poster ships the nominal, in-distribution
+   state; the island overwrites it every ~10 Hz). */
+.ct-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem; right: 0.7rem;
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.ct-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.ct-hud .ct-k { color: var(--ink-mute); letter-spacing: 0.02em; }
+.ct-hud .ct-v { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ct-hud .ct-ok  { color: var(--entity-target); }
+.ct-hud .ct-bad { color: var(--alert); }
+/* the distance-from-demos meter bar */
+.ct-meter {
+  grid-column: 1 / -1;
+  height: 5px; border-radius: 3px; margin-top: 0.1rem;
+  background: color-mix(in srgb, var(--ink-mute) 18%, transparent);
+  overflow: hidden;
+}
+.ct-meter-fill {
+  height: 100%; width: 0%;
+  background: var(--entity-target);
+  transition: width 0.12s linear, background 0.2s ease;
+}
+.ct-meter-fill[data-ood="true"] { background: var(--alert); }
+
+/* boot / error status line under the HUD */
+.ct-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono); font-size: 0.66rem;
+  color: var(--ink-mute);
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.ct-status[data-failed="true"] { color: var(--alert); }
+
+/* controls — JS-only affordances (the poster reads without them) */
+.ct-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.ct-btn {
+  font-family: var(--font-mono);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ct-btn:hover { border-color: var(--signal); color: var(--ink); }
+.ct-btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.ct-btn--primary {
+  background: var(--signal); color: var(--signal-ink); border-color: var(--signal);
+  box-shadow: 0 1px 4px -1px var(--signal-line);
+}
+.ct-btn--primary:hover { color: #fff; background: color-mix(in srgb, var(--signal) 90%, #000); }
+.ct-btn[disabled] { opacity: 0.5; cursor: default; }
+.ct-control-note {
+  font-family: var(--font-mono); font-size: 0.66rem;
+  color: var(--ink-mute); margin-left: auto;
+}
+@media (max-width: 34rem) {
+  .ct-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; right: 0.5rem; }
+  .ct-control-note { display: none; }
+}
+
+/* ===========================================================================
+   DARK THEME — "read like a book at night". Token-only override layer.
+   ---------------------------------------------------------------------------
+   The whole design system is token-based, and every token that carries COLOUR
+   is authored on `.book` (the <body>). So a dark theme is just: redefine those
+   tokens under a dark selector and let every component / concept-toy / exercise
+   / progress / landing / search surface inherit the new values. Nothing below
+   restructures an existing rule — this is a pure additive skin.
+
+   TRIGGER — dark applies when EITHER:
+     · the reader toggled dark            → :root[data-theme="dark"]        (explicit, wins on any OS)
+     · OR the OS prefers dark AND they have not toggled light
+                                          → @media (prefers-color-scheme: dark)
+                                            :root:not([data-theme="light"])  (the default signal)
+   The explicit toggle ALWAYS wins over the media query in BOTH directions:
+     · light-toggle on a dark OS → :not([data-theme="light"]) fails, media block skipped → light.
+     · dark-toggle on a light OS → :root[data-theme="dark"] matches outside the media block → dark.
+
+   SPECIFICITY — the colour tokens live on `.book` (0,1,0). Both dark selectors
+   below target `… .book` at (0,3,0), so they redefine the tokens ON the body
+   element itself (not merely inherited from :root) and therefore win; the new
+   values then cascade to the entire `.book` subtree.
+
+   NO-FLASH — the two `:root … { background }` rules paint the correct page
+   colour on the FIRST paint of <html>, before <body class="book"> is styled,
+   so there is no light flash. The orchestrator's synchronous <head> snippet
+   (see ThemeToggle wire-in note) stamps data-theme from localStorage before
+   first paint for the toggled case; for the untoggled OS-dark case the media
+   rule already covers it with zero JS.
+
+   FIXED-INSTRUMENT SURFACES (intentional, flagged): the code panels are an
+   always-dark instrument (code-* unchanged); the sim/graph-paper stages
+   (.bk-plate / .bk-stage / .ct-figure / HUD chips) carry hardcoded warm-light
+   backgrounds in their own files and the toy canvases are painted light in JS —
+   they stay LIGHT lab-instruments in both themes, so --entity-* BASE + -hi keep
+   their light-surface tuning. Only the entity TEXT that sits on the flipping
+   paper is retargeted to the bright -hi/-ink hues below.
+   ======================================================================== */
+
+/* ---- payload macro, applied to the two trigger selectors below ------------ */
+
+/* (A) explicit toggle — highest authority, any OS */
+:root[data-theme="dark"] { background: #15120d; color-scheme: dark; }
+:root[data-theme="dark"] .book {
+  color-scheme: dark;
+  /* reading surface — warm near-black paper, warm light ink */
+  --paper:       #15120d;
+  --paper-2:     #1d1912;
+  --paper-3:     #241f16;
+  --paper-edge:  #322b1f;
+  --ink:         #ece4d6;   /* body — 14.8:1 on paper                         */
+  --ink-soft:    #cabfac;   /* subheads — 10.3:1                              */
+  --ink-mute:    #9d917d;   /* captions/marginalia — 6.0:1 on paper, 5.6:1 on-2 */
+  --rule:        #322b20;
+  --rule-strong: #4a4030;
+  /* book chrome (numerals, drop cap, rules, prose links) — warm terracotta,
+     still "old ink", not a live signal — 7.9:1 on paper */
+  --book:        #dd9a72;
+  --book-soft:   #b9714f;   /* 4.9:1                                          */
+  /* the ONE live signal — brighter blue for the dark surface — 7.1:1 on paper;
+     signal-ink flips DARK so button text (dark-on-blue) clears 7.2:1 */
+  --signal:      #6f9dff;
+  --signal-ink:  #0c1018;
+  --signal-soft: rgba(111, 157, 255, 0.12);
+  --signal-line: rgba(111, 157, 255, 0.40);
+  /* semantic alert — warm coral, 6.9:1 on paper */
+  --alert:       #ff6f61;
+  /* entity BASE + -hi unchanged (fixed light/dark instrument surfaces above);
+     only the -ink variants — entity TEXT on the flipping paper — go bright: */
+  --entity-pusher-ink: #f0a25c;   /* 8.4:1 on paper-2                         */
+  --entity-target-ink: #45c79e;   /* 8.3:1 on paper-2                         */
+  /* code-* deliberately NOT redefined: the code panel is an always-dark
+     instrument and its light-theme values already clear AA on code-bg. */
+}
+/* paper grain: multiply darkens (invisible on near-black) → switch to screen */
+:root[data-theme="dark"] body.book::before { mix-blend-mode: screen; opacity: 0.32; }
+/* entity TEXT/underlines that read off base --entity-* on the flipping paper
+   fall below AA there; retarget to the bright -hi hues (6.5–8.9:1). */
+:root[data-theme="dark"] .book .bk-legend-item .bk-e-block { color: var(--entity-block-hi); }
+:root[data-theme="dark"] .book .bk-ent-pusher { border-color: var(--entity-pusher-hi); }
+:root[data-theme="dark"] .book .bk-ent-block  { border-color: var(--entity-block-hi); }
+:root[data-theme="dark"] .book .bk-ent-target { border-color: var(--entity-target-hi); }
+:root[data-theme="dark"] .book .sidebar__link[data-read="true"] .sidebar__title::after { color: var(--entity-target-hi); }
+/* the sim/poster stages + HUD chips are hardcoded-LIGHT instruments in BOTH
+   themes (see the comment above); hold their TEXT at light-theme token values so
+   the flipped dark tokens don't render labels/HUD/status light-on-light. */
+:root[data-theme="dark"] .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud) {
+  --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
+  --signal: #1f56de; --alert: #c0362a;
+}
+
+/* (B) OS default — identical payload, gated on "prefers dark & not toggled light" */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { background: #15120d; color-scheme: dark; }
+  :root:not([data-theme="light"]) .book {
+    color-scheme: dark;
+    --paper:       #15120d;
+    --paper-2:     #1d1912;
+    --paper-3:     #241f16;
+    --paper-edge:  #322b1f;
+    --ink:         #ece4d6;
+    --ink-soft:    #cabfac;
+    --ink-mute:    #9d917d;
+    --rule:        #322b20;
+    --rule-strong: #4a4030;
+    --book:        #dd9a72;
+    --book-soft:   #b9714f;
+    --signal:      #6f9dff;
+    --signal-ink:  #0c1018;
+    --signal-soft: rgba(111, 157, 255, 0.12);
+    --signal-line: rgba(111, 157, 255, 0.40);
+    --alert:       #ff6f61;
+    --entity-pusher-ink: #f0a25c;
+    --entity-target-ink: #45c79e;
+  }
+  :root:not([data-theme="light"]) body.book::before { mix-blend-mode: screen; opacity: 0.32; }
+  :root:not([data-theme="light"]) .book .bk-legend-item .bk-e-block { color: var(--entity-block-hi); }
+  :root:not([data-theme="light"]) .book .bk-ent-pusher { border-color: var(--entity-pusher-hi); }
+  :root:not([data-theme="light"]) .book .bk-ent-block  { border-color: var(--entity-block-hi); }
+  :root:not([data-theme="light"]) .book .bk-ent-target { border-color: var(--entity-target-hi); }
+  :root:not([data-theme="light"]) .book .sidebar__link[data-read="true"] .sidebar__title::after { color: var(--entity-target-hi); }
+  :root:not([data-theme="light"]) .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud) {
+    --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
+    --signal: #1f56de; --alert: #c0362a;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   ThemeToggle — the button that stamps data-theme on <html>. Styled in C's
+   language: a warm paper chip, mono glyph, one signal-blue focus ring. Adapts
+   to dark automatically (it consumes the same tokens).
+   ------------------------------------------------------------------------ */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.1rem; height: 2.1rem; padding: 0;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  cursor: pointer;
+  line-height: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink-mute); }
+.theme-toggle:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.theme-toggle svg { width: 1.02rem; height: 1.02rem; display: block; }
+/* the two glyphs cross-fade on state (JS toggles the button's data-theme attr) */
+.theme-toggle .tt-moon { display: none; }
+.theme-toggle .tt-sun  { display: block; }
+.theme-toggle[data-active="dark"] .tt-moon { display: block; }
+.theme-toggle[data-active="dark"] .tt-sun  { display: none; }

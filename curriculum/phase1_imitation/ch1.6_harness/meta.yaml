@@ -1,0 +1,131 @@
+id: ch1.6-harness
+title: "Evaluation Is Hard"
+artifact: harness.py         # target ~250 LOC (built to 387: the from-scratch CI math + seeded suites + a two-policy overlap demo + a held-out variant, one file)
+task: pusht                  # evaluates BC policies on curriculum/common/envs/pusht; the statistics are the subject, not the robot
+objectives:
+  - Explain why a single-number success rate over 20 episodes is a point estimate with a wide band, and read the ch1.3/1.4/1.5 headlines (ACT/flow/diffusion "0.40 vs 0.30") as the noise they are
+  - Build a Wilson score confidence interval on a success rate FROM SCRATCH in numpy (no scipy), understand why it beats the naive Wald interval at the boundary (k=0/k=n), and cross-check it against a percentile bootstrap
+  - Show that two real policies whose 20-episode point estimates differ can have OVERLAPPING confidence intervals — the ranking is NOT established at that N — and that growing N is what makes a real gap significant (or exposes that there is none)
+  - Run a LIBERO-style held-out eval on a start distribution the policy never trained on, and measure the generalization gap WITH its own confidence interval
+
+scale_lab: false
+# The map's ch1.6 row is CPU+T4 and calls for no distinct Scale Lab. This DRAFT ships
+# the free-tier core only (the whole run is 0.6 min on cpu-laptop). The scale knobs
+# (--eval_episodes, --n_seeds, --num_demos) are the on-ramp: the chapter's OWN lesson
+# is that bigger N buys a tighter CI, so "scaling" here means turning --n_seeds up and
+# watching the diff CI separate. If the author later wants a T4 study (a bigger policy,
+# thousands of eval episodes), set scale_lab: true + a ref and have wallclock-bench
+# MEASURE it — do not assert a scaling claim.
+
+# READ-THE-REAL-THING: the map pairs this chapter with LIBERO-style held-out variants.
+# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline
+# commit sha and must never invent one. The real repo is LIBERO (Liu et al., "LIBERO:
+# Benchmarking Knowledge Transfer for Lifelong Robot Learning", NeurIPS 2023 Datasets
+# & Benchmarks), Lifelong-Robot-Learning/LIBERO. site RTRT.astro renders nothing until
+# repo + commit both exist.
+read_the_real_thing: true
+# rtrt:
+#   repo: Lifelong-Robot-Learning/LIBERO   # author: confirm + pin a real commit sha
+#   commit: <author pins a real sha>
+#   focus:
+#     - the held-out task suites (LIBERO-Object / -Goal / -Spatial): what is varied and what is held fixed
+#     - the evaluation loop + how success is aggregated across tasks and seeds
+#     - the reported metrics: mean success across N rollouts vs our per-suite CI (they average; we band)
+
+demo: harness_eval_bands     # 2D stats panels (the swing + the two-policy overlap + the held-out gap); no MuJoCo/WASM needed
+
+# All reference metrics: seed 0, cpu, mujoco 3.10.0 / torch 2.10.0 / numpy 2.4.6. The
+# two policies are tiny BC MLPs trained on the deterministic scripted expert. The whole
+# THESIS is the STATISTICS, and it is decisive and reproducible: at N=20 the strong-vs-
+# weak ranking is NOT significant (the CIs overlap 0); pool to N=200 and it IS. The
+# policy success numbers are modest on purpose (BC on tight scripted demos saturates ~0.2)
+# — that is fine, the subject is the error bar, not the robot.
+reference_run:
+  provenance: "seed 0 on cpu; default config (num_demos 120, num_demos_weak 40, hidden_dim 192, epochs 300, eval_episodes 20, n_seeds 10); measured 2026-07-06"
+  # --- (1) the swing: one 20-episode suite is a coin flip ---
+  suite_rate_min: 0.05                # strong policy, worst of 10 suites of 20
+  suite_rate_max: 0.30                # strong policy, best of 10 suites of 20
+  suite_rate_std: 0.087321            # a single "20-episode success rate" swings this much across suites
+  # --- (2) Wilson vs bootstrap agree (two roads, one CI) on the pooled strong estimate ---
+  strong_pooled_rate: 0.225           # k=45 of n=200
+  strong_pooled_ci_lo: 0.172624       # Wilson 95%
+  strong_pooled_ci_hi: 0.287741
+  strong_pooled_bootstrap_lo: 0.17    # percentile bootstrap, seeded — lands on top of Wilson
+  strong_pooled_bootstrap_hi: 0.285
+  # --- (3) SINGLE NUMBERS LIE: same two policies, small N vs large N ---
+  strong_small_rate: 0.30             # strong, suite 0, N=20 (OVERSTATES the pooled 0.225 — a lucky suite)
+  weak_small_rate: 0.20               # weak, suite 0, N=20
+  small_diff_ci_lo: -0.165595         # Newcombe diff CI at N=20 CONTAINS 0 ->
+  small_diff_ci_hi: 0.349383          #   the ranking is NOT significant at 20 episodes
+  small_significant: false
+  weak_pooled_rate: 0.105             # k=21 of n=200
+  pooled_diff_ci_lo: 0.047465         # at N=200 the diff CI EXCLUDES 0 ->
+  pooled_diff_ci_hi: 0.191986         #   the ranking IS significant; the gap was real, 20 episodes just couldn't see it
+  pooled_significant: true
+  # --- (4) HELD-OUT: same strong policy, a start region it never trained on ---
+  heldout_pooled_rate: 0.08           # OOD annulus (block 0.24-0.30 m from target; training demos: 0.10-0.24 m)
+  heldout_pooled_ci_lo: 0.049841
+  heldout_pooled_ci_hi: 0.125989
+  heldout_gap_significant: true       # train-dist 0.225 vs held-out 0.08, gap CI +0.08..+0.21 excludes 0
+  # Seed robustness (default config, cpu): the N=20 ranking is NOT significant on ANY
+  # seed (0/1/2) — 20 episodes never resolves it, the robust core lesson. The N=200
+  # ranking is significant when the true gap is real: seed0 (strong 0.225 vs weak 0.105)
+  # SIG, seed2 (0.14 vs 0.07) SIG, seed1 (0.11 vs 0.08 — the strong policy trained weaker
+  # that seed, so the true gap shrank) NOT SIG. That is the honest truth and it REINFORCES
+  # the lesson: significance tracks the real gap, not the seed you happened to pick.
+  # Break-It signature (same seed 0, measured 2026-07-06 cpu):
+  break_too_few_episodes: 5           # --break too_few shrinks every suite to 5 episodes
+  break_too_few_small_diff_width: 0.92 # the strong-vs-weak diff CI at N=5 is ~0.92 wide and spans 0 — a number, but not evidence
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The demonstration is the ROCK: N=20 diff CI [-0.17, +0.35] overlaps 0, N=200 diff
+  #    CI [+0.05, +0.19] excludes 0. Reproducible (twice-run byte-identical on cpu). Lead with it.
+  #  * Do NOT claim the strong policy is "better" without the N. At 20 episodes it is not
+  #    established — that is the entire point, and it is exactly the ch1.3/1.4/1.5 thread.
+  #  * The policy absolute numbers (0.1-0.3) are modest because BC on the tight, low-diversity
+  #    scripted demos saturates low. That is not a defect: the chapter grades the METHOD of
+  #    evaluation, and low, close rates are the HARD case where single numbers lie loudest.
+  #  * Wilson and bootstrap agreeing is a FEATURE to show, not a coincidence — two independent
+  #    derivations of the same band.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
+# provenance, not a bare magic number). checks.py reads these instead of inlining
+# tolerances. The reproduce checks train two policies (~15 s on CPU at this reduced
+# config) and are @pytest.mark.slow — excluded from `make check`, which runs only the
+# fast math gates (ex3 Wilson-CI completion, ex4 boundary-CI bug-hunt) and the recorded
+# predictions.
+exercise_checks:
+  exercise_config:                 # shared reduced config for the slow reproduce checks (kept small so a check runs in ~15 s)
+    num_demos: 60
+    num_demos_weak: 20
+    hidden_dim: 128
+    epochs: 150
+    eval_episodes: 20
+    n_seeds: 6
+    provenance: "measured 2026-07-06 with harness.py at this reduced config, seed 0, cpu: N=20 diff CI [-0.08,+0.30] NOT significant; N=120 diff CI [+0.03,+0.16] SIGNIFICANT; held-out 0.01 vs train 0.11 gap [+0.04,+0.17] REAL. The DIRECTIONS are robust; the checks assert them, not the exact rates."
+  ex1:                             # ex1_predict_significance.py (predict-then-run) — the "harness graded by itself"
+    answer: "B"                    # NOT significant at N=20 (CIs overlap), significant at N=200 (they separate)
+  ex2:                             # ex2_predict_heldout.py (predict-then-run)
+    answer: "A"                    # held-out success is significantly BELOW train-distribution — the gap is real
+  ex3:                             # ex3_completion_wilson.py (code-completion, fast)
+    abs_tol: 1.0e-6               # completed Wilson CI must match the textbook values (0/10 -> [0,0.2775]; 5/10 -> [0.2366,0.7634])
+  ex4:                             # ex4_bughunt_boundary_ci.py (bug-hunt, fast)
+    provenance: "self-contained numpy fixture; the fix replaces the Wald interval (which collapses to zero width at k=0/k=n, claiming certainty from a handful of trials) with the Wilson interval"
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
+# is not built yet (ch1.6 is a draft pending the teaching-pass); notebook-tier-test writes
+# both on generation, and the gate skips a chapter that carries neither key (never a
+# PENDING placeholder, which reads as stale).
+
+# region_hashes intentionally omitted until the site build renders this chapter
+# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
+# on first render; do not hand-write them.
+
+region_hashes:
+  setup: 9eb776ffc521d74790e879069553a9156244ef173055aabbe4f41899f1e0c4f4
+  stats: d1d3d92b176e761e9b7e03c06baac07101caff77bdd6b5d2100889c31d7b5972
+  policy: ce93d549a94b14a9787ded1988d0426b24b09c94280a131d0bd1acfedd501098
+  eval: f442e4b1b5d9d950dc0a308dc156610662b492afb0006b7ae33e32c29eaf575a
+  report: 8f82307441452a16e165c278c960bc4335168665f9cd8cf5e9cb3bcb97961435
+
+notebook_hash: 52d4f5969c64236e80776cabdbbc5a21002cc32e54cac19b53a9d2b81ce35b32        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 135c4ffbe6e0bbcc522405440c86345e97153ce60cd456f0b037e351237db976   # sha256 of the generated notebook bytes; mismatch => hand-edited

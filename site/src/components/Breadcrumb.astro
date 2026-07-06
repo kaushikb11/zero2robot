@@ -1,0 +1,19 @@
+---
+// Breadcrumb — Home / Phase / Chapter. Static.
+import type { ChapterInfo } from "../lib/curriculum.ts";
+
+interface Props {
+  chapter: ChapterInfo;
+}
+const { chapter } = Astro.props;
+---
+
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol class="breadcrumb__list">
+    <li class="breadcrumb__item"><a href="/">Home</a></li>
+    <li class="breadcrumb__item">{chapter.phaseLabel}</li>
+    <li class="breadcrumb__item breadcrumb__item--current" aria-current="page">
+      {chapter.number} · {chapter.title}
+    </li>
+  </ol>
+</nav>

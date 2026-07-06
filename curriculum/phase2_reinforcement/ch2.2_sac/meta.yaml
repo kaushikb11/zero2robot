@@ -1,0 +1,66 @@
+id: ch2.2-sac
+title: "SAC and the Off-Policy Bargain"
+artifact: sac.py           # 387 LOC (measured); target ~350, hard cap 450
+task: pusher_reach         # curriculum/common/envs/pusher_reach — dense reward (-distance), continuous torque
+dataset:
+  reference: null          # RL generates its own data by acting; no demo dataset
+  learner_path: false
+objectives:
+  - Implement SAC from scratch in one file — squashed-Gaussian policy (reparam + tanh log-prob correction), twin Q critics + target networks, auto-tuned entropy temperature, soft target updates
+  - Explain the off-policy bargain — why a replay buffer reuses each transition many times, and the instability (Q divergence) that twin-Q + target nets + entropy tame
+  - Measure, don't assert, that off-policy SAC is more SAMPLE-EFFICIENT than on-policy PPO on the dense-reward pusher-reach (env-steps-to-solve, head-to-head)
+  - State WHEN off-policy wins (dense reward + cheap env + heavy sample reuse) and when it does not
+companion_tooling:
+  # NOT the artifact (LOC-exempt, forbidden-imports still enforced). Holds the
+  # measured SAC-vs-PPO comparison that does not fit under sac.py's 450 cap —
+  # the ch2.1 spike H3 finding applied. The on-policy reference is a compact
+  # from-scratch PPO (ch2.1 family), not a framework.
+  - compare_ppo_sac.py
+scale_lab: false           # map lists ch2.2 tier T4; free-tier CPU config measured. A 4090 SL (bigger buffer/nets, PushT-dense) is a future add, not this draft.
+read_the_real_thing: true
+# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor is CleanRL's single-file
+# sac_continuous_action.py (~280 LOC) — the reference the learner graduates to.
+# Do NOT invent a commit sha here; the read-the-real-thing skill pins the real
+# upstream commit.
+#   repo: vwxyz/cleanrl   # PLACEHOLDER — resolve the real org/commit via the skill
+demo: pusher_sac_reach     # hero: trained SAC arm reaches; visitor drags the target, the arm re-reaches
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances.
+# PROVENANCE: seed sweep 0-2 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6;
+# EXERCISE config (total_steps 15000, buffer_size 100000 default); measured 2026-07-06.
+# H2 note (ch2.1 spike): the graded assertion is the STRONG learns-signal over N
+# seeds (eval final distance clearly below the random baseline), never a flaky
+# single-run effect. At the full 30k default the seed-0 run solves (<0.05m) at
+# 18000 env steps; at the 15k exercise budget it reaches ~0.065 m — well below the
+# random 0.176 m baseline on every seed, but short of the 0.05 m solve bar (so the
+# bands assert "clearly learned", not "solved").
+exercise_checks:
+  ex1:                     # ex1_predict_multiseed.py — trains SAC on seeds 0-2 (each seed bit-reproducible on CPU)
+    provenance: "cpu, seeds 0-2, total_steps 15000; measured 2026-07-06: final_dist [0.0735, 0.0718, 0.0495] m, mean 0.0649 (random ~0.176)"
+    learns_mean_dist_max: 0.11       # measured mean 0.0649; margin to 0.11, still far below random 0.176
+    learns_per_seed_dist_max: 0.13   # measured worst seed 0.0735; every seed beats random by a clear margin
+  ex2:                     # ex2_investigate_replay.py — default vs 20x-smaller replay, seeds 0-2
+    provenance: "cpu, seeds 0-2, total_steps 15000; measured 2026-07-06: default mean 0.0649 m vs small-buffer(2000) mean 0.0876 m (worse on all 3 seeds)"
+    default_learns_mean_dist_max: 0.11   # default reliably learns (strong signal); the replay-shrink effect is observational (measured: shrinking hurts, but only by ~0.02 m at this budget)
+
+# region_hashes: recorded from the frozen artifact (matches the ch2.1 convention;
+# check_prose_code_drift recomputes each region's sha256 and gates on drift). The
+# author/site build refreshes these if a voice pass edits the artifact.
+
+# notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill when
+# the Colab variant is generated. Not gated by `make check`.
+
+region_hashes:
+  setup: d91783a7e5a69fed1e5106f3047ce978332cad6f55613663a5e47995c3c0a62a
+  env: 92dba03857c0b457d145d6e384412359f08c0a27918a3a95b99f653b7f907a1a
+  model: 8f475fa1b05875cdbe542b221840aa185c1c6c4835369658ed9b5a31920526c0
+  replay: d093649c07cd455a30199738cdf3b6e0b2eb39652f2321419c3f0f2a12ea5564
+  update: 7d8427ca00d976e04482299b1e7565234112b9c58ce92b27408d32a0317bb956
+  eval: 89f51273777765aec5bce64a8e952af57fad47bed60db6ff1d3092a3886a055d
+  train: eb3266c57827bb7c7e4e5fb020e88300e8f5b6ff38703e93a43aa24bf4ac675d
+  report: e2cc4242b5e907961ec2cc9383e8cd6852c086615faddda64a0936c90855b15e
+
+notebook_hash: 7117292c948501f25b24e67bc5851c177d5c8134b1fed6a4f6dcc29680bf138a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 9b994b64012546c537ed1fa3cc8773dcf276a9db0a0e1c46130961cf5d062636   # sha256 of the generated notebook bytes; mismatch => hand-edited

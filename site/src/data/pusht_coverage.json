@@ -1,0 +1,101 @@
+{
+  "schema": "z2r-coverage-1",
+  "task": "pusht",
+  "chapter": "ch1.1-bc",
+  "variable": "block_position_xy",
+  "world_half_extent_m": 0.45,
+  "target_xy": [
+    0.0,
+    0.0
+  ],
+  "k_bins": 48,
+  "envelope_radius_m": [
+    0.23543,
+    0.2374,
+    0.23713,
+    0.2352,
+    0.22825,
+    0.21989,
+    0.22147,
+    0.22966,
+    0.23519,
+    0.23806,
+    0.23799,
+    0.23541,
+    0.23522,
+    0.23674,
+    0.23612,
+    0.23315,
+    0.22949,
+    0.23041,
+    0.23425,
+    0.23589,
+    0.23552,
+    0.23435,
+    0.23628,
+    0.23892,
+    0.23863,
+    0.23749,
+    0.23665,
+    0.23719,
+    0.23467,
+    0.23077,
+    0.23344,
+    0.23348,
+    0.22984,
+    0.23292,
+    0.23763,
+    0.23343,
+    0.2271,
+    0.2287,
+    0.23054,
+    0.23051,
+    0.23215,
+    0.23342,
+    0.2338,
+    0.23525,
+    0.23562,
+    0.23534,
+    0.23589,
+    0.23473
+  ],
+  "metric": "radial_beyond_envelope",
+  "provenance": {
+    "derived_from": "real scripted-expert demonstration rollouts \u2014 the exact distribution gen_demos.py writes the BC training set from",
+    "env": "curriculum/common/envs/pusht/pusht_env.py (PushTEnv.reset annulus r in [0.10,0.24], uniform yaw) + scripted_expert.py (noise=0)",
+    "generator": "site/scripts/gen_coverage.py",
+    "generator_command": "../.venv/bin/python scripts/gen_coverage.py --episodes 1500 --seed 0 --k-bins 48 --pct 99.5",
+    "episodes": 1500,
+    "seed0": 0,
+    "visited_block_positions": 102933,
+    "envelope_percentile": 99.5,
+    "expert_success_rate": 0.995,
+    "start_radius_m": {
+      "min": 0.1001,
+      "mean": 0.1704,
+      "max": 0.24,
+      "annulus_spec": [
+        0.1,
+        0.24
+      ]
+    },
+    "envelope_radius_m_summary": {
+      "min": 0.2199,
+      "mean": 0.2337,
+      "max": 0.2389
+    },
+    "yaw_note": "reset samples yaw uniformly on [-pi, pi), so orientation is fully in-distribution; the shift axis this toy exposes is block POSITION, hence a position-only coverage region.",
+    "metric_validation_vs_nearest_neighbor": {
+      "outward_query_points": 2876,
+      "mean_abs_diff_m": 0.004497217856663036,
+      "p95_abs_diff_m": 0.01566902138695034,
+      "max_abs_diff_m": 0.01802807278869925
+    },
+    "versions": {
+      "mujoco": "3.10.0",
+      "numpy": "2.4.6"
+    },
+    "generated": "2026-07-05",
+    "pusht_git": "bdee2eb"
+  }
+}

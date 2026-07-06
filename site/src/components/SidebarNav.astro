@@ -1,0 +1,76 @@
+---
+// SidebarNav — the chapter index grouped by phase (Phase 0 / Phase 1 → chapters
+// by number + title). Fully static; the current chapter is marked
+// aria-current="page". Reading-progress JS (in ChapterLayout) decorates visited
+// links with a data-read attribute at runtime, but the nav is complete without JS.
+import { chaptersByPhase, type ChapterInfo } from "../lib/curriculum.ts";
+import ThemeToggle from "./ThemeToggle.tsx";
+
+interface Props {
+  chapters: ChapterInfo[];
+  currentSlug?: string;
+}
+const { chapters, currentSlug } = Astro.props;
+const groups = chaptersByPhase(chapters);
+---
+
+<nav class="sidebar" aria-label="Chapters">
+  <div class="sidebar__top">
+    <a class="sidebar__brand" href="/">zero2robot</a>
+    <ThemeToggle client:only="preact" />
+  </div>
+
+  {/* Search + help are JS-only (the overlay islands need JS); the "/" · ⌘K · ?
+      keybinds also open them. Hidden without JS; reading is unaffected. */}
+  <div class="sidebar__util">
+    <button class="sidebar__search" type="button" data-search-open hidden>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+    <button class="sidebar__search" type="button" data-help-open hidden>
+      <span>Help</span><kbd>?</kbd>
+    </button>
+  </div>
+
+  <ul class="sidebar__quicklinks">
+    <li><a href="/about/" aria-current={currentSlug === undefined && Astro.url.pathname.startsWith("/about") ? "page" : undefined}>Start here</a></li>
+    <li><a href="/progress/">Your progress</a></li>
+  </ul>
+
+  {
+    groups.map((g) => (
+      <div class="sidebar__phase">
+        {/* nav group LABEL, not a document heading — keeps the page heading
+            outline (h1 → h2 …) intact rather than injecting sidebar h2s first. */}
+        <p class="sidebar__phase-label" id={`ph-${g.phaseKey}`}>{g.phaseLabel}</p>
+        <ul class="sidebar__list" aria-labelledby={`ph-${g.phaseKey}`}>
+          {g.chapters.map((ch) => (
+            <li class="sidebar__item">
+              <a
+                class="sidebar__link"
+                href={`/${ch.slug}/`}
+                data-chapter={ch.slug}
+                aria-current={ch.slug === currentSlug ? "page" : undefined}
+              >
+                <span class="sidebar__num">{ch.number}</span>
+                <span class="sidebar__title">{ch.title}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</nav>
+
+<script>
+  // Reveal + wire the search affordance once JS is available; dispatch the event
+  // the SearchOverlay island listens for (works regardless of hydration order).
+  for (const b of document.querySelectorAll<HTMLElement>("[data-search-open]")) {
+    b.hidden = false;
+    b.addEventListener("click", () => window.dispatchEvent(new Event("z2r:search-open")));
+  }
+  for (const b of document.querySelectorAll<HTMLElement>("[data-help-open]")) {
+    b.hidden = false;
+    b.addEventListener("click", () => window.dispatchEvent(new Event("z2r:help-open")));
+  }
+</script>

@@ -1,0 +1,36 @@
+# Demo embed stub — ch0.5 "pusht-inspect".
+# Playground integration point: playground/ owns the rerun web viewer embed and
+# the .rrd hosting. This file declares WHAT the embed shows; the Python side is
+# inspect.py's log_rerun, which replays a dataset onto the canonical entity paths
+# (.claude/skills/rerun-instrument). Coordinate at the playground contracts level
+# before wiring. Unlike ch0.4 this demo is NON-interactive: it is a rerun replay
+# of a recorded dataset, not a live teleop surface.
+demo: pusht-inspect
+kind: rerun-replay             # embeds the rerun web viewer over a hosted .rrd (not a WASM sim)
+source: inspect.py             # the .rrd comes from `python inspect.py --dataset <your ch0.4 output>`
+scene: pusht                   # entity paths must equal pusht_env.py / ch0.4: world/objects/tee, world/robot/pusher
+timeline: sim_time             # scrub a demonstration frame-by-frame, like reading a story
+entities:                      # the canonical tree the viewer opens on (rerun-instrument conventions)
+  - world/objects/target       # green goal T (static)
+  - world/objects/tee          # the block, posed per frame from obs[2:6]
+  - world/robot/pusher         # the pusher, posed per frame from obs[0:2]
+  - policy/action              # the recorded [vx, vy] as scalars
+  - eval/pos_err               # reconstructed block->target distance (m)
+  - eval/ang_err               # reconstructed yaw error (rad)
+  - eval/episode_index         # which demonstration a frame belongs to
+hud:
+  - episode_index
+  - success                    # reconstructed terminal-frame reached (the "success hiding in the data")
+notes: >
+  The hero flow: a learner records episodes in ch0.4, then runs
+  `inspect.py --dataset <their dataset>` and scrubs the resulting .rrd here —
+  watching the pusher worry the T onto the green target, reading episode
+  boundaries on the sim_time timeline, and seeing the eval/pos_err and
+  eval/ang_err scalars fall as a demonstration succeeds. The --break yaw-swap
+  variant is worth showing side by side: the SAME data, but the tee renders
+  rotated wrong, making "seeing like a robot" literal. A per-chapter blueprint
+  (demo/blueprint.rbl) that fixes this entity layout is authored later by a human
+  with the rerun viewer open (rerun-instrument skill); until then the viewer
+  opens on its default layout. Graceful-degrade ladder (playground/CLAUDE.md):
+  live rerun web viewer -> static screenshot of the tree + a Colab link that
+  regenerates the .rrd; never a blank screen.

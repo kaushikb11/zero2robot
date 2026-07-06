@@ -1,0 +1,52 @@
+# Demo embed stub — ch1.6 "harness_eval_bands".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Unlike ch1.1-1.5 this chapter has NO policy to
+# drive in the browser — the subject is the STATISTICS, and every panel is a pure
+# 2D plot of numbers harness.py already wrote to metrics.json / harness.rrd. There
+# is NOTHING blocked on a contract-v2 sampler runtime here: this embed is fully
+# unblocked and needs no MuJoCo/WASM. It is the cheapest embed in the phase and the
+# most important to get right, because the whole chapter is "look at the band."
+#
+# Three panels, each a static plot fed from the seed-0 reference run (meta.yaml):
+demo: harness_eval_bands
+panels:
+  - id: the_swing
+    kind: points1d               # a strip/dot plot, no MuJoCo/WASM needed
+    title: "One 20-episode number is a coin flip"
+    shows: >
+      The strong policy's per-suite success rate for each of the 10 suites of 20
+      episodes, plotted as dots on a 0..1 axis (measured: they range 0.05..0.30,
+      std 0.087), with the pooled 200-episode estimate 0.225 and its Wilson band
+      [0.17, 0.29] drawn behind them. The point: any single dot could have been
+      your "the success rate", and they disagree by 6x.
+    source: harness.rrd           # entity eval/suite_success_rate (one scalar per suite)
+    timeline: suite
+  - id: single_numbers_lie
+    kind: intervals               # two rows of [point estimate + CI], at two N
+    title: "Do these two policies actually differ?"
+    shows: >
+      Strong vs weak, at N=20 and at N=200. At N=20 the two Wilson intervals
+      overlap heavily and the difference CI is [-0.17, +0.35] (spans 0 — ranking
+      NOT established); at N=200 the intervals pull apart and the difference CI is
+      [+0.05, +0.19] (excludes 0 — the gap is real). Same policies, same rollouts,
+      opposite verdict — the only thing that changed is how many episodes you
+      counted. This IS the ch1.3/1.4/1.5 "0.40 vs 0.30" thread, made rigorous.
+    source: harness.rrd           # entities eval/strong_pooled, eval/weak_pooled (rate + ci)
+  - id: held_out_gap
+    kind: intervals
+    title: "90% on WHAT starts?"
+    shows: >
+      The strong policy on train-distribution starts (0.225 [0.17, 0.29]) vs the
+      LIBERO-style held-out variant — the block spawned farther out than any demo
+      (0.08 [0.05, 0.13]). The gap CI [+0.08, +0.21] excludes 0: a real
+      generalization drop, with its own error bar because it is a success rate too.
+    source: harness.rrd           # entity eval/heldout_pooled (rate + ci)
+notes: >
+  Author: this embed is the strongest teaching artifact in the chapter and it is
+  UNBLOCKED (pure 2D, zero browser deps) — ship it. The site should also render the
+  ch1.3/1.4/1.5 headline table with the CIs this chapter computes DRAWN ON, so the
+  reader sees the old "0.40 vs 0.30" bars sprout error bars that overlap. An optional
+  interactive: a slider on n_seeds that redraws the difference CI live, so the visitor
+  watches the band tighten and the verdict flip as N grows — that is the whole lesson
+  in one drag. Coordinate the slider with playground only if cheap; the static
+  small-multiple already carries it.

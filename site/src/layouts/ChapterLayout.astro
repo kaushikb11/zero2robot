@@ -1,0 +1,134 @@
+---
+// ChapterLayout — the shared chrome for every chapter page and the index, in the
+// won Variant C system. It owns the page shell: document head, the honest sticky
+// draft ribbon (a galley-proof band), the sidebar, a breadcrumb slot, the warm
+// reading column, a prev/next slot, and the reading-progress bar.
+//
+// JS-OFF: prose, code panels and the wall-clock ledger are server-rendered in
+// the body; the only two <script>s here are progressive enhancement — the
+// reading-progress bar (+ localStorage "read" marks) and the code-panel copy
+// buttons. Strip both and every page still reads completely.
+import SidebarNav from "../components/SidebarNav.astro";
+import SearchOverlay from "../components/search/SearchOverlay.tsx";
+import HelpOverlay from "../components/HelpOverlay.tsx";
+import { discoverChapters } from "../lib/curriculum.ts";
+
+interface Props {
+  title: string;
+  currentSlug?: string;
+  draft?: boolean;
+}
+const { title, currentSlug, draft = false } = Astro.props;
+const chapters = discoverChapters();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      // No-flash theme: stamp an EXPLICIT stored choice before first paint; if
+      // none, data-theme stays unset and the prefers-color-scheme media query
+      // drives the OS default (zero JS, auto-updating).
+      (function () {
+        try {
+          var t = localStorage.getItem("z2r:theme");
+          if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+    <title>{title}</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="book" data-slug={currentSlug}>
+    <div class="progress" aria-hidden="true"><div class="progress__bar" id="reading-progress"></div></div>
+
+    {
+      draft && (
+        <div class="bk-ribbon" role="note" aria-label="Draft — pending author voice pass">
+          <b>draft</b>
+          <span class="bk-ribbon-src">
+            pending author voice pass
+            <span class="bk-ribbon-tail"> · rendered verbatim from curriculum/**/prose/chapter.draft.md</span>
+          </span>
+        </div>
+      )
+    }
+
+    <a class="skip-link" href="#content">Skip to content</a>
+
+    <div class="shell">
+      <aside class="shell__sidebar">
+        <SidebarNav chapters={chapters} currentSlug={currentSlug} />
+      </aside>
+
+      <div class="shell__main">
+        <slot name="breadcrumb" />
+        <main id="content" class="reading">
+          <slot />
+        </main>
+        <slot name="prevnext" />
+      </div>
+    </div>
+
+    <SearchOverlay client:only="preact" />
+    <HelpOverlay client:only="preact" />
+
+    <!-- Reading-progress enhancer: additive only. No JS → no bar, full content.
+         Read/last-visited state lives in lib/progress.ts (one localStorage model,
+         shared with the progress dashboard + completion). -->
+    <script>
+      import { markRead, setLastVisited, isRead, subscribe } from "../lib/progress.ts";
+
+      const slug = document.body.dataset.slug;
+      const bar = document.getElementById("reading-progress");
+      if (slug) setLastVisited(slug);
+
+      function updateBar() {
+        if (!bar) return;
+        const doc = document.documentElement;
+        const scrollable = doc.scrollHeight - doc.clientHeight;
+        const pct = scrollable > 0 ? (doc.scrollTop / scrollable) * 100 : 0;
+        bar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+        if (slug && pct > 90) markRead(slug);
+      }
+      function decorateSidebar() {
+        document.querySelectorAll<HTMLElement>(".sidebar__link").forEach((a) => {
+          const c = a.dataset.chapter;
+          if (c && isRead(c)) a.setAttribute("data-read", "true");
+        });
+      }
+
+      subscribe(decorateSidebar);
+      decorateSidebar();
+      updateBar();
+      window.addEventListener("scroll", updateBar, { passive: true });
+      window.addEventListener("resize", updateBar, { passive: true });
+    </script>
+
+    <!-- Code-panel copy: progressive enhancement ONLY. Stripping this <script>
+         leaves the panels, their sha256 headers and every real code byte intact;
+         it only reveals + wires the copy buttons (hidden without JS). -->
+    <script>
+      document.documentElement.setAttribute("data-bk-js", "on");
+      for (const btn of document.querySelectorAll(".bk-copy")) {
+        btn.addEventListener("click", async () => {
+          const fig = btn.closest(".bk-panel");
+          const b64 = fig?.getAttribute("data-code") ?? "";
+          try {
+            const text = decodeURIComponent(escape(atob(b64)));
+            await navigator.clipboard.writeText(text);
+            const prev = btn.textContent;
+            btn.textContent = "copied";
+            setTimeout(() => {
+              btn.textContent = prev;
+            }, 1200);
+          } catch {
+            /* clipboard unavailable — no-op */
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

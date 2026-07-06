@@ -1,0 +1,59 @@
+---
+// HeroDemo — the "See it work" hero (Variant C). A crisp lab instrument mounted
+// inside a warm letterpress plate mat: the plate heading + the ONE signal-blue
+// "live · P2" badge, the server-rendered PlateIsland (poster JS-off, interactive
+// with JS), the entity legend (PushT chapters only), and the "See it work" lede
+// rendered from the chapter draft.
+//
+// JS-OFF: the island is server-rendered, so the poster + caption are in the
+// static HTML; only ch1.1's nominal/drift toggle needs JavaScript. The lede,
+// legend, heading and badge are all static.
+//
+// P2 SLOT CONTRACT: P2 replaces the BODY of PlateIsland with the real playground
+// embed keyed off `demo` (→ curriculum/**/demo/embed.yaml) + `task`. This
+// component is the stable frame around that island; P2 restyles nothing here.
+import PlateIsland from "./PlateIsland.tsx";
+
+interface Props {
+  demo?: string | null;
+  task?: string | null;
+  ledeHtml: string;
+}
+const { demo, task, ledeHtml } = Astro.props;
+const isPusht = task === "pusht";
+---
+
+<section class="bk-hero" aria-labelledby="bk-see">
+  <div class="bk-hero-head">
+    <p class="bk-plate-heading" id="bk-see">See it work</p>
+    <span class="bk-live">live · P2</span>
+  </div>
+
+  <div class="bk-plate">
+    <PlateIsland client:visible demo={demo} task={task} />
+  </div>
+
+  {
+    isPusht && (
+      <div class="bk-legend" aria-label="Entity colour key">
+        <span class="bk-legend-item">
+          <span class="bk-swatch" style="background: var(--entity-pusher)" />
+          <b class="bk-e-pusher">pusher</b>
+          <span class="bk-role">the agent that pushes</span>
+        </span>
+        <span class="bk-legend-item">
+          <span class="bk-swatch" style="background: var(--entity-block)" />
+          <b class="bk-e-block">T-block</b>
+          <span class="bk-role">the thing being pushed</span>
+        </span>
+        <span class="bk-legend-item">
+          <span class="bk-swatch bk-swatch-target" />
+          <b class="bk-e-target">target</b>
+          <span class="bk-role">where it needs to end up</span>
+        </span>
+      </div>
+    )
+  }
+
+  <div class="bk-lede" set:html={ledeHtml} />
+</section>

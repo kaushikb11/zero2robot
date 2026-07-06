@@ -1,0 +1,92 @@
+<!-- PUSHER-REACH scene (zero2robot Phase 2, ch2.2 SAC).
+
+     A minimal planar 2-link arm whose fingertip must REACH a randomly-placed
+     target. The canonical dense-reward continuous-control task (OpenAI Gym's
+     "Reacher" lineage): reward is negative fingertip->target distance, so every
+     step carries gradient toward the goal. That dense signal is exactly what an
+     off-policy learner (SAC, ch2.2) exploits — unlike cartpole's sparse-ish
+     alive bonus, which suits on-policy PPO (ch2.1).
+
+     Design (mirrors cartpole / PushT determinism discipline):
+       - arm: two capsule links on two hinge joints, both about +z, so the arm
+         moves purely in the x-y plane (a top-down planar reacher). shoulder is
+         anchored at the origin; elbow is at the end of link 1. A `fingertip`
+         site sits at the far end of link 2 — that is the end-effector.
+       - joints: torque-driven by ONE motor each. ctrl = [tau_shoulder,
+         tau_elbow] in [-1, 1], gear 0.5 => +-0.5 N*m at ctrl +-1. Small
+         `armature` + `damping` keep the double-pendulum dynamics well-behaved
+         and the analytic-IK + PD baseline stable (both are deterministic).
+       - NO joint limits and NO collisions anywhere (contype/conaffinity 0): the
+         links never touch each other, the target, or the floor. With no contact
+         solver and no limit constraints the dynamics are a pure articulated
+         2-body chain — bitwise CPU-deterministic and microsecond-cheap.
+       - gravity (-z) is PERPENDICULAR to the plane of motion (hinges about z),
+         so it exerts no torque about either joint: the arm never sags. The task
+         is a clean planar reach.
+       - target: a mocap body (a small red sphere). Mocap bodies carry no joints
+         and no dynamics — the env sets its position directly via data.mocap_pos
+         each reset, so the seeded target placement never enters qpos and can
+         never perturb the arm's dynamics.
+
+     Physics: link 0.1 m each (total reach 0.2 m). timestep 0.01 s; the env
+     applies FRAME_SKIP = 2 => 50 Hz control.
+-->
+<mujoco model="pusher_reach">
+  <option timestep="0.01" integrator="implicitfast"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <global offwidth="640" offheight="640"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.92 0.92 0.94" rgb2="0.83 0.83 0.87"
+             width="256" height="256"/>
+    <material name="floor_mat" texture="grid" texrepeat="8 8" reflectance="0"/>
+  </asset>
+
+  <default>
+    <!-- shared link look; no collisions (contype/conaffinity 0) -->
+    <geom type="capsule" size="0.01" rgba="0.30 0.35 0.60 1" contype="0" conaffinity="0"/>
+    <joint type="hinge" axis="0 0 1" damping="0.1" armature="0.01"/>
+  </default>
+
+  <worldbody>
+    <!-- top-down camera looking along -z at the x-y plane the arm lives in -->
+    <camera name="top" pos="0 0 0.5" quat="1 0 0 0" fovy="50"/>
+
+    <!-- visual-only floor (nothing collides) -->
+    <geom name="floor" type="plane" pos="0 0 -0.02" size="0.3 0.3 0.1" material="floor_mat"
+          contype="0" conaffinity="0"/>
+
+    <!-- fixed shoulder anchor at the origin (visual hub) -->
+    <geom name="anchor" type="cylinder" size="0.012 0.005" pos="0 0 0"
+          rgba="0.5 0.5 0.55 1" contype="0" conaffinity="0"/>
+
+    <!-- link 1: shoulder hinge at origin, capsule out to (0.1, 0, 0) -->
+    <body name="link1" pos="0 0 0">
+      <joint name="shoulder"/>
+      <geom name="link1_geom" fromto="0 0 0 0.1 0 0"/>
+
+      <!-- link 2: elbow hinge at the end of link 1 -->
+      <body name="link2" pos="0.1 0 0">
+        <joint name="elbow"/>
+        <geom name="link2_geom" fromto="0 0 0 0.1 0 0" rgba="0.55 0.35 0.30 1"/>
+        <!-- end-effector marker at the far tip of link 2 -->
+        <site name="fingertip" pos="0.1 0 0" size="0.012" rgba="0.9 0.4 0.35 1"/>
+      </body>
+    </body>
+
+    <!-- seeded random target: a mocap body, positioned each reset via mocap_pos -->
+    <body name="target" mocap="true" pos="0.15 0 0">
+      <geom name="target_geom" type="sphere" size="0.012" rgba="0.35 0.8 0.4 0.6"
+            contype="0" conaffinity="0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- one torque motor per joint: ctrl in [-1, 1] => +-0.5 N*m -->
+    <motor name="shoulder_torque" joint="shoulder" gear="0.5" ctrlrange="-1 1"/>
+    <motor name="elbow_torque"    joint="elbow"    gear="0.5" ctrlrange="-1 1"/>
+  </actuator>
+</mujoco>

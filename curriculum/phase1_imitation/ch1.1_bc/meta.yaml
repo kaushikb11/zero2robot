@@ -1,0 +1,37 @@
+id: ch1.1-bc
+title: "Behavior Cloning: The Dumbest Thing That Works"
+artifact: bc.py           # target ~220 LOC
+task: pusht               # LeRobot PushT dataset (pretrained path) + learner teleop path
+dataset:
+  reference: lerobot/pusht
+  learner_path: true      # from ch0.4 teleop session
+objectives:
+  - Implement supervised imitation from (obs, action) pairs in a single file
+  - Explain why MSE on actions is a defensible (and flawed) starting objective
+  - Diagnose covariate shift from a rerun trace of a failing rollout
+  - Run the full train→eval→export→browser loop with your own dataset
+scale_lab: false
+read_the_real_thing: false
+demo: pusht_bc_recovery   # hero: visitor perturbs block, BC policy sometimes recovers, often doesn't
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances.
+exercise_checks:
+  ex1:                    # ex1_bughunt_normalize_twice.py, config EX1_CONFIG in checks.py
+    provenance: "seed 0 on cpu, mujoco 3.10.0 / numpy 2.4.6; config: epochs 80, hidden_dim 128, eval_episodes 5; measured 2026-07-03"
+    buggy_mean_episode_return: -103.318   # smoke signature of the injected double-normalize bug
+    buggy_band: 2.0                       # |return - buggy| < band => bug still present, SKIP
+    ref_mean_episode_return_abs: 0.5      # a correct fix reproduces bc.py within these bands
+    ref_success_rate_abs: 0.21
+    ref_train_loss_abs: 1.0e-4            # training was never touched, so this stays tight
+
+notebook_hash: d5d4d867a8f62ad8ed8b86683afc36090438c6afaf35b144f2b2a3e5e4ce2a10        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: b9382e330910ae3a3c296ed27163f29bcd19ac9cbbd7270720f92edc50ca9e22   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 16c89e594920a1fd92da0df084644ea793fdd6431b5c79ba6a9629e65391f26e
+  data: 2650003f8fb903b7e3f2e803739faa3016e2d70c122e059da3281cd81b89cd3d
+  model: 587270db3559f2c26095ad76f60fdb50ff25aa77581fae8faa90136e21152441
+  train: fb3058a61d4aff4f7fbdd212332893dd2820045bff9cf76d5b33d43532d1ca53
+  eval: dcd865519e82294b232f28edb9a0fddc6cf81d89df0e929c9f6b357484f0163c

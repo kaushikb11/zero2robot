@@ -1,0 +1,35 @@
+# Demo embed stub — ch2.5 "quadruped_walk".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: walk.py saves a torch
+# state_dict for the ACTOR (walk_actor.pt), not an ONNX policy — the ONNX export
+# (tensor contract v1: observation float32[1,23] -> action float32[1,8]) is a
+# follow-up the author wires when this chapter graduates from draft to drop.
+# The squashed-Gaussian actor exports as: obs -> mean -> tanh(mean) (deterministic
+# eval action); the sampling/log-std branch is training-only and not exported.
+demo: quadruped_walk
+scene: quadruped            # curriculum/common/envs/quadruped/quadruped.xml, verbatim
+policy: walk_actor.onnx     # PENDING export; contract v1: obs float32[1,23] -> action float32[1,8]
+camera:
+  lookat: [0.0, 0.0, 0.2]
+  distance: 2.5
+  azimuth: 90               # side view: the sagittal-plane gait (hip sweep + knee flex) reads cleanest side-on
+  elevation: -10
+interaction: none           # v1 is watch-the-gait; a "drag to add a headwind / change mass" hook is the ch2.7 tie-in
+hud:
+  - sim_time
+  - forward_distance        # the emergent-gait payoff — watch the torso travel +x
+  - forward_velocity        # vx; the reward's forward term, rising as the stride settles
+  - torso_height            # stays near the 0.25 m ride height if the gait is stable (a faceplant tanks it)
+notes: >
+  The hero behavior is GAIT EMERGENCE made visible: side-on, the learned policy's
+  legs fall into a repeating stride and the torso travels forward — a motion
+  nobody scripted, discovered by SAC maximizing the ch2.4 reward. The honest
+  caveat carries into the embed: at the free-tier budget the emergent gait travels
+  FURTHER than the scripted trot (+3.0 m vs +2.15 m) and faster, but it is less
+  stable — it sprints and falls before the full 10 s horizon, so the torso-height
+  HUD dips and the episode ends early. That fast-but-fragile look is the honest
+  result; the Scale Lab (many more env steps on a GPU) is where it may learn to
+  stay up. Prefer a mid-training checkpoint (~45k steps) for the hero clip, where
+  the gait is both fast and rides longer. Contrast with ch2.2's pusher-reach hero
+  (precise reaching); here the hero is a whole-body periodic gait from reward alone.

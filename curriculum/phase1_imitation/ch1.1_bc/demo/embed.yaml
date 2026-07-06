@@ -1,0 +1,25 @@
+# Demo embed stub — ch1.1 "pusht_bc_recovery".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring (tensor contract v1 —
+# this chapter's bc_policy.onnx is also the playground hero's fallback model,
+# see 01-editorial/exemplar-chapter-1.1-outline.md production notes).
+demo: pusht_bc_recovery
+scene: pusht                # curriculum/common/envs/pusht/pusht.xml, verbatim
+policy: bc_policy.onnx      # contract v1: observation float32[1,10] -> action float32[1,2]
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.1
+  azimuth: 90
+  elevation: -60
+interaction: drag-tee       # visitor drags the T-block mid-rollout; the policy reacts live
+hud:
+  - sim_time
+  - pos_err                 # distance to target — watch it stall when the visitor drags off-distribution
+  - success
+notes: >
+  The hero behavior is imperfection on purpose: the BC policy pushes the block
+  home from ordinary starts, and the visitor's drag creates states the demos
+  never covered. Sometimes it recovers, often it doesn't — that failure is the
+  chapter's opening problem, and chapter 1.2's motivation. Reset button
+  re-seeds the block pose; no goal randomization in this phase.

@@ -1,0 +1,64 @@
+# Demo embed stub — ch1.5 "flow_multimodality".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): like ch1.3/1.4, this policy does
+# NOT fit tensor contract v1. flow.py exports flow_velocity.onnx whose signature is
+# velocity(point[1,2], flow_time[1], observation[1,10]) -> velocity[1,2] — THREE
+# inputs, and one action requires flow_steps of these chained through a forward-Euler
+# ODE integrator (a stateful sampler the runtime must own, plus the action mean/std
+# for un-standardizing). It is contract-v2-shaped, SAME as ch1.4 — but strictly
+# CHEAPER to drive: the sampler is x <- x + dt*v with NO schedule and NO injected
+# noise (contrast ch1.4's DDPM posterior). If playground builds the ch1.4 sampler
+# runtime, this one is a few lines less. This embed is BLOCKED on that contract-v2
+# path; ship it only after playground/src/policy/contracts.ts gains the sampler-aware
+# policy type.
+#
+# The HERO of this chapter's embed is the 2D TOY, same as ch1.4 — and it gains one
+# NEW panel unique to flow: the step-efficiency slider. Three panels:
+demo: flow_multimodality
+panels:
+  - id: toy_flow
+    kind: points2d               # a pure 2D scatter canvas, no MuJoCo/WASM needed
+    title: "Flowing a multimodal target"
+    shows: >
+      The ring target (grey), the flow samples (blue) that land ON the ring across
+      ALL directions, and the regression samples (red) collapsed into the empty
+      center. Scrub the flow_step timeline to watch pure noise slide along straight
+      lines into the ring — the interpolation melts the ring into noise, the ODE
+      rebuilds it. Same lesson as ch1.4, a simpler sampler. Zero deps in the browser.
+    source: flow.rrd              # entities toy/flow, toy/target, toy/regression, toy/forward
+    timeline: flow_step
+  - id: toy_step_efficiency
+    kind: points2d               # NEW vs ch1.4: the efficiency panel — the chapter's flow-specific point
+    title: "How few steps does flow need?"
+    shows: >
+      The SAME trained velocity net sampled at 2, 3, 5, 20, 100 Euler steps. Full
+      mode coverage (8/8) appears by ~3 steps; only 2 steps under-resolves. Sampling
+      steps are decoupled from training — this is one net, re-integrated. Author: this
+      panel can be a static small-multiple from the flow_steps sweep in meta.yaml, or
+      a slider if playground exposes flow_steps to the toy sampler.
+    source: flow.rrd
+  - id: pusht_policy
+    kind: mujoco-wasm             # BLOCKED on contract v2 (sampler-aware runtime)
+    scene: pusht                  # curriculum/common/envs/pusht/pusht.xml, verbatim
+    policy: flow_velocity.onnx    # 3-input velocity core — contract v2 (ODE sampler + un-standardize), NOT v1
+    runtime:
+      mode: flow-euler            # run the velocity net flow_steps times per control step, x <- x + dt*v, in JS
+      flow_steps: 100             # matches flow.py default; the toy shows 3-5 already suffice — author may lower for the embed
+    camera:
+      lookat: [0.0, 0.0, 0.02]
+      distance: 1.2
+      azimuth: 90
+      elevation: -70              # top-down
+    interaction: reset-seed       # visitor re-seeds the block spawn
+    hud:
+      - pos_err                   # block -> target distance; watch it drop
+notes: >
+  Author decides whether the embed ships the toy panels alone (unblocked, pure 2D,
+  the strongest teaching artifact — and the step-efficiency panel is the visual that
+  distinguishes this chapter from ch1.4) or waits to pair them with the PushT policy
+  panel (blocked on the contract-v2 sampler runtime). Recommendation: ship the two
+  toy panels first. The site should render flow.py and ch1.4's diffusion.py side by
+  side as a DIFF — that is the chapter's pedagogy; coordinate the diff view with site/.

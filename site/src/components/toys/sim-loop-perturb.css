@@ -1,0 +1,147 @@
+/* ch0.1 "The Simulation Loop" concept-toy — the TIMESTEP-instability toy.
+ *
+ * Co-located CSS for sim-loop-perturb.tsx (imported at the top of that file).
+ * Namespaced `sl-*` so it never collides with the global `ct-*`/`bk-*` classes
+ * in public/styles.css. It only *reads* the site's design tokens (--signal,
+ * --alert, --ink, --ink-mute, --paper*, --rule-strong, --font-mono); every var
+ * carries a fallback so the toy still renders if it is ever mounted outside the
+ * page shell. Colour discipline (per the frozen concept-toy contract):
+ *   - neutral ink  → the box + the table (entities are not the lesson here)
+ *   - ONE --signal blue → the live control (the dt slider) + its readout
+ *   - --alert red  → the "unstable / exploding" state only
+ */
+
+.sl {
+  display: grid;
+  gap: 0;
+}
+
+/* square arena — poster and canvas share the exact box, so booting never reflows */
+.sl-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+}
+.sl-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+/* live canvas — fills the figure, hidden until the WASM sim boots */
+.sl-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+.sl-canvas[hidden] { display: none; }
+
+/* SSR poster (JS-off + pre-boot) — same square box as the canvas */
+.sl-poster { position: absolute; inset: 0; }
+.sl-poster[hidden] { display: none; }
+.sl-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* poster vector styling (shared, static) */
+.sl-grid line { stroke: color-mix(in srgb, var(--rule-strong, #c8bc9e) 55%, transparent); stroke-width: 1; }
+.sl-arena { fill: none; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.5; }
+.sl-orbit { fill: none; stroke: var(--ink-mute, #6d6252); stroke-width: 1.3; stroke-dasharray: 5 4; stroke-opacity: 0.55; }
+.sl-anchor-ring { fill: none; stroke: var(--signal, #1f56de); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: 0.85; }
+.sl-anchor-dot { fill: var(--signal, #1f56de); }
+.sl-box { fill: color-mix(in srgb, var(--ink, #23201b) 82%, var(--paper, #f7f3ea)); stroke: var(--ink, #23201b); stroke-width: 1.2; }
+.sl-force { stroke: var(--signal, #1f56de); stroke-width: 2; opacity: 0.7; }
+.sl-axis { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; letter-spacing: 0.05em; fill: var(--ink-mute, #6d6252); }
+.sl-hint { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; letter-spacing: 0.02em; fill: var(--signal, #1f56de); }
+
+/* HUD — the live instrument. Makes the invisible visible: kinetic energy /
+   speed of mjData, which stays low at a small timestep and diverges at a big one. */
+.sl-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem; right: 0.7rem;
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.sl-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.sl-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.sl-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.sl-v.sl-ok  { color: var(--ink, #23201b); }
+.sl-v.sl-bad { color: var(--alert, #c0362a); }
+
+.sl-meter {
+  grid-column: 1 / -1;
+  height: 5px; border-radius: 3px; margin-top: 0.1rem;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent);
+  overflow: hidden;
+}
+.sl-meter-fill {
+  height: 100%; width: 0%;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 60%, var(--paper, #f7f3ea));
+  transition: width 0.12s linear, background 0.2s ease;
+}
+.sl-meter-fill[data-unstable="true"] { background: var(--alert, #c0362a); }
+
+/* boot / status line */
+.sl-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.sl-status[data-unstable="true"] { color: var(--alert, #c0362a); }
+.sl-status[data-failed="true"] { color: var(--alert, #c0362a); }
+
+/* controls — JS-only. The ONE control is the timestep slider (signal blue). */
+.sl-controls {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.sl-slider-row {
+  display: flex; align-items: center; gap: 0.7rem;
+  flex-wrap: wrap;
+}
+.sl-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.sl-slider-label b { color: var(--signal, #1f56de); }
+.sl-slider {
+  flex: 1 1 180px;
+  min-width: 150px;
+  accent-color: var(--signal, #1f56de);
+  cursor: pointer;
+}
+.sl-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.sl-dt-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--signal, #1f56de);
+  min-width: 6.5ch; text-align: right;
+}
+.sl-dt-val[data-unstable="true"] { color: var(--alert, #c0362a); }
+
+.sl-btn-row { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.sl-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sl-btn:hover { border-color: var(--signal, #1f56de); }
+.sl-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.sl-btn:disabled { opacity: 0.5; cursor: default; }
+.sl-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}

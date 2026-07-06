@@ -1,0 +1,148 @@
+---
+// CurriculumArc.astro — the journey. Supersedes the bare TOC with a structured,
+// honest map of the five-phase arc: which chapters are LIVE (real pages,
+// discovered from curriculum/) vs which are still COMING.
+//
+// HONESTY CONTRACT:
+//  · Chapter rows are curriculum DATA (title, objectives, artifact) pulled
+//    through the same bridge the chapter pages use — not authored copy, and
+//    every one links to a page that actually exists.
+//  · Phase blurbs ARE authored marketing copy → DRAFT, flagged by the section's
+//    draft band. They describe intent, never claim un-built chapters exist.
+//  · The five phases are structural facts (curriculum/ subdirectories). Phases
+//    with no built chapters render as "coming" — no invented titles or counts.
+//
+// SSR / JS-OFF: fully server-rendered; this is the readable-without-JS TOC.
+import { discoverChapters, chaptersByPhase } from "../../lib/curriculum.ts";
+import "./landing.css";
+
+const chapters = discoverChapters();
+const groups = chaptersByPhase(chapters);
+const builtByPhase = new Map(groups.map((g) => [g.phaseKey, g.chapters]));
+const liveCount = chapters.length;
+
+// The canonical five-phase arc (keys === curriculum/ subdirs, labels === the
+// bridge's phaseLabelFor). Blurbs are DRAFT copy behind the section's band.
+const PHASES: { key: string; label: string; blurb: string }[] = [
+  {
+    key: "phase0_foundations",
+    label: "Phase 0 · Foundations",
+    blurb:
+      "Make the simulator behave. Step physics by hand, author a scene, get frames and rotations right, and record your first teleoperated dataset.",
+  },
+  {
+    key: "phase1_imitation",
+    label: "Phase 1 · Imitation",
+    blurb:
+      "Teach a policy from demonstrations. Behavior cloning, exactly why it breaks, and the models built to stop it from breaking.",
+  },
+  {
+    key: "phase2_reinforcement",
+    label: "Phase 2 · Reinforcement",
+    blurb:
+      "Learn from reward instead of examples — for when demonstrations run out and the robot has to try, fail, and improve.",
+  },
+  {
+    key: "phase3_advanced",
+    label: "Phase 3 · Advanced",
+    blurb:
+      "The architectures and tricks behind modern manipulation, taken apart the same way — small, readable, and run end to end.",
+  },
+  {
+    key: "phase4_capstone",
+    label: "Phase 4 · Capstone",
+    blurb:
+      "Put every phase together into one project you can point at, measure honestly, and show.",
+  },
+];
+
+/** Split "Title: Subtitle" so the subtitle can hang below (mirrors [chapter].astro). */
+function splitTitle(title: string): [string, string] {
+  const i = title.indexOf(":");
+  return i >= 0 ? [title.slice(0, i).trim(), title.slice(i + 1).trim()] : [title, ""];
+}
+---
+
+<section class="ln-arc" id="curriculum" aria-labelledby="ln-arc-title">
+  <header class="ln-arc__head">
+    <p class="ln-kicker">The arc</p>
+    <h2 class="ln-arc__title" id="ln-arc-title">Five phases, one runnable file at a time.</h2>
+
+    <div class="ln-draft ln-draft--inline" role="note" aria-label="Draft section copy — pending DevRel and author pass">
+      <b>draft</b>
+      <span class="ln-draft__src">phase descriptions are placeholder copy · chapter list is live from <code>curriculum/</code></span>
+    </div>
+
+    <p class="ln-arc__stat">
+      <b class="ln-arc__count">{liveCount}</b>
+      {liveCount === 1 ? "chapter is" : "chapters are"} live and readable today.
+      The rest of the arc is being written — chapters appear here the moment they ship,
+      never before.
+    </p>
+  </header>
+
+  <ol class="ln-phases">
+    {
+      PHASES.map((phase) => {
+        const built = builtByPhase.get(phase.key) ?? [];
+        const isLive = built.length > 0;
+        return (
+          <li class="ln-phase" data-state={isLive ? "live" : "coming"}>
+            <div class="ln-phase__rail" aria-hidden="true">
+              <span class="ln-phase__dot" />
+            </div>
+
+            <div class="ln-phase__body">
+              <div class="ln-phase__head">
+                <h3 class="ln-phase__label">{phase.label}</h3>
+                <span class="ln-phase__pill" data-state={isLive ? "live" : "coming"}>
+                  {isLive ? `${built.length} live` : "coming"}
+                </span>
+              </div>
+              <p class="ln-phase__blurb">{phase.blurb}</p>
+
+              {isLive ? (
+                <ul class="ln-chapters">
+                  {built.map((ch) => {
+                    const [main, sub] = splitTitle(ch.title);
+                    return (
+                      <li class="ln-chapter">
+                        <a class="ln-chapter__link" href={`/${ch.slug}/`}>
+                          <span class="ln-chapter__num">{ch.number}</span>
+                          <span class="ln-chapter__text">
+                            <span class="ln-chapter__title">
+                              {main}
+                              {sub && <span class="ln-chapter__sub">{sub}</span>}
+                            </span>
+                            <span class="ln-chapter__meta">
+                              {ch.objectives.length} objectives · <code>{ch.artifactBasename}</code>
+                              {ch.demo === "pusht_bc_recovery" && (
+                                <span class="ln-chapter__tag">flagship</span>
+                              )}
+                            </span>
+                          </span>
+                          <span class="ln-chapter__go" aria-hidden="true">→</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                  <li class="ln-chapter ln-chapter--more" aria-hidden="true">
+                    <span class="ln-chapter__num">··</span>
+                    <span class="ln-chapter__text">
+                      <span class="ln-chapter__soon">more chapters in progress</span>
+                    </span>
+                  </li>
+                </ul>
+              ) : (
+                <p class="ln-phase__soon">
+                  Chapters for this phase are still being written. They'll link
+                  from here the day they're ready.
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })
+    }
+  </ol>
+</section>

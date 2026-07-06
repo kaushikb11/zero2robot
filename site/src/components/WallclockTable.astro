@@ -1,0 +1,19 @@
+---
+// WallclockTable — honest wall-clock, rendered from curriculum/common/wallclock.csv
+// via the bridge (wallclock()). Measured tiers show the rendered line; PENDING
+// or absent tiers show the verbatim "not yet measured" line — NEVER an estimate.
+//
+// On a chapter page the same table is normally injected inline at the Run-it
+// placeholder (see lib/prose.ts). This component is the standalone / fallback
+// rendering and shares wallclockTableHtml() so the markup has one source.
+import type { WallclockRow } from "../lib/curriculum.ts";
+import { wallclockTableHtml } from "../lib/prose.ts";
+
+interface Props {
+  rows: WallclockRow[];
+}
+const { rows } = Astro.props;
+const html = wallclockTableHtml(rows);
+---
+
+<Fragment set:html={html} />

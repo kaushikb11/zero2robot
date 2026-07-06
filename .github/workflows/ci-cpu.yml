@@ -1,0 +1,26 @@
+name: ci-cpu
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # full history so --changed-only can diff origin/main
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev,export]" --quiet   # export: onnx for tests/common/test_export_parity.py
+      - name: Lint + pedagogy gates
+        run: |
+          ruff check .
+          python infra/ci/check_loc_caps.py          # 450 cap on chapter artifacts
+          python infra/ci/check_forbidden_imports.py
+          python infra/ci/check_prose_code_drift.py  # region checksums vs site includes
+          python infra/ci/check_wallclock_provenance.py
+      - name: Unit tests
+        run: pytest curriculum tests infra grader -m "not gpu and not slow" -q   # paths per infra/decisions/005; grader is infra (013)
+      - name: Chapter smoke (CPU, tiny steps; bitwise determinism x2 — CPU lane only)
+        run: python infra/ci/smoke_chapters.py --changed-only --seed 0 --verify-determinism --python python

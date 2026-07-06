@@ -1,0 +1,53 @@
+---
+// /progress — the full progress dashboard page. Wrapped in ChapterLayout (the
+// shared book chrome: sidebar, running head, reading column), it composes two
+// client islands over the ONE localStorage progress model (lib/progress.ts):
+//   · ProgressDashboard — overall %, resume link, per-phase → per-chapter tree,
+//     each chapter with its live CompletionBadge (read ✓ · N-of-M predicted).
+//   · Achievements — milestones derived only from real read/prediction signals.
+//
+// HONESTY: the chapter list handed to the islands carries GATED (predict-then-run)
+// exercise ids only — the sole exercise kind that can leave a localStorage commit
+// trace — computed exactly as the landing does. So completion counts only real
+// signals (read + committed gated predictions) and a ring reaches 100% legitimately.
+//
+// JS-OFF: the islands server-render a deterministic 0% / all-locked shell (their
+// SSR contract), so the page is structurally complete and readable without JS;
+// real values fill in post-hydration. Islands mount client:load — this is the
+// page's primary content, above the fold, so it should reflect real state at once.
+import ChapterLayout from "../layouts/ChapterLayout.astro";
+import ProgressDashboard from "../components/progress/ProgressDashboard.tsx";
+import Achievements from "../components/progress/Achievements.tsx";
+import { discoverChapters } from "../lib/curriculum.ts";
+import { chapterExercises, isGated } from "../lib/exercises.ts";
+
+// Serialisable chapter list for the client islands. exerciseIds are GATED only:
+// bug-hunt / code-completion / hyperparameter exercises run locally and "never
+// phone home", so the site cannot honestly track them — counting them would make
+// completion unreachable. This mirrors index.astro's progressChapters exactly.
+const chapters = discoverChapters();
+const progressChapters = chapters.map((ch) => ({
+  slug: ch.slug,
+  title: ch.title,
+  number: ch.number,
+  phaseKey: ch.phaseKey,
+  phaseLabel: ch.phaseLabel,
+  exerciseIds: chapterExercises(ch.chapterDir).filter(isGated).map((e) => e.id),
+}));
+---
+
+<ChapterLayout title="Your progress — zero2robot">
+  <div class="bk-titleblock">
+    <p class="bk-kicker">Dashboard</p>
+    <h1 class="bk-title">Your progress</h1>
+    <p class="bk-draftnote">
+      Everything here lives only in your browser — no account, ever. Completion
+      counts only what you actually did: chapters you read, and predictions you
+      committed. Read it as an honest ledger, not a score to game.
+    </p>
+  </div>
+
+  <ProgressDashboard client:load chapters={progressChapters} />
+
+  <Achievements client:load chapters={progressChapters} />
+</ChapterLayout>

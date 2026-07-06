@@ -1,0 +1,73 @@
+<!-- PushT reference scene (zero2robot Phase 0).
+     Learners rebuild this from scratch in ch0.2 — keep it small and readable.
+
+     Layout:
+       - table: visual-only plane at z=0 (contype/conaffinity 0; the block never
+         touches it — planar friction is emulated with joint frictionloss+damping,
+         which keeps the physics quasi-static and CPU-deterministic).
+       - tee: T-shaped block = two welded boxes on a planar composite joint
+         (slide-x, slide-y, hinge-yaw). qpos = [x, y, yaw].
+       - pusher: cylinder on two velocity-actuated slide joints. ctrl = [vx, vy] m/s.
+       - target: visual-only green T showing the fixed goal pose (0, 0, yaw=0).
+       - walls: keep everything inside the +-0.40 m workspace.
+-->
+<mujoco model="pusht">
+  <option timestep="0.01" integrator="implicitfast"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <global offwidth="640" offheight="640"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.92 0.92 0.94" rgb2="0.83 0.83 0.87"
+             width="256" height="256"/>
+    <material name="table_mat" texture="grid" texrepeat="8 8" reflectance="0"/>
+  </asset>
+
+  <worldbody>
+    <camera name="top" pos="0 0 1.0" quat="1 0 0 0" fovy="50"/>
+
+    <geom name="table" type="plane" size="0.45 0.45 0.1" material="table_mat"
+          contype="0" conaffinity="0"/>
+
+    <!-- workspace walls -->
+    <geom name="wall_n" type="box" pos="0  0.41 0.03" size="0.43 0.02 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_s" type="box" pos="0 -0.41 0.03" size="0.43 0.02 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_e" type="box" pos=" 0.41 0 0.03" size="0.02 0.43 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_w" type="box" pos="-0.41 0 0.03" size="0.02 0.43 0.03" rgba="0.6 0.6 0.6 1"/>
+
+    <!-- fixed goal pose, visual only -->
+    <body name="target" pos="0 0 0.0005">
+      <site name="target_site" pos="0 0 0" size="0.005" rgba="0 0 0 0"/>
+      <geom name="target_bar"  type="box" size="0.06 0.015 0.0005" pos="0  0.00 0"
+            rgba="0.35 0.8 0.4 0.5" contype="0" conaffinity="0"/>
+      <geom name="target_stem" type="box" size="0.015 0.045 0.0005" pos="0 -0.06 0"
+            rgba="0.35 0.8 0.4 0.5" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- T-shaped block: bar 0.12 x 0.03, stem 0.03 x 0.09, welded -->
+    <body name="tee" pos="0 0 0.0152">
+      <joint name="tee_x"   type="slide" axis="1 0 0" damping="4"    frictionloss="1.2"/>
+      <joint name="tee_y"   type="slide" axis="0 1 0" damping="4"    frictionloss="1.2"/>
+      <joint name="tee_yaw" type="hinge" axis="0 0 1" damping="0.02" frictionloss="0.006"/>
+      <geom name="tee_bar"  type="box" size="0.06 0.015 0.015" pos="0  0.00 0"
+            rgba="0.45 0.5 0.95 1" mass="0.06"/>
+      <geom name="tee_stem" type="box" size="0.015 0.045 0.015" pos="0 -0.06 0"
+            rgba="0.45 0.5 0.95 1" mass="0.045"/>
+    </body>
+
+    <!-- cylindrical pusher on two actuated slides -->
+    <body name="pusher" pos="0 0 0.02">
+      <joint name="pusher_x" type="slide" axis="1 0 0" damping="0.5"/>
+      <joint name="pusher_y" type="slide" axis="0 1 0" damping="0.5"/>
+      <geom name="pusher_tip" type="cylinder" size="0.015 0.02"
+            rgba="0.9 0.4 0.35 1" mass="0.2"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <velocity name="pusher_vx" joint="pusher_x" kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+    <velocity name="pusher_vy" joint="pusher_y" kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+  </actuator>
+</mujoco>

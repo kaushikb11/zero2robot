@@ -1,0 +1,145 @@
+/* ch2.1 "PPO" concept-toy — the CARTPOLE recovery toy.
+ *
+ * Co-located CSS for cartpole-ppo.tsx (imported at the top of that file).
+ * Namespaced `cp-*` so it never collides with the global `ct-*`/`bk-*`/`sl-*`
+ * classes in public/styles.css. It only *reads* the site's design tokens
+ * (--signal, --alert, --ink, --ink-mute, --entity-*, --paper*, --rule-strong,
+ * --font-mono); every var carries a light fallback so the toy still renders if
+ * mounted outside the page shell. The stage is a hardcoded-LIGHT lab instrument
+ * in both themes — styles.css pins .cp-figure/.cp-hud tokens light under dark
+ * theme (the same treatment as .ct-figure), so the JS-painted canvas and the
+ * HUD read correctly on the warm paper in light and dark.
+ *
+ * Colour discipline (per the frozen concept-toy contract):
+ *   - neutral ink        → the cart (the actuated body)
+ *   - a warm hue         → the pole (the thing being balanced)
+ *   - ONE --signal blue  → the shove affordance (the one live interaction)
+ *   - --alert red        → the "leaning / falling" readout only
+ *   - --entity-target    → the balanced episode-return counter
+ */
+
+.cp {
+  display: grid;
+  gap: 0;
+}
+
+/* wide side-view stage — poster and canvas share the exact box, so booting never reflows */
+.cp-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none; /* pointer-drag the cart, never scroll the page */
+}
+.cp-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+/* live canvas — fills the figure, hidden until the WASM sim boots */
+.cp-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+}
+.cp-canvas[data-dragging="true"] { cursor: grabbing; }
+.cp-canvas[hidden] { display: none; }
+
+/* SSR poster (JS-off + pre-boot) — same box as the canvas */
+.cp-poster { position: absolute; inset: 0; }
+.cp-poster[hidden] { display: none; }
+.cp-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* poster vector styling (shared, static) */
+.cp-rail { stroke: var(--rule-strong, #c8bc9e); stroke-width: 3; stroke-linecap: round; }
+.cp-rail-end { stroke: var(--rule-strong, #c8bc9e); stroke-width: 2; }
+.cp-pole { stroke: var(--entity-pusher, #b0560f); stroke-width: 7; stroke-linecap: round; }
+.cp-pole-bob { fill: var(--entity-pusher, #b0560f); }
+.cp-cart { fill: var(--ink, #23201b); }
+.cp-hinge { fill: var(--ink-mute, #6d6252); }
+.cp-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px; letter-spacing: 0.03em; fill: var(--signal, #1f56de);
+  text-anchor: middle;
+}
+
+/* HUD — the live instrument. Makes the invisible visible: the pole angle and how
+   close it is to the fall limit, plus the episode return climbing +1 per step. */
+.cp-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  width: min(15rem, 46%);
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.cp-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.cp-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.cp-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.cp-v.cp-ok  { color: var(--entity-target, #0c7d5f); }
+.cp-v.cp-bad { color: var(--alert, #c0362a); }
+.cp-v.cp-ret { color: var(--entity-target, #0c7d5f); }
+
+/* the tilt meter — |pole angle| as a fraction of the fall limit */
+.cp-meter {
+  grid-column: 1 / -1;
+  height: 5px; border-radius: 3px; margin-top: 0.1rem;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent);
+  overflow: hidden;
+}
+.cp-meter-fill {
+  height: 100%; width: 0%;
+  background: var(--entity-target, #0c7d5f);
+  transition: width 0.12s linear, background 0.2s ease;
+}
+.cp-meter-fill[data-lean="true"] { background: var(--alert, #c0362a); }
+
+/* boot / status line */
+.cp-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.cp-status[data-failed="true"] { color: var(--alert, #c0362a); }
+
+/* controls — JS-only. The ONE interaction is the shove (signal blue). */
+.cp-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.cp-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #473f34);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.cp-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.cp-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.cp-btn--primary {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff);
+  border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.4));
+}
+.cp-btn--primary:hover { color: #fff; background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.cp-btn:disabled { opacity: 0.5; cursor: default; }
+.cp-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252); margin-left: auto;
+}
+@media (max-width: 34rem) {
+  .cp-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(13rem, 60%); }
+  .cp-control-note { display: none; }
+}

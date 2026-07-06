@@ -1,0 +1,62 @@
+id: ch2.4-rewards
+title: "Reward Design Is Programming"
+artifact: rewards.py       # 386 LOC (measured); target ~200, hard cap 450 — see the H3 note below
+task: quadruped            # curriculum/common/envs/quadruped — stand -> walk; reward = 5 shapeable terms
+dataset:
+  reference: null          # RL generates its own data by acting; no demo dataset
+  learner_path: false
+objectives:
+  - Treat the reward function as the PROGRAM you write for the robot — one reward_fn(info, action, frac) per design, everything else held fixed
+  - Show SHAPING: a sparse "did it move" reward barely trains; the env's dense shaped reward learns a walk (measure forward distance)
+  - Deliberately induce and MEASURE a REWARD HACK: reward raw height, the policy rears/stalls, its reward climbs while forward distance stays ~0 (specification gaming)
+  - Stage a reward as a CURRICULUM (stand first, then add forward) and report the comparison honestly
+scale_lab: false
+read_the_real_thing: true
+# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor candidates for the
+# specification-gaming / reward-hacking segment: OpenAI's "Faulty Reward
+# Functions in the Wild" (the CoastRunners boat-race hack) and DeepMind's
+# specification-gaming examples list; on the code side, a legged-locomotion
+# reward file (e.g. an isaacgym/legged_gym rewards module) makes the "reward is
+# a program" point at production scale. Do NOT invent a commit sha here; the
+# read-the-real-thing skill pins the real upstream commit.
+
+demo: quadruped_reward_hack   # hero: side-by-side rollouts of the shaped walk vs the height-hack rear-and-stall (see demo/embed.yaml)
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances.
+# PROVENANCE: seed 0 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6;
+# DEFAULT config (total_steps 400000/design, num_envs 16, num_steps 64);
+# measured 2026-07-06. Single-seed full run: sparse forward +0.79 m,
+# shaped +4.61 m, hack forward -0.181 m / height_m 0.277 / design_return rose
+# 105 -> 1048, curriculum +7.84 m. The RELIABLE, seed-robust signals the checks
+# assert are ORDERINGS (shaped forward > sparse forward; hack design_return
+# rises while hack forward stays near 0), never absolute magnitudes.
+exercise_checks:
+  ex1:                     # ex1_predict_hack.py — trains the hack design, seeded => reproducible
+    provenance: "cpu, seed 0, reduced 150k budget (ex1's affordable config); hack forward_m +0.41 — a small fraction of the shaped +4.61 m walk — while height rises (tallest design) and design_return rose 128 -> 910 (7x): tall, not walking. The default 400k config walks nowhere (forward_m -0.181, see reference_run); either budget shows the hack. The check asserts |forward| small + reward-rise, both seed-robust."
+    hack_forward_abs_max: 1.0      # the hack's |forward distance| stays small (measured 0.18 m); it does NOT walk
+    hack_return_rise_min: 2.0      # the hack's own return rises by >=2x over training (measured ~10x); the reward IS optimized
+  ex2:                     # ex2_completion_fix_hack.py — add the missing term that fixes the hack
+    provenance: "DETERMINISTIC pure-function property (no training, no RL variance). On two hand-built states differing only in forward_vel (0.0 vs 0.9), a correct fix that adds the env's forward term (W_FORWARD * clip(vx) = 1.0 * 0.9) makes the faster state score >= 0.9 higher. Threshold set below that measured gap."
+    fixed_forward_min: 0.5         # walking-forward state must beat standing-still by >= this (measured gap 0.9)
+
+# region_hashes: recorded by the site build (check_prose_code_drift recomputes
+# each region's sha256 and gates on drift). Omitted until this chapter is first
+# rendered — a chapter without region_hashes passes the drift gate by design.
+
+# notebook_hash / notebook_file_hash: added by the notebook-tier-test skill when
+# the Colab variant is generated.
+
+region_hashes:
+  setup: ae0ecf7ecb12845d45f299b5cc976afa75cf1fe917f9310b0260ad969c765f1d
+  rewards: 64a794a3b1c7afd23c22d34586d91b486e1dec6966e278dd4be6ac64160c9ae0
+  envs: 92285f4b7298b7dc0c7bfef6f8386224ed49cac21d32c7b1b3398e6137f199d5
+  model: 999d1d16acc45e7b16eb66e526068747bf6ce719ef2cc7b8926311471f826235
+  ppo: b7666f43e364f4f36e9c464140f0c4927498074dfb62300c07cd04bc18bb50b9
+  train: 27b1caf46794550fae148966e28d98589be58d552a1426c1cb1825df254b68fa
+  eval: a4388d293da8b88136b21c244a318da09f4c7da40e0f2404aeb5529f4e4a73ac
+  demos: f97f0617a0de8ec4c7982d2f22d3d7ada235822afa3d9e5e20c6f4dba3818c6f
+
+notebook_hash: 1a32b5bb14529c36fb1a9e2ca90e478f40dddc1e51b3dc2adc94f01244da4069        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: c2c500188b4be2742b495ba76ab9596634e6a40049449846a7c51ddfa1b6f78d   # sha256 of the generated notebook bytes; mismatch => hand-edited

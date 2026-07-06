@@ -1,0 +1,27 @@
+# Demo embed stub — ch2.1 "cartpole_ppo_balance".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: ppo.py currently
+# saves a torch state_dict, not an ONNX policy — the ONNX export (tensor
+# contract v1: observation float32[1,5] -> action float32[1,1]) is a follow-up
+# the author wires when this chapter graduates from spike to drop. OUT OF SCOPE
+# for the feasibility spike (per the scope doc: no browser demo/site embed).
+demo: cartpole_ppo_balance
+scene: cartpole             # curriculum/common/envs/cartpole/cartpole.xml, verbatim
+policy: ppo_agent.onnx      # PENDING export; contract v1: obs float32[1,5] -> action float32[1,1]
+camera:
+  lookat: [0.0, 0.0, 0.3]
+  distance: 3.0
+  azimuth: 90
+  elevation: -10
+interaction: nudge-cart     # visitor shoves the cart mid-episode; the trained policy recovers the pole
+hud:
+  - sim_time
+  - pole_angle              # watch it stay near 0 (upright) as the visitor perturbs
+  - episode_return          # climbs +1/step while the pole is up
+notes: >
+  The hero behavior is competence, not imperfection (the contrast with ch1.1's
+  fragile BC policy is the point): PPO trained on states IT visited, so a shove
+  that pushes the cart off-distribution is still in-distribution for a policy
+  that spent training recovering from exactly such states. Reset re-seeds the
+  pole pose. This is the payoff of acting-and-observing over cloning.

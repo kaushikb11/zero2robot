@@ -1,0 +1,227 @@
+/* ========================================================================
+   eval-bands (.eb-*) — ch1.6 "Evaluation Is Hard" FLAGSHIP concept-toy.
+
+   The "single numbers lie" plate: two success-rate confidence intervals on a
+   shared probability axis, plus their (strong − weak) difference interval on a
+   zero-centred axis below. ONE control — the episodes-per-policy slider N —
+   drives every band client-side (closed-form Wilson + Newcombe, no data file).
+   Drag N up and the bands tighten from OVERLAPPING (ranking not established) to
+   SEPARATED (significant); the difference bar flips red→green as its interval
+   clears 0. Namespaced .eb- so it never collides with the global ct-, bk-,
+   fd-, sl- toy class prefixes.
+
+   Colour discipline (PlateIsland FROZEN CONTRACT):
+     • the two policy bars are DATA → neutral ink (strong = full --ink, weak =
+       muted --ink-mute), never an entity hue and never signal blue;
+     • the overlap zone (data "could be the same") is a faint --alert wash;
+     • the difference bar carries the live VERDICT: --alert when it spans 0
+       (not established), --entity-target emerald when it excludes 0 (real) —
+       the same green=established convention the sibling HUDs use;
+     • the ONE live signal-blue element is the N slider + its readout.
+
+   Theme: the plate is a warm-paper INSTRUMENT that stays light in both themes,
+   matching every sibling concept-toy figure (styles.css pins .ct-figure/.bk-svg
+   the same way). Because this toy uses a NEW .eb-* prefix that isn't in that
+   shared dark-override list — and shared files must not be edited — the light
+   instrument tokens are pinned locally on .eb-figure below, self-contained. The
+   controls OUTSIDE the figure use the flipping tokens, so they sit correctly on
+   the dark page in dark mode (identical to .sl-controls / .fd-controls).
+
+   Motion: bands transition width/position smoothly, but only when the reader has
+   not asked for reduced motion; under reduce they snap.
+   ======================================================================== */
+.eb {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.eb-caption {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.eb-caption b { color: var(--ink); font-weight: 600; }
+
+/* the instrument plate — warm paper in BOTH themes (light tokens pinned here) */
+.eb-figure {
+  --ink: #23201b;
+  --ink-soft: #473f34;
+  --ink-mute: #6d6252;
+  --signal: #1f56de;
+  --alert: #c0362a;
+  --entity-target: #0c7d5f;
+  --rule-strong: #c8bc9e;
+
+  position: relative;
+  margin: 0;
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  padding: 0.7rem 0.7rem 0.4rem;
+}
+
+.eb-svg { display: block; width: 100%; height: auto; }
+
+/* axes + frame — neutral reference */
+.eb-frame { stroke: color-mix(in srgb, var(--rule-strong) 65%, transparent); stroke-width: 1; }
+.eb-axis { stroke: var(--rule-strong); stroke-width: 1.4; }
+.eb-divider { stroke: color-mix(in srgb, var(--rule-strong) 70%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+.eb-tick line { stroke: var(--rule-strong); stroke-width: 1.2; }
+.eb-tick-lbl {
+  font-family: var(--font-mono); font-size: 11px;
+  fill: var(--ink-mute); font-variant-numeric: tabular-nums;
+}
+.eb-axis-title { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink-mute); letter-spacing: 0.04em; }
+
+/* row labels */
+.eb-row-lbl { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.02em; }
+.eb-row-lbl--strong { fill: var(--ink); font-weight: 600; }
+.eb-row-lbl--weak { fill: var(--ink-mute); font-weight: 600; }
+.eb-diff-title { font-family: var(--font-mono); font-size: 11.5px; fill: var(--ink-soft); letter-spacing: 0.02em; }
+
+/* the overlap zone — the invisible made visible; a faint alert wash that shrinks
+   to nothing as the bands pull apart */
+.eb-overlap {
+  fill: color-mix(in srgb, var(--alert) 12%, transparent);
+  stroke: color-mix(in srgb, var(--alert) 34%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* CI bar primitive: translucent band + centre rule + end caps + point dot.
+   Transitions let the band grow/shrink smoothly as N changes (reduced-motion off). */
+.eb-band, .eb-rule, .eb-cap, .eb-point { }
+@media (prefers-reduced-motion: no-preference) {
+  .eb-band { transition: x 0.18s ease, width 0.18s ease; }
+  .eb-rule, .eb-cap, .eb-point { transition: x1 0.18s ease, x2 0.18s ease, cx 0.18s ease; }
+}
+
+/* strong policy — full ink */
+.eb-bar--strong .eb-band { fill: color-mix(in srgb, var(--ink) 14%, transparent); }
+.eb-bar--strong .eb-rule { stroke: var(--ink); stroke-width: 2; }
+.eb-bar--strong .eb-cap  { stroke: var(--ink); stroke-width: 2; }
+.eb-bar--strong .eb-point { fill: var(--ink); stroke: #fdfbf6; stroke-width: 1.2; }
+
+/* weak policy — muted ink */
+.eb-bar--weak .eb-band { fill: color-mix(in srgb, var(--ink-mute) 16%, transparent); }
+.eb-bar--weak .eb-rule { stroke: var(--ink-mute); stroke-width: 2; }
+.eb-bar--weak .eb-cap  { stroke: var(--ink-mute); stroke-width: 2; }
+.eb-bar--weak .eb-point { fill: var(--ink-mute); stroke: #fdfbf6; stroke-width: 1.2; }
+
+/* difference bar — the live verdict. Default (not significant) = alert red. */
+.eb-bar--diff .eb-band { fill: color-mix(in srgb, var(--alert) 14%, transparent); }
+.eb-bar--diff .eb-rule { stroke: var(--alert); stroke-width: 2.4; }
+.eb-bar--diff .eb-cap  { stroke: var(--alert); stroke-width: 2.4; }
+.eb-bar--diff .eb-point { fill: var(--alert); stroke: #fdfbf6; stroke-width: 1.2; }
+/* significant → the interval has cleared 0: flip to emerald "established" */
+[data-sig="true"] .eb-bar--diff .eb-band { fill: color-mix(in srgb, var(--entity-target) 16%, transparent); }
+[data-sig="true"] .eb-bar--diff .eb-rule { stroke: var(--entity-target); }
+[data-sig="true"] .eb-bar--diff .eb-cap  { stroke: var(--entity-target); }
+[data-sig="true"] .eb-bar--diff .eb-point { fill: var(--entity-target); }
+
+/* the zero line on the difference axis — the verdict pivot */
+.eb-zero { stroke: var(--ink-soft); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.eb-zero-lbl { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-soft); font-weight: 600; }
+
+/* live numeric HUD — top-right chip over the plate */
+.eb-hud {
+  position: absolute; top: 0.7rem; right: 0.7rem;
+  display: grid; gap: 0.24rem;
+  padding: 0.5rem 0.65rem;
+  background: color-mix(in srgb, #fdfbf6 88%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  pointer-events: none;
+}
+.eb-hud-row { display: flex; gap: 0.9rem; justify-content: space-between; align-items: baseline; }
+.eb-hud .eb-k { color: var(--ink-mute); letter-spacing: 0.01em; }
+.eb-hud .eb-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.eb-hud .eb-v.eb-ok  { color: var(--entity-target); }
+.eb-hud .eb-v.eb-bad { color: var(--alert); }
+
+/* verdict banner — bottom-left over the plate */
+.eb-verdict {
+  position: absolute; left: 0.9rem; bottom: 0.55rem;
+  display: flex; align-items: baseline; gap: 0.55rem;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.eb-verdict-n {
+  font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--signal);
+}
+.eb-verdict-txt { font-size: 0.68rem; color: var(--alert); letter-spacing: 0.01em; }
+.eb-verdict[data-sig="true"] .eb-verdict-txt { color: var(--entity-target); }
+
+/* controls — JS-only, on the page (flipping tokens → correct in dark mode) */
+.eb-controls {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem 0.1rem 0.1rem;
+}
+.eb-slider-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.eb-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.76rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+  min-width: 8.5ch;
+}
+.eb-slider-label b { color: var(--signal, #1f56de); font-variant-numeric: tabular-nums; }
+.eb-slider {
+  flex: 1 1 220px;
+  min-width: 160px;
+  accent-color: var(--signal, #1f56de);
+  cursor: pointer;
+}
+.eb-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.eb-slider:disabled { opacity: 0.5; cursor: default; }
+
+.eb-btn-row { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.eb-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.eb-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink); }
+.eb-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.eb-btn[aria-pressed="true"] {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff); border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.34));
+}
+.eb-btn:disabled { opacity: 0.5; cursor: default; }
+.eb-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+  margin-left: auto;
+}
+
+.eb-foot {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+}
+
+/* visually-hidden live region for screen readers */
+.eb-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 40rem) {
+  .eb-hud { position: static; margin-top: 0.5rem; backdrop-filter: none; }
+  .eb-verdict { position: static; margin-top: 0.4rem; }
+  .eb-note { display: none; }
+}

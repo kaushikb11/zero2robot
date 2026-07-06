@@ -1,0 +1,23 @@
+---
+// Objectives — the "what you'll be able to do" plate, rendered from meta.yaml
+// (never duplicated in prose). Count varies per chapter (3–5); the ordered list
+// renders whatever it is given, each item numbered with a leading-zero mono
+// marginal counter (Variant C). Pure static content component.
+interface Props {
+  objectives: string[];
+}
+const { objectives } = Astro.props;
+---
+
+{
+  objectives.length > 0 && (
+    <section class="bk-objectives" aria-label="Learning objectives">
+      <p class="bk-label">By the end you can</p>
+      <ol>
+        {objectives.map((o) => (
+          <li>{o}</li>
+        ))}
+      </ol>
+    </section>
+  )
+}

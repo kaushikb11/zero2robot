@@ -1,0 +1,26 @@
+name: ci-notebook
+on:
+  schedule: [{ cron: "0 2 * * *" }]   # nightly
+  workflow_dispatch:
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev,notebooks]" ipykernel --quiet   # ipykernel: nbclient needs a kernel at execution time
+      - name: Hash-sync check (notebook <-> chapter artifact)
+        run: python infra/ci/check_notebook_hashes.py
+      - name: Execute all notebooks headless (CPU-sim smoke profile)
+        run: python infra/ci/run_notebooks.py --profile cpu-smoke --fail-fast false --report infra/ci/reports/notebooks.json
+      - name: File issues for failures (headless Claude)
+        if: failure()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude -p "Read infra/ci/reports/notebooks.json. For each failing notebook, file or refresh a GitHub issue titled 'notebook-ci: <name>' containing the traceback, the chapter it belongs to, and a one-line hypothesis. Do not attempt fixes." \
+            --allowedTools "Bash(gh issue:*)" "Read"

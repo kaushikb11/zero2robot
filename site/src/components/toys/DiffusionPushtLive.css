@@ -1,0 +1,130 @@
+/* ch1.4 "Diffusion" concept-toy — the LIVE generative-policy PushT toy.
+ *
+ * Co-located CSS for DiffusionPushtLive.tsx. Namespaced `df-*` so it never
+ * collides with the global `ct-*`/`bk-*`/`cp-*`/`fl-*` classes. It only *reads*
+ * the site's design tokens (each var carries a light fallback so the toy renders
+ * if mounted outside the page shell). The stage is a hardcoded-LIGHT lab
+ * instrument in both themes — public/styles.css pins .df-figure/.df-hud tokens
+ * light under dark theme (same treatment as .fl-figure/.ct-figure), so the
+ * JS-painted canvas and the HUD read correctly on the warm paper in light + dark.
+ *
+ * Colour discipline (per the frozen concept-toy contract):
+ *   - --entity-* → the pusher / T-block / target (the physical entities)
+ *   - ONE --signal blue → the live denoising_steps control (the one interaction)
+ *   - --alert red → the "under-denoised" (few-step) readout only
+ *   - --entity-target green → the pos_err reached-target readout
+ */
+
+/* ch1.4 hero stacks the 2D diffusion-ring panel above this live PushT panel */
+.df-stack { display: grid; gap: 1.6rem; }
+
+.df { display: grid; gap: 0; }
+
+/* square top-down stage — poster and canvas share the exact box (no reflow on boot) */
+.df-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  max-width: 34rem;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;
+}
+.df-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.df-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.df-canvas[hidden] { display: none; }
+
+.df-poster { position: absolute; inset: 0; }
+.df-poster[hidden] { display: none; }
+.df-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* poster vector styling (static) */
+.df-arena { fill: #fbf9f3; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.5; }
+.df-grid line { stroke: rgba(200, 188, 158, 0.5); stroke-width: 1; }
+.df-tee { fill: var(--entity-block, #a5257d); }
+.df-target { fill: none; stroke: var(--entity-target, #0c7d5f); stroke-width: 2; stroke-dasharray: 5 4; }
+.df-target-label,
+.df-poster-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.df-target-label { font-size: 12px; }
+.df-poster-hint { font-size: 13px; letter-spacing: 0.03em; fill: var(--signal, #1f56de); text-anchor: middle; }
+.df-pusher-ring { fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.5; opacity: 0.5; }
+.df-pusher-core { fill: var(--entity-pusher, #b0560f); }
+/* the noise-cloud dots the poster scatters to hint "each move is denoised from noise" */
+.df-noise { fill: var(--ink-mute, #6d6252); opacity: 0.5; }
+
+/* HUD — the live instrument: pos_err ticking down + the active denoising_steps */
+.df-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  width: min(16rem, 58%);
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.df-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.df-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.df-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.df-v.df-ok { color: var(--entity-target, #0c7d5f); }
+.df-v.df-bad { color: var(--alert, #c0362a); }
+.df-v.df-signal { color: var(--signal, #1f56de); }
+
+/* boot / status line */
+.df-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.df-status[data-failed="true"] { color: var(--alert, #c0362a); }
+
+/* controls — JS-only. The ONE interaction is the denoising_steps segmented control. */
+.df-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.df-controls-label {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem;
+  color: var(--ink-mute, #6d6252);
+}
+.df-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.df-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #473f34);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.df-seg .df-btn { border: none; border-right: 1px solid var(--rule-strong, #c8bc9e); border-radius: 0; }
+.df-seg .df-btn:last-child { border-right: none; }
+.df-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.df-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.df-btn--on {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.4));
+}
+.df-btn--on:hover { color: #fff; background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.df-btn:disabled { opacity: 0.5; cursor: default; }
+.df-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252); margin-left: auto;
+}
+@media (max-width: 34rem) {
+  .df-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(15rem, 66%); }
+  .df-control-note { display: none; }
+}

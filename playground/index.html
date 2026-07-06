@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>zero2robot playground — teach a robot with your mouse</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        background: #16181d;
+        color: #d7dae0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+      }
+      h1 { font-size: 14px; font-weight: 600; margin: 0; }
+      #stage { position: relative; }
+      /* Fixed display size: the quality-tier auto-degrade may lower the canvas
+         backing-store resolution on slow devices; pinning the CSS size keeps the
+         visible canvas the same while only the pixel count drops. */
+      canvas#scene { width: 720px; height: 720px; background: #0d0e11; border: 1px solid #2a2d34; border-radius: 4px; touch-action: none; cursor: crosshair; }
+      #loading {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 12px; background: rgba(13, 14, 17, 0.92);
+        border-radius: 4px; font-size: 13px; color: #b8c0cc;
+      }
+      #loading.hidden { display: none; }
+      .spinner {
+        width: 28px; height: 28px; border-radius: 50%;
+        border: 3px solid #2a2d34; border-top-color: #6fa8dc;
+        animation: z2r-spin 0.8s linear infinite;
+      }
+      @keyframes z2r-spin { to { transform: rotate(360deg); } }
+      #quality { font-size: 12px; max-width: 720px; text-align: center; color: #d0a85a; }
+      #quality.hidden { display: none; }
+      #meters {
+        position: absolute; top: 8px; left: 8px;
+        font-size: 12px; line-height: 1.5;
+        background: rgba(13, 14, 17, 0.8);
+        padding: 6px 10px; border-radius: 4px;
+        white-space: pre;
+        pointer-events: none;
+      }
+      #controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; max-width: 720px; }
+      button {
+        font: inherit; font-size: 12px;
+        background: #23262d; color: #d7dae0;
+        border: 1px solid #363a42; border-radius: 4px;
+        padding: 6px 12px; cursor: pointer;
+      }
+      button:hover { background: #2c303a; }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button.rec { border-color: #a04040; color: #e08a8a; }
+      button.rec.active { background: #4a2323; color: #ffb0b0; }
+      button.pol { border-color: #3a6ea0; color: #8ab6e0; }
+      button.pol.active { background: #23384a; color: #b0d4ff; }
+      label.btnlike {
+        font: inherit; font-size: 12px;
+        background: #23262d; color: #d7dae0;
+        border: 1px solid #363a42; border-radius: 4px;
+        padding: 6px 12px; cursor: pointer;
+      }
+      label.btnlike:hover { background: #2c303a; }
+      #stage.drop canvas#scene { border-color: #6fa8dc; box-shadow: 0 0 0 2px rgba(111, 168, 220, 0.5); }
+      #stage.drop::after {
+        content: "drop .onnx to load your policy";
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; color: #b0d4ff; background: rgba(13, 14, 17, 0.55);
+        border-radius: 4px; pointer-events: none;
+      }
+      label.chk { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+      #teleop, #policy, #status { font-size: 12px; max-width: 720px; white-space: pre-wrap; text-align: center; }
+      #teleop .ok { color: #7fd18a; }
+      #status.error { color: #e07070; }
+      .hint { font-size: 11px; color: #7a7f88; max-width: 720px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <h1>zero2robot — teach a robot with your mouse (PushT teleop)</h1>
+    <div id="stage">
+      <canvas id="scene" width="720" height="720"></canvas>
+      <div id="meters">loading…</div>
+      <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading simulation… (MuJoCo WASM)</div>
+      </div>
+    </div>
+    <div id="controls">
+      <button id="btn-record" class="rec">● Record episode</button>
+      <button id="btn-reset">↺ Reset scene</button>
+      <label class="chk"><input type="checkbox" id="chk-images" /> record 96×96 frames</label>
+      <button id="btn-download" disabled>⤓ Download dataset</button>
+      <label class="btnlike">⤒ Load .onnx<input type="file" id="policy-file" accept=".onnx" hidden /></label>
+      <button id="btn-policy" class="pol" disabled>▶ Run policy</button>
+      <button id="btn-perturb">⚡ Perturb block</button>
+    </div>
+    <div id="teleop">drag on the scene to push the block — release to stop</div>
+    <div id="policy">policy: none loaded</div>
+    <div id="quality" class="hidden"></div>
+    <div id="status">booting…</div>
+    <p class="hint">
+      Drag the pusher (red) into the T-block (blue) to shove it onto the green target.
+      Record episodes, download the <code>z2r-teleop-1</code> dataset, then train a policy
+      (see <code>TRAIN-LOOP.md</code>). Drag the exported <code>bc_policy.onnx</code> onto the
+      scene — then <b>Run policy</b> to watch it drive, or <b>Perturb block</b> to knock the T
+      askew and watch it recover (honestly — it won't always). Arrow keys also drive the pusher.
+    </p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

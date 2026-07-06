@@ -1,0 +1,487 @@
+/* ============================================================================
+   landing.css — the LANDING FRAME (feature F3), in the Variant C language.
+
+   Scoped `.ln-*`, imported by Hero / ValueProps / CurriculumArc. These render
+   inside `.book`, so every colour, font and rule token comes from the shared
+   design system (public/styles.css) — this file only arranges them into a
+   landing. No new palette; the discipline is inherited:
+
+     · warm ink on ivory paper for reading;
+     · oxblood (--book) for CHROME + primary actions (static "old ink");
+     · ONE signal blue kept strictly for the LIVE toy + focus rings (never a
+       static CTA — a landing button is chrome, so it wears oxblood);
+     · the draft band is warm paper + an oxblood keyline (it is NOT interactive,
+       so it is never blue), mirroring the galley-proof .bk-ribbon.
+
+   Mobile-first: base styles target ~390px; enhancements stack up at min-width
+   breakpoints. The hero never overflows its column.
+   ========================================================================== */
+
+/* --- shared kicker (mono eyebrow with a trailing hairline) ----------------- */
+.ln-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.ln-kicker::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rule-strong), transparent);
+}
+
+/* --- draft band — mirrors the galley-proof .bk-ribbon, but scoped + inline --
+   Honest, deliberately visible: the surrounding COPY is a placeholder pending
+   the DevRel/author voice pass. Warm paper, oxblood keyline; never signal blue. */
+.ln-draft {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.75rem;
+  margin: 0 0 1.4rem;
+  background: color-mix(in srgb, var(--book) 7%, var(--paper));
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--book-soft);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+}
+.ln-draft b {
+  color: var(--book);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+}
+.ln-draft__src { color: var(--ink-mute); }
+.ln-draft__src code {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+  background: var(--paper-3);
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  padding: 0.02em 0.28em;
+}
+.ln-draft--inline { margin: 0.4rem 0 1.2rem; }
+/* the long tail reminder folds away on narrow screens (like .bk-ribbon-tail) */
+@media (max-width: 40rem) {
+  .ln-draft__tail { display: none; }
+}
+
+/* ===========================================================================
+   HERO
+   ======================================================================== */
+.ln-hero {
+  max-width: var(--page);
+  margin: 1.4rem auto 3.2rem;
+}
+.ln-hero__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+.ln-hero__lead { min-width: 0; }
+
+.ln-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-4);
+  line-height: 1.04;
+  letter-spacing: -0.014em;
+  text-wrap: balance;
+  color: var(--ink);
+  margin: 0 0 1.1rem;
+}
+.ln-title__accent {
+  display: block;
+  color: var(--ink-soft);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.ln-subhead {
+  font-size: 1.14rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 34rem;
+  margin: 0 0 1.7rem;
+}
+
+/* --- CTAs — chrome, so oxblood not signal blue --------------------------- */
+.ln-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0 0 1.4rem;
+}
+.ln-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.7rem 1.15rem;
+  border-radius: 4px;
+  border: 1px solid var(--book-soft);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--book);
+  background: transparent;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ln-btn:hover {
+  background: color-mix(in srgb, var(--book) 8%, transparent);
+  border-color: var(--book);
+}
+.ln-btn--primary {
+  color: var(--paper);
+  background: var(--book);
+  border-color: var(--book);
+}
+.ln-btn--primary:hover {
+  background: color-mix(in srgb, var(--book) 88%, #000);
+  color: #fff;
+}
+.ln-btn__sub {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the continue / progress region (F2 slot + JS-off fallback) ---------- */
+.ln-hero__continue {
+  margin-top: 0.4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+}
+.ln-continue-fallback {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--ink-mute);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* --- the flagship demo column ------------------------------------------- */
+/* HeroDemo carries its own .bk-hero chrome; trim its default top margin so it
+   aligns with the copy column, and let it fill its grid cell. */
+.ln-hero__demo .bk-hero {
+  width: 100%;
+  margin: 0;
+}
+
+/* two columns once there's room; the demo stays a comfortable square */
+@media (min-width: 52rem) {
+  .ln-hero__grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 2.4rem;
+  }
+  /* nudge the demo heading to baseline-align with the kicker */
+  .ln-hero__demo { padding-top: 0.2rem; }
+}
+
+/* ===========================================================================
+   VALUE PROPS
+   ======================================================================== */
+.ln-props {
+  max-width: var(--page);
+  margin: 3.2rem auto;
+  padding-top: 2.4rem;
+  border-top: 1px solid var(--rule);
+}
+.ln-props__head { margin: 0 0 1.6rem; }
+.ln-props__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.ln-prop {
+  padding: 1.3rem 1.4rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.ln-prop__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 0.6rem;
+}
+.ln-prop__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.24rem;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0 0 0.5rem;
+}
+.ln-prop__body {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+@media (min-width: 46rem) {
+  .ln-props__grid { grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+}
+
+/* ===========================================================================
+   CURRICULUM ARC
+   ======================================================================== */
+.ln-arc {
+  max-width: var(--page);
+  margin: 3.2rem auto 1rem;
+  padding-top: 2.4rem;
+  border-top: 1px solid var(--rule);
+}
+.ln-arc__head { margin: 0 0 2rem; }
+.ln-arc__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-3);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 0.6rem;
+  text-wrap: balance;
+}
+.ln-arc__stat {
+  margin: 0.2rem 0 0;
+  font-size: 1.02rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.ln-arc__count {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--book);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the phase timeline --------------------------------------------------- */
+.ln-phases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: none;
+}
+.ln-phase {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.9rem;
+}
+/* the connecting rail down the left, with a node per phase */
+.ln-phase__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.ln-phase__rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--rule-strong);
+}
+.ln-phase:first-child .ln-phase__rail::before { top: 0.55rem; }
+.ln-phase:last-child .ln-phase__rail::before { bottom: calc(100% - 0.55rem); }
+.ln-phase__dot {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--book);
+}
+.ln-phase[data-state="coming"] .ln-phase__dot {
+  border-color: var(--rule-strong);
+  background: var(--paper-2);
+}
+
+.ln-phase__body { min-width: 0; padding-bottom: 2rem; }
+.ln-phase:last-child .ln-phase__body { padding-bottom: 0; }
+.ln-phase__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.4rem;
+}
+.ln-phase__label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-1);
+  color: var(--ink);
+  margin: 0;
+}
+.ln-phase__pill {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.16rem 0.55rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.ln-phase__pill[data-state="live"] {
+  color: var(--entity-target-ink);
+  background: color-mix(in srgb, var(--entity-target) 14%, transparent);
+}
+.ln-phase__pill[data-state="coming"] {
+  color: var(--ink-mute);
+  background: color-mix(in srgb, var(--ink-mute) 12%, transparent);
+}
+.ln-phase__blurb {
+  margin: 0 0 0.9rem;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 40rem;
+}
+.ln-phase__soon {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-mute);
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--paper-2) 60%, transparent);
+}
+
+/* --- chapter rows within a phase ----------------------------------------- */
+.ln-chapters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.ln-chapter + .ln-chapter { border-top: 1px solid var(--rule); }
+.ln-chapter__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.15s ease;
+}
+.ln-chapter__link:hover { background: color-mix(in srgb, var(--book) 6%, transparent); }
+.ln-chapter__num {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--book);
+  min-width: 2.4em;
+  font-variant-numeric: tabular-nums;
+}
+.ln-chapter__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+.ln-chapter__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.ln-chapter__link:hover .ln-chapter__title { color: var(--book); }
+.ln-chapter__sub {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: 0.9em;
+}
+.ln-chapter__sub::before { content: " "; }
+.ln-chapter__meta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ln-chapter__meta code {
+  font-family: var(--font-mono);
+  background: var(--paper-3);
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  padding: 0.02em 0.3em;
+  color: var(--ink-soft);
+}
+.ln-chapter__tag {
+  color: var(--signal);
+  border: 1px solid var(--signal-line);
+  border-radius: 100px;
+  padding: 0.02em 0.5em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.ln-chapter__go {
+  color: var(--book-soft);
+  font-size: 1rem;
+  align-self: center;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.ln-chapter__link:hover .ln-chapter__go { color: var(--book); transform: translateX(2px); }
+
+/* the honest "more coming" tail row inside a live phase */
+.ln-chapter--more {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.7rem 1rem;
+  background: color-mix(in srgb, var(--paper-3) 45%, transparent);
+}
+.ln-chapter--more .ln-chapter__num { color: var(--ink-mute); }
+.ln-chapter__soon {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-style: italic;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+}
+
+/* --- wider layout: give the phase rail a touch more room ----------------- */
+@media (min-width: 46rem) {
+  .ln-phase { grid-template-columns: 2rem minmax(0, 1fr); gap: 1.2rem; }
+}
+
+/* ===========================================================================
+   Motion — respect reduced-motion (the global .book reset also covers this;
+   this makes the intent explicit for the landing's hover affordances).
+   ======================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .ln-btn,
+  .ln-chapter__link,
+  .ln-chapter__go { transition: none; }
+  .ln-chapter__link:hover .ln-chapter__go { transform: none; }
+}

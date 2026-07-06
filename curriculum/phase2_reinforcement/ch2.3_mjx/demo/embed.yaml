@@ -1,0 +1,45 @@
+# Demo embed stub — ch2.3 "mjx_parallel_training".
+# Playground integration point: playground/ owns the WASM/browser runtime and the
+# embed component; this file declares WHAT the embed shows. The actual site/
+# playground component is a FOLLOW-UP the author/playground build wires — this spec
+# is the contract. Coordinate at contracts.ts before wiring.
+demo: mjx_parallel_training
+scene: cartpole             # curriculum/common/envs/cartpole/cartpole.xml, verbatim (the MJX env)
+kind: live-parallel-training  # NOT a single trained-policy hero (that's ch2.1); this shows TRAINING, in parallel
+what_it_shows: >
+  Many cartpoles training AT ONCE — a grid/wall of N parallel envs (e.g. 64-256)
+  all stepping together, so the visitor SEES what "vmap over N worlds" means:
+  early on the poles fall everywhere; as PPO updates land, more and more envs hold
+  the pole up, in lockstep. Beside the env wall, two live curves tell the chapter's
+  story: (1) episodic return climbing toward the 500 cap (learning), and (2)
+  throughput in env-steps/sec (the parallelism win). A num_envs slider re-runs the
+  throughput measurement and redraws the WALL-CLOCK CLIFF curve live — the visitor
+  drags it up and watches throughput climb, then plateau (on the browser/CPU tier).
+panels:
+  env_wall:
+    render: N parallel cartpole sims (subsample to a viewable grid if N is large)
+    highlight: fraction of envs currently balancing (upright) — rises as training proceeds
+  charts:
+    - episodic_return         # rerun charts/episodic_return — the learning curve
+    - throughput_env_steps_per_sec  # rerun charts/throughput_env_steps_per_sec — the cliff, live
+  cliff_curve:
+    x: num_envs (slider: 16 .. tier max)
+    y: env-steps/sec
+    annotation: mark the plateau; label "GPU keeps climbing to 4096 (Scale Lab)"
+interaction:
+  - drag num_envs slider -> re-measure throughput, redraw the cliff curve
+  - scrub the return curve -> the env wall shows that iteration's competence
+tier_honesty: >
+  The browser/CPU tier runs a SMALL num_envs (the free-tier config, ~64-256) — the
+  same honest limit as the artifact. The demo LABELS this: the 4096-robot regime is
+  the GPU Scale Lab, shown as the dashed continuation of the cliff curve, not a live
+  browser run. Do not fake a 4096-env live browser demo.
+data_source: >
+  The artifact already logs charts/episodic_return and
+  charts/throughput_env_steps_per_sec to rerun (.rrd), and --sweep prints the cliff
+  table. The embed can drive off a recorded .rrd + a small live CPU-jax sweep, or a
+  precomputed sweep JSON for the cliff curve. Contract TBD with playground/.
+notes: >
+  The payoff vs ch2.1: ch2.1's hero was ONE competent policy recovering from a nudge;
+  ch2.3's hero is SCALE made visible — thousands of robots learning together and the
+  throughput/gradient-quality tradeoff you can feel by dragging the slider.

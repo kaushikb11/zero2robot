@@ -1,0 +1,96 @@
+---
+// Hero.astro — the top of the landing FRAME (feature F3).
+//
+// The product promise + the flagship covariate-shift toy as the "wow", plus a
+// primary CTA and a SLOT for F2's progress-aware "continue" widget.
+//
+// COPY OWNERSHIP: landing-page copy is DevRel + author owned (site/CLAUDE.md:
+// "treat like prose/"). So every authored marketing line here is DRAFT, sitting
+// behind a visible draft band that mirrors ChapterLayout's galley-proof ribbon —
+// exactly the honesty pattern chapter draft-prose uses. The hero's centerpiece
+// (HeroDemo → the real bc_policy.onnx + MuJoCo-WASM toy) is NOT copy; it is the
+// real thing, reused verbatim, and it degrades to its SSR poster with JS off.
+//
+// SSR / JS-OFF: this component is fully server-rendered. The headline, CTAs and
+// the toy's poster + caption survive a <script> strip. Only the live sim (inside
+// HeroDemo/PlateIsland) needs JS, and it is hydration-gated + lazy by contract.
+import HeroDemo from "../HeroDemo.astro";
+import { discoverChapters } from "../../lib/curriculum.ts";
+import "./landing.css";
+
+// Links are DERIVED from the real curriculum, never hand-typed — so they can
+// never point at a chapter that doesn't exist.
+const chapters = discoverChapters();
+const first = chapters[0] ?? null;
+const flagship = chapters.find((c) => c.demo === "pusht_bc_recovery") ?? null;
+
+const startHref = first ? `/${first.slug}/` : "#curriculum";
+const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
+
+// The toy's "See it work" caption is authored copy → self-labelled DRAFT inline,
+// and it sits under the hero's draft band besides. Instructional + factual, not
+// marketing voice: it describes exactly what the real toy demonstrates.
+const heroLedeHtml = `
+  <p><em>Draft caption — pending DevRel/author.</em> This is the real
+  behavior-cloning policy from Chapter 1.1, running in your browser on a
+  MuJoCo-WASM simulation — the same <code>bc.py</code> you'll train.
+  Drag the block out of the region the demonstrations covered and watch a
+  confident policy fail. That failure has a name, and the course is built
+  around understanding it.</p>
+`;
+
+const hasProgress = Astro.slots.has("progress");
+---
+
+<section class="ln-hero" aria-labelledby="ln-hero-title">
+  <div class="ln-draft" role="note" aria-label="Draft landing copy — pending DevRel and author pass">
+    <b>draft</b>
+    <span class="ln-draft__src">
+      landing copy — pending DevRel/author pass
+      <span class="ln-draft__tail"> · headline, subhead &amp; captions are placeholders, not final voice</span>
+    </span>
+  </div>
+
+  <div class="ln-hero__grid">
+    <div class="ln-hero__lead">
+      <p class="ln-kicker">Interactive textbook · embodied AI, from scratch</p>
+
+      <h1 class="ln-title" id="ln-hero-title">
+        Read robotics like a book.
+        <span class="ln-title__accent">Run every page like a lab.</span>
+      </h1>
+
+      <p class="ln-subhead">
+        Minimal, real, readable code — one runnable file per chapter, taught
+        phase by phase from a bare simulation loop to a policy you train, export,
+        and drive in the browser. No black boxes. The code is the product.
+      </p>
+
+      <div class="ln-cta">
+        <a class="ln-btn ln-btn--primary" href={startHref}>
+          Start from the first page
+          {first && <span class="ln-btn__sub">{first.number} · {first.artifactBasename}</span>}
+        </a>
+        <a class="ln-btn" href={flagshipHref}>
+          Jump to the flagship chapter →
+        </a>
+      </div>
+
+      <!-- Progress-aware "continue" widget (F2's ProgressOverview) mounts here.
+           F2 owns the widget; F3 owns only this labelled slot. Static fallback
+           reads fine JS-off and when no progress island is wired. -->
+      <div class="ln-hero__continue" data-has-progress={hasProgress ? "true" : "false"}>
+        <slot name="progress">
+          <p class="ln-continue-fallback">
+            No account, no setup — progress is remembered locally in your browser.
+            Everything runs on a free Colab T4 or a CPU laptop.
+          </p>
+        </slot>
+      </div>
+    </div>
+
+    <div class="ln-hero__demo">
+      <HeroDemo demo="pusht_bc_recovery" task="pusht" ledeHtml={heroLedeHtml} />
+    </div>
+  </div>
+</section>

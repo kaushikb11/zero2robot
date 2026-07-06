@@ -1,0 +1,213 @@
+/* pusht-scene-build — ch0.2 weld concept-toy.
+ * Scoped to .sb-*; reuses the page design tokens from public/styles.css
+ * (--paper*, --ink*, --rule*, --signal*, --alert, --entity-*). Light theme only,
+ * matching the site's single letterpress palette. */
+
+.sb {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* ---- square figure: poster + canvas share ONE box (no reflow on boot) ---- */
+.sb-figure {
+  position: relative;
+  margin: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fbf9f3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 3px -1px rgba(35, 32, 27, 0.12);
+}
+
+.sb-poster,
+.sb-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sb-poster[hidden],
+.sb-canvas[hidden] { display: none; }
+
+.sb-poster-svg { width: 100%; height: 100%; display: block; }
+
+/* ---- poster SVG entity styling (mirrors the live canvas hues) ---- */
+.sb-arena { fill: #fbf9f3; stroke: var(--rule-strong); stroke-width: 1.5; }
+.sb-grid line { stroke: color-mix(in srgb, var(--rule-strong) 55%, transparent); stroke-width: 1; }
+
+.sb-tee rect { fill: var(--entity-block); }
+.sb-target rect { fill: none; stroke: var(--entity-target); stroke-width: 2; stroke-dasharray: 5 4; }
+.sb-target-label {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.05em;
+  fill: var(--entity-target);
+}
+.sb-pusher-ring { fill: none; stroke: var(--entity-pusher); stroke-width: 1.5; opacity: 0.5; }
+.sb-pusher-core { fill: var(--entity-pusher); }
+
+.sb-poster-badge rect {
+  fill: color-mix(in srgb, var(--signal) 8%, #fdfbf6);
+  stroke: var(--signal-line, rgba(31, 86, 222, 0.34));
+  stroke-width: 1;
+}
+.sb-poster-badge text {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.02em; fill: var(--ink-soft);
+}
+.sb-poster-hint {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.03em;
+  fill: var(--signal);
+}
+
+/* ---- the DOF badge overlay: structural truth the picture hides ---- */
+.sb-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.34rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--signal) 8%, #fdfbf6);
+  border: 1px solid var(--signal-line, rgba(31, 86, 222, 0.34));
+  border-radius: 7px;
+  box-shadow: 0 1px 3px -1px rgba(35, 32, 27, 0.18);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.sb-badge--split {
+  background: color-mix(in srgb, var(--alert) 9%, #fdfbf6);
+  border-color: color-mix(in srgb, var(--alert) 42%, transparent);
+}
+.sb-badge-line b { font-weight: 700; }
+.sb-badge-sep { color: var(--rule-strong); }
+.sb-dof-ok { color: var(--entity-target); }
+.sb-dof-bad { color: var(--alert); }
+.sb-phantom { color: var(--alert); font-style: italic; opacity: 0.9; }
+
+/* ---- live HUD panel (bottom-left) ---- */
+.sb-hud {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 2.1rem;
+  min-width: 13.5rem;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  background: color-mix(in srgb, #fdfbf6 88%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  box-shadow: 0 1px 3px -1px rgba(35, 32, 27, 0.16);
+}
+.sb-hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+}
+.sb-k { color: var(--ink-mute); }
+.sb-v { font-variant-numeric: tabular-nums; font-weight: 600; }
+.sb-ok { color: var(--entity-target); }
+.sb-bad { color: var(--alert); }
+
+/* ---- boot / status line ---- */
+.sb-status {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  background: color-mix(in srgb, #fdfbf6 82%, transparent);
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+}
+.sb-status[data-failed="true"] { color: var(--alert); }
+
+/* ---- controls ---- */
+.sb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sb-btn {
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.sb-btn:hover:not(:disabled) { border-color: var(--signal); color: var(--ink); }
+.sb-btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.sb-btn:disabled { opacity: 0.5; cursor: default; }
+
+.sb-btn--primary {
+  background: var(--signal);
+  color: var(--signal-ink);
+  border-color: var(--signal);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.34));
+}
+.sb-btn--primary:hover:not(:disabled) { color: var(--signal-ink); filter: brightness(1.06); }
+
+/* the ONE control: a real switch — welded ⟷ two bodies */
+.sb-btn--toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sb-toggle-label { color: var(--ink-mute); font-size: 0.8rem; letter-spacing: 0.02em; }
+.sb-btn--toggle:not(.is-split) .sb-toggle-label:first-of-type { color: var(--signal); font-weight: 600; }
+.sb-btn--toggle.is-split .sb-toggle-label:last-of-type { color: var(--alert); font-weight: 600; }
+.sb-toggle-track {
+  position: relative;
+  width: 2.2rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 22%, var(--paper-2, #f0e9d9));
+  border: 1px solid var(--rule-strong);
+  transition: background 160ms ease;
+}
+.sb-btn--toggle.is-split .sb-toggle-track {
+  background: color-mix(in srgb, var(--alert) 26%, var(--paper-2, #f0e9d9));
+}
+.sb-toggle-knob {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--signal);
+  transform: translate(0, -50%);
+  transition: transform 160ms ease, background 160ms ease;
+}
+.sb-btn--toggle.is-split .sb-toggle-knob {
+  background: var(--alert);
+  transform: translate(1.1rem, -50%);
+}
+
+.sb-control-note {
+  flex: 1 1 14rem;
+  color: var(--ink-mute);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-badge,
+  .sb-btn,
+  .sb-toggle-track,
+  .sb-toggle-knob { transition: none; }
+}

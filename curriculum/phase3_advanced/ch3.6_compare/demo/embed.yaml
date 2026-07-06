@@ -1,0 +1,42 @@
+# Demo embed stub — ch3.6 "pusht_sim2sim" (the FULL CIRCLE).
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. The hero is the OVERLAY: the same ch1.1 BC policy
+# driving PushT in two sims at once — MuJoCo (the ground truth, blue) and the
+# learner's from-scratch numpy engine (the test, red) — from ONE shared initial
+# state, with the block-pose divergence growing between them. Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: pusht_sim2sim
+scene: pusht                 # the pusht.xml scene for the MuJoCo side; the engine side is the two-mass block + pusher disk, pure numpy
+runtime: numpy-inline+mujoco-wasm  # MuJoCo-WASM drives the ground-truth sim; the learner's engine is ~200 lines of numpy the embed steps directly
+scene_default: overlay      # the hero: both sims' block trajectories drawn in one top-down view
+panels:
+  - id: overlay
+    kind: top_down_2d       # THE hero panel: MuJoCo block path vs engine block path from the same start, pusher + target drawn
+    series: [mujoco, engine]
+    colors: [ "#7380f2", "#d94c40" ]   # matches compare.py rerun colors (blue MuJoCo / red your-engine)
+    annotate: "Same policy, same start, two engines. They begin identical and pull apart — most of all in ANGLE."
+  - id: divergence
+    kind: timeseries        # block-pose divergence (position + angle) vs step — the gap, growing
+    y: divergence
+    series: [position_m, angle_rad]
+  - id: transfer
+    kind: bar               # BC success rate: MuJoCo (ground truth) vs your engine — the transfer headline
+    series: [mujoco, engine]
+controls:
+  - id: block_damp
+    kind: slider
+    min: 2.0                # low drag: the block coasts, unlike MuJoCo's quasi-static tee -> WIDER gap
+    max: 60.0               # high drag: quasi-static like MuJoCo -> the divergence NARROWS (ex3's knob)
+  - id: pusher_mass
+    kind: slider
+    min: 1.0                # a light pusher the block can shove back -> a different gap
+    max: 12.0
+interaction: watch-both-sims-diverge-and-tune-the-gap
+notes: >
+  The one thing to feel here: the policy you trust IS running in the engine you
+  built, and it PARTLY works. The blue (MuJoCo) and red (your engine) block paths
+  leave the same point and drift apart, the angle gap opening faster than the
+  position gap because a two-point-mass block rotates worse than MuJoCo's shaped
+  one. Drag the block_damp slider up and the red path pulls back toward the blue —
+  the sim-to-sim gap is a modeling choice, and you can watch yourself move it. Tie
+  it out loud to ch2.6: this is sim-to-sim, but it is the same story as sim-to-real.

@@ -1,0 +1,107 @@
+id: ch1.3-act
+title: "ACT: Commit to the Chunk"
+artifact: act.py            # target ~350 LOC (built to 379: chunking data-prep + a from-scratch transformer + temporal-ensembling eval, all in one file)
+task: aloha_cube            # bimanual cube transfer with a mandatory mid-air handoff (curriculum/common/envs/aloha_cube)
+objectives:
+  - Predict a CHUNK of K future actions per forward pass instead of one action, and explain why committing to a short plan beats re-averaging every step on a coordination task
+  - Build a tiny transformer encoder-decoder from scratch in torch (entity-token attention encoder + learned-query decoder) with no transformer library
+  - Apply temporal ensembling at eval — average overlapping chunk predictions with exponential weights — and measure the smoothness it buys
+  - Name what this teaching version drops from real ACT (the CVAE latent, the image backbone) and why the deterministic core still beats single-step BC here
+scale_lab: false
+
+# READ-THE-REAL-THING: the map's ch1.3 row calls for a guided read of the
+# original ACT repo (chunking + temporal-ensembling code). The chapter is
+# flagged for it, but the rtrt: block below is LEFT FOR THE AUTHOR to pin: the
+# real repo is tonyzhaozh/act (Zhao et al., "Learning Fine-Grained Bimanual
+# Manipulation with Low-Cost Hardware", RSS 2023). I did not have a verified
+# offline commit sha and must never invent one, so the author pins the commit.
+# site RTRT.astro renders nothing until repo + commit both exist, so this is safe.
+read_the_real_thing: true
+# rtrt:
+#   repo: tonyzhaozh/act        # author: confirm + pin a real commit sha
+#   commit: <author pins>
+#   focus:
+#     - imitate_episodes.py  temporal ensembling loop (all_time_actions + exp weights)
+#     - policy.py            the CVAE encoder/decoder we simplified away
+#     - detr/models          the DETR-style transformer our from-scratch blocks mirror
+
+demo: aloha_cube_chunk       # ensembled ACT chunk driving the handoff; optional --break no_ensemble panel
+
+# All reference metrics: seed 0, cpu, mujoco 3.10.0 / torch 2.10.0 / lerobot
+# 0.4.4 / numpy 2.4.6. The demos are the deterministic scripted expert (100% on
+# seeds 0..49), so a learner re-running the default config reproduces these to
+# the seeded band. Absolute success is modest — a tiny transformer on ~50 demos,
+# trained briefly to fit a CPU laptop — so the LESSON is the delta over the
+# untrained baseline and the chunking/ensembling ablations, not the headline number.
+reference_run:
+  provenance: "seed 0 on cpu; default config (chunk_size 8, model_dim 128, num_demos 50, epochs 400, eval_episodes 25); measured 2026-07-06"
+  baseline_success_rate: 0.0       # untrained (random-init) reference, temporal ensembling
+  baseline_mean_return: -320.354913
+  success_rate: 0.88               # trained ACT, temporal ensembling — chunking clears a bar single-step never reaches
+  mean_return: -45.84927
+  final_train_loss: 0.01105
+  # Ablations (same demos/epochs, only the named piece changed), measured 2026-07-06 cpu, seed 0, eval_episodes 25:
+  break_no_chunk_success_rate: 0.6         # K=1: single-step BC through the transformer — the big, ROBUST drop; chunking IS the lever
+  break_no_ensemble_success_rate: 0.0      # first-action-only, seed 0 — see the seed-dependence note; NOT a robust number
+  break_open_loop_success_rate: 0.88       # commit to the whole chunk, no mid-chunk re-query — neutral on success here (jerk shows in traces, not success)
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * CHUNKING helps largely and ROBUSTLY: trained chunked 0.88 vs no_chunk 0.6
+  #    at default (eval 25); at eval 50 the gap is ~0.9 vs 0.58, and it holds
+  #    across seeds. This is the chapter's thesis and it is solid. K=8 also beats
+  #    K=16 (0.92 vs 0.86 at eval 50) — the "tune chunk under the ~27-step
+  #    episode" lesson, measured.
+  #  * TEMPORAL ENSEMBLING's effect on SUCCESS is SEED-DEPENDENT, not a clean win:
+  #    seed 0 no_ensemble = 0.00 (catastrophic — the env's threshold weld-grasp
+  #    makes grip timing marginal, and the temporal average is what tips the
+  #    gripper over CLOSE_FRAC to latch the grasp), but seed 1 no_ensemble = 0.94
+  #    (neutral: ensemble 0.92). Do NOT claim ensembling reliably raises success.
+  #    Its RELIABLE contribution is trajectory smoothness (visible in eval/*/action
+  #    traces) and robustness to real-robot observation noise this clean sim lacks.
+  #    The seed-0 collapse is a vivid illustration to SHOW, honestly captioned as
+  #    seed-dependent — that brittleness is itself chapter 1.6's evaluation thesis.
+  #  * eval_episodes is 25 by default, so break rates carry ~1-2 episode noise;
+  #    only the no_chunk direction is robust to seed and eval size.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded
+# band with provenance, not a bare magic number). checks.py reads these instead
+# of inlining tolerances. The reproduce checks train a policy (~minutes on CPU)
+# and are @pytest.mark.slow — excluded from `make check`. PENDING values are
+# filled by the author from the measured reference run above; the fast
+# prediction/unit gates do not depend on them.
+exercise_checks:
+  exercise_config:                 # shared reduced config for the slow reproduce checks (kept small so a check trains in a few minutes)
+    chunk_size: 8
+    model_dim: 64
+    num_demos: 30
+    epochs: 200
+    eval_episodes: 10
+    provenance: "PENDING — measure with act.py at this reduced config, seed 0, cpu; the DIRECTION (trained >> baseline; chunk >> no_chunk) is robust, the exact band author-confirms"
+    min_return_gain: 5.0           # trained mean_return must beat untrained baseline by at least this (measured margin at default is ~275; conservative here for the reduced config)
+  ex1:                             # ex1_predict_chunk_vs_baseline.py (predict-then-run)
+    answer: "B"                    # the chunked policy beats the untrained baseline; chunking is the point
+  ex2:                             # ex2_predict_chunk_vs_single.py (predict-then-run)
+    answer: "A"                    # chunking (K>1) beats single-step (K=1) — the robust core ablation
+  ex3:                             # ex3_bughunt_chunk_indexing.py (bug-hunt)
+    provenance: "PENDING — author confirms the off-by-one degrades success vs the fixed indexing at exercise_config"
+  ex4:                             # ex4_completion_temporal_ensemble.py (code-completion)
+    rel_tol: 1.0e-6                # completed ensemble weights must match the reference on the fixture
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/
+# Colab variant is not built yet (ch1.3 is a draft pending the teaching-pass);
+# notebook-tier-test writes both on generation, and the gate skips a chapter
+# that carries neither key (never a PENDING placeholder, which reads as stale).
+
+# region_hashes intentionally omitted until the site build renders this chapter
+# (check_prose_code_drift passes a chapter with no region_hashes). The site
+# records them on first render; do not hand-write them.
+
+region_hashes:
+  setup: 96f2df630a8dc3230817d8e5d9b8d0c5c80d3abda29c62f3388c5bd3968336d4
+  data: 93db3132c688d6d16a7855eee33dd67adcafcae4f5b9e642b36c30ebb1c8411d
+  model: 15e580b8d703f98c0b7e82e71d7c9d735e2606c9440e57165590987eb22d0702
+  train: a30d5081e8404853a13830719e01a0763ea34e18a62ac40f0235a532139455d7
+  eval: 19534f9baab11242bc2318a09d049c35ccb201883b0bb16277c93b6f175d331a
+  report: 0c841753e750691a6ec677fa53e6b09556f53c21351852211d8fdc7a15a90122
+
+notebook_hash: 9172cfdd4d42c682a767a2f324356ddeda4a06342cdf4895c5d9cb01e9c066d4        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 36a2ba0184072aa920824f6ceb007bbf90af96f55a9986fc0a019bc07aa5b5d3   # sha256 of the generated notebook bytes; mismatch => hand-edited

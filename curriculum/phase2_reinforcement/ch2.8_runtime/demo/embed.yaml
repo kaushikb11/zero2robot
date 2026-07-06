@@ -1,0 +1,34 @@
+# Demo embed stub — ch2.8 "cartpole_runtime_graph".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: the browser embed is a
+# follow-up the author wires when this chapter graduates from draft to drop — the
+# ch2.1 ONNX policy (obs float32[1,5] -> action float32[1,1]) is the same brain the
+# node graph runs here, so the embed reuses ch2.1's exported policy. OUT OF SCOPE
+# for this draft (spike doctrine: no browser demo/site embed yet).
+demo: cartpole_runtime_graph
+scene: cartpole             # curriculum/common/envs/cartpole/cartpole.xml, verbatim
+policy: ppo_agent.onnx      # reuse ch2.1's export; contract v1: obs float32[1,5] -> action float32[1,1]
+camera:
+  lookat: [0.0, 0.0, 0.3]
+  distance: 3.0
+  azimuth: 90
+  elevation: -10
+interaction: control-rate-slider   # visitor drags a slider that sets --control_hz; the pole balances high, falls low
+hud:
+  - pole_angle              # watch it stay near 0 until the control rate drops below the cliff
+  - control_hz              # the knob being dragged
+  - obs_msg_rate            # /obs messages per second delivered
+  - sense_to_act_latency_ms # climbs as the control rate drops — the visible warning sign
+graph_overlay:              # the hero visual: the node graph itself, not just the pole
+  nodes: [sensor, policy, actuator]
+  topics: [/obs, /action]
+  show: [per_topic_msg_rate, dropped_count]
+notes: >
+  The hero behavior is the GRAPH, not just the balancing pole: three boxes
+  (sensor, policy, actuator) wired by two topic arrows, each arrow annotated with
+  its live message rate and drop count. Drag the control-rate slider down and the
+  visitor watches the /obs arrow turn red with drops, the latency readout climb,
+  and — past the cliff — the pole fall. This makes the chapter's thesis physical:
+  real robot software is a graph running at rates, and the rate is what keeps the
+  robot alive. Reset re-seeds the pole pose and restores 50 Hz.

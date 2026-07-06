@@ -1,0 +1,149 @@
+---
+// Dynamic chapter route — one page per discovered chapter, rendered in the won
+// Variant C system ("read like a book, code like a lab"): a warm ivory serif
+// reading surface with roman-numeral section marks + drop cap + book chrome,
+// the "See it work" plate hero, an objectives plate, dark crisp code panels with
+// sha256 headers, and the honest wall-clock ledger.
+//
+// Everything reads from curriculum/ via the bridge (lib/curriculum.ts) — the
+// site stores no prose or code of its own. All of it is server-rendered, so a
+// chapter reads with JavaScript disabled: prose, every code panel (real bytes),
+// the wall-clock lines, and the hero poster all survive a <script> strip.
+import ChapterLayout from "../layouts/ChapterLayout.astro";
+import Breadcrumb from "../components/Breadcrumb.astro";
+import HeroDemo from "../components/HeroDemo.astro";
+import Objectives from "../components/Objectives.astro";
+import WallclockTable from "../components/WallclockTable.astro";
+import PrevNext from "../components/PrevNext.astro";
+import Exercises from "../components/exercises/Exercises.astro";
+import RTRT from "../components/RTRT.astro";
+import OpenInColab from "../components/OpenInColab.astro";
+import {
+  discoverChapters,
+  extractRegions,
+  regionHashes,
+  wallclock,
+  readProse,
+  type ChapterInfo,
+} from "../lib/curriculum.ts";
+import { renderChapterProse, wallclockTableHtml } from "../lib/prose.ts";
+
+// Consistent tier set across every chapter; tiers absent from wallclock.csv
+// render as "not yet measured" (honest, never an estimate).
+const TIERS = ["cpu-laptop", "mps", "t4", "4090"];
+
+export async function getStaticPaths() {
+  const chapters = discoverChapters();
+  return chapters.map((chapter, i) => ({
+    params: { chapter: chapter.slug },
+    props: {
+      chapter,
+      prev: i > 0 ? chapters[i - 1] : null,
+      next: i < chapters.length - 1 ? chapters[i + 1] : null,
+    },
+  }));
+}
+
+interface Props {
+  chapter: ChapterInfo;
+  prev: ChapterInfo | null;
+  next: ChapterInfo | null;
+}
+const { chapter, prev, next } = Astro.props;
+
+const regions = extractRegions(chapter.artifactPath);
+const hashes = regionHashes(regions);
+const wall = wallclock(chapter.id, TIERS);
+const proseMarkdown = readProse(`${chapter.chapterDir}/prose/chapter.draft.md`);
+
+// Entity tinting is display-only and applied ONLY for PushT chapters, where the
+// pusher / T-block / target map is trivially correct. Other chapters (e.g. the
+// raw sim-loop) keep the --entity-* tokens defined in CSS but get NO tinting —
+// never wrong tinting. Tinting wraps spans around already-rendered text and
+// never alters the extracted region bytes or their sha256.
+const entities = chapter.task === "pusht";
+
+const { ledeHtml, bodyHtml, wallclockInjected } = renderChapterProse(
+  proseMarkdown,
+  regions,
+  chapter.artifactBasename,
+  { wallclockHtml: wallclockTableHtml(wall), entities },
+);
+
+// Split "Title: Subtitle" so the subtitle can drop below in italic display face.
+const [titleMain, titleSub] = chapter.title.includes(":")
+  ? [
+      chapter.title.slice(0, chapter.title.indexOf(":")).trim(),
+      chapter.title.slice(chapter.title.indexOf(":") + 1).trim(),
+    ]
+  : [chapter.title, ""];
+
+const draftPath = `${chapter.chapterDir}/prose/chapter.draft.md`;
+---
+
+<ChapterLayout title={`${chapter.number} — ${chapter.title}`} currentSlug={chapter.slug} draft={true}>
+  <Breadcrumb slot="breadcrumb" chapter={chapter} />
+
+  <div class="bk-runninghead">
+    <span class="bk-folio">zero2robot · {chapter.phaseLabel}</span>
+    <span class="bk-imprint">{chapter.id} · {chapter.artifactBasename}</span>
+  </div>
+
+  <div class="bk-titleblock">
+    <p class="bk-kicker">Chapter {chapter.number}</p>
+    <h1 class="bk-title">
+      {titleMain}
+      {titleSub && <span class="bk-title-sub">{titleSub}</span>}
+    </h1>
+    <p class="bk-draftnote">
+      Draft — pending author voice pass. Rendered verbatim from <code>{draftPath}</code>; the numbers
+      carry their own provenance, the voice does not yet.
+    </p>
+  </div>
+
+  <Objectives objectives={chapter.objectives} />
+
+  <HeroDemo demo={chapter.demo} task={chapter.task} ledeHtml={ledeHtml} />
+
+  <OpenInColab chapterId={chapter.id} />
+
+  <article class="bk-prose" set:html={bodyHtml} />
+
+  <Exercises chapterDir={chapter.chapterDir} chapterSlug={chapter.slug} />
+
+  <RTRT rtrt={chapter.rtrt} />
+
+  {
+    /* Fallback: only if a draft lacks the Run-it wall-clock placeholder, so the
+       honest CSV-backed ledger always renders somewhere. */
+    !wallclockInjected && (
+      <section class="bk-runit" aria-label="Wall-clock">
+        <WallclockTable rows={wall} />
+      </section>
+    )
+  }
+
+  {
+    Object.keys(hashes).length > 0 && (
+      <footer class="bk-colophon">
+        <h2>Colophon · provenance</h2>
+        <p>
+          The code on this page is not pasted — each panel is included by region straight from
+          <code>{chapter.artifactBasename}</code>, and these fingerprints are its sha256, the same
+          ones <code>check_prose_code_drift</code> re-checks on every PR. Edit a shown region without
+          re-rendering and CI turns red.
+        </p>
+        <dl>
+          {Object.entries(hashes).map(([name, sha]) => (
+            <>
+              <dt>#{name}</dt>
+              <dd>{sha}</dd>
+            </>
+          ))}
+        </dl>
+      </footer>
+    )
+  }
+
+  <PrevNext slot="prevnext" prev={prev} next={next} />
+</ChapterLayout>

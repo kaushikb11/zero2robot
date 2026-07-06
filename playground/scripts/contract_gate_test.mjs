@@ -1,0 +1,177 @@
+// Fail-closed unit tests for the browser-side ONNX contract gate.
+//
+// Exercises the PURE validation/parse functions (no ORT/WASM needed) against
+// the real toy model plus hand-crafted adversarial inputs, proving each
+// confirmed review finding now REFUSES with a human-readable error:
+//
+//   #1  non-float32 graph output   -> GraphContractError
+//   #2  metadata dim vs graph dim  -> GraphContractError naming both
+//   #4  oversized protobuf tag     -> "invalid protobuf tag"
+//
+// A conformant model still loads: readOnnxMetadata + validateContract +
+// validateGraphContract all accept the real toy_policy.onnx graph I/O
+// (observation float32 [1,4], action float32 [1,2]).
+//
+// The two source modules are pure TypeScript with no external imports, so we
+// transpile them in-memory with the project's own `typescript` dep (no new
+// deps, no browser/WASM) and import the emitted JS. Run:
+//   node playground/scripts/contract_gate_test.mjs
+
+import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
+import ts from 'typescript';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const srcDir = resolve(here, '..', 'src', 'policy');
+const MODEL = resolve(here, '..', 'public', 'models', 'toy_policy.onnx');
+
+// Transpile a pure .ts source (types stripped, parameter properties lowered)
+// to an ESM .mjs in a temp dir, then dynamic-import it.
+const outDir = mkdtempSync(join(tmpdir(), 'z2r-contract-test-'));
+async function loadTs(name) {
+  const src = readFileSync(join(srcDir, `${name}.ts`), 'utf8');
+  const js = ts.transpileModule(src, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const outPath = join(outDir, `${name}.mjs`);
+  writeFileSync(outPath, js);
+  return import(pathToFileURL(outPath).href);
+}
+
+const { readOnnxMetadata } = await loadTs('onnx_metadata');
+const {
+  validateContract,
+  validateGraphContract,
+  GraphContractError,
+  assertDrivesPushT,
+  PolicyShapeMismatchError,
+  PUSHT_POLICY,
+} = await loadTs('contracts');
+
+let passed = 0;
+let failed = 0;
+const ok = (name) => { passed += 1; console.log(`  ok   ${name}`); };
+const bad = (name, detail) => { failed += 1; console.error(`  FAIL ${name}: ${detail}`); };
+
+function expectThrows(name, fn, match, errName) {
+  try {
+    fn();
+  } catch (e) {
+    if (errName && e.name !== errName) return bad(name, `wrong error type ${e.name}: ${e.message}`);
+    if (!match.test(e.message)) return bad(name, `message did not match ${match}: "${e.message}"`);
+    return ok(`${name}  (refused: "${e.message}")`);
+  }
+  bad(name, 'did not throw — FAILED OPEN');
+}
+
+// The graph I/O a conformant contract-v1 model exposes through ORT's
+// session.inputMetadata / outputMetadata (ONNX FLOAT -> ORT "float32").
+const goodInput = { name: 'observation', isTensor: true, type: 'float32', shape: [1, 4] };
+const goodOutput = { name: 'action', isTensor: true, type: 'float32', shape: [1, 2] };
+
+// --- positive path: the real toy model is ACCEPTED end-to-end ----------------
+const bytes = new Uint8Array(readFileSync(MODEL));
+const contract = validateContract(readOnnxMetadata(bytes));
+if (contract.obsDim === 4 && contract.actDim === 2 && contract.contractVersion === 'v1') {
+  ok('conformant toy_policy.onnx: metadata parsed + contract validated (v1, obs=4, act=2)');
+} else {
+  bad('conformant metadata', JSON.stringify(contract));
+}
+try {
+  validateGraphContract(contract, goodInput, goodOutput);
+  ok('conformant graph I/O accepted (observation f32 [1,4], action f32 [1,2])');
+} catch (e) {
+  bad('conformant graph I/O', e.message);
+}
+
+// --- #1 output dtype: float64 and int64 outputs are REFUSED ------------------
+expectThrows('#1 float64 output refused',
+  () => validateGraphContract(contract, goodInput, { ...goodOutput, type: 'float64' }),
+  /float32.*float64/s, 'GraphContractError');
+expectThrows('#1 int64 output refused',
+  () => validateGraphContract(contract, goodInput, { ...goodOutput, type: 'int64' }),
+  /float32.*int64/s, 'GraphContractError');
+
+// --- #2 metadata dim vs graph dim mismatch is REFUSED, naming both ----------
+expectThrows('#2 obs_dim=4 vs graph input [1,8] refused',
+  () => validateGraphContract(contract, { ...goodInput, shape: [1, 8] }, goodOutput),
+  /obs_dim=4.*\[1, 8\]/s, 'GraphContractError');
+expectThrows('#2 act_dim=2 vs graph output [1,5] refused',
+  () => validateGraphContract(contract, goodInput, { ...goodOutput, shape: [1, 5] }),
+  /act_dim=2.*\[1, 5\]/s, 'GraphContractError');
+
+// sanity: GraphContractError is the real exported class
+if (!(new GraphContractError('x') instanceof Error)) bad('GraphContractError type', 'not an Error');
+
+// --- REAL PushT drive contract (obs[10]/action[2]) ---------------------------
+// The 10-dim contract a bc.py ONNX carries: validateGraphContract accepts the
+// conformant graph and refuses a wrong feature dim, exactly as for the toy.
+const pushtContract = { contractVersion: 'v1', obsDim: 10, actDim: 2 };
+const pushtInput = { name: 'observation', isTensor: true, type: 'float32', shape: [1, 10] };
+const pushtOutput = { name: 'action', isTensor: true, type: 'float32', shape: [1, 2] };
+try {
+  validateGraphContract(pushtContract, pushtInput, pushtOutput);
+  ok('PushT graph I/O accepted (observation f32 [1,10], action f32 [1,2])');
+} catch (e) {
+  bad('PushT graph I/O', e.message);
+}
+expectThrows('PushT obs_dim=10 vs graph input [1,4] refused',
+  () => validateGraphContract(pushtContract, { ...pushtInput, shape: [1, 4] }, pushtOutput),
+  /obs_dim=10.*\[1, 4\]/s, 'GraphContractError');
+
+// --- drive gate: only obs[10]/act[2] may DRIVE PushT -------------------------
+// A contract-valid policy still needs the right dims to drive the scene. The
+// 10-dim policy passes; the 4-dim toy is refused with a human-readable reason.
+if (PUSHT_POLICY.obsDim !== 10 || PUSHT_POLICY.actDim !== 2) {
+  bad('PUSHT_POLICY dims', JSON.stringify(PUSHT_POLICY));
+} else {
+  ok('PUSHT_POLICY drive contract = obs[10]/action[2]');
+}
+try {
+  assertDrivesPushT(pushtContract);
+  ok('assertDrivesPushT accepts a 10/2 policy (may drive the scene)');
+} catch (e) {
+  bad('assertDrivesPushT(10/2)', e.message);
+}
+expectThrows('drive gate REFUSES the 4-dim toy (cannot drive PushT)',
+  () => assertDrivesPushT(contract), // `contract` = the real toy, obs=4/act=2
+  /obs_dim=4.*obs_dim=10/s, 'PolicyShapeMismatchError');
+if (!(new PolicyShapeMismatchError({ contractVersion: 'v1', obsDim: 4, actDim: 2 }) instanceof Error))
+  bad('PolicyShapeMismatchError type', 'not an Error');
+
+// --- opportunistic: a real bc.py export, when present, passes both gates -----
+// public/models/bc_policy.onnx is git-ignored (regenerated by bc.py), so this
+// only runs when a learner/CI has actually trained one — the end-to-end proof.
+const BC_MODEL = resolve(here, '..', 'public', 'models', 'bc_policy.onnx');
+try {
+  const bcBytes = new Uint8Array(readFileSync(BC_MODEL));
+  const bc = validateContract(readOnnxMetadata(bcBytes));
+  if (bc.obsDim === 10 && bc.actDim === 2 && bc.contractVersion === 'v1') {
+    ok('real bc_policy.onnx: metadata parsed + contract validated (v1, obs=10, act=2)');
+  } else {
+    bad('real bc_policy.onnx metadata', JSON.stringify(bc));
+  }
+  assertDrivesPushT(bc);
+  ok('real bc_policy.onnx passes the PushT drive gate (obs[10]/action[2])');
+} catch (e) {
+  if (e.code === 'ENOENT') console.log('  (skip real bc_policy.onnx: not present — train one with bc.py)');
+  else bad('real bc_policy.onnx', e.message);
+}
+
+// --- #4 oversized protobuf tag is REFUSED (does not fabricate metadata) ------
+// A hostile ONNX whose field tag is the 5-byte varint 0xF2 80 80 80 10 decodes
+// to 0x1_0000_0072. The old `tag >>> 3` (ToUint32) truncates that to 0x72 =
+// field 14 / wire 2 and mis-reads it as metadata_props, fabricating metadata.
+// The bounded tag reader must reject it before splitting field/wire.
+expectThrows('#4 5-byte oversized tag refused',
+  () => readOnnxMetadata(new Uint8Array([0xf2, 0x80, 0x80, 0x80, 0x10, 0x00])),
+  /invalid protobuf tag/);
+// A 6-byte varint tag trips the shift guard (no silent high-byte drop).
+expectThrows('#4 6-byte oversized tag refused',
+  () => readOnnxMetadata(new Uint8Array([0xf2, 0x80, 0x80, 0x80, 0x80, 0x01])),
+  /invalid protobuf tag/);
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed === 0 ? 0 : 1);

@@ -1,0 +1,45 @@
+[project]
+name = "zero2robot"
+version = "0.0.1"
+requires-python = ">=3.11"
+# PINNING DOCTRINE: exact pins land in the tooling engineer's FIRST commit after
+# `pip install` resolution on day 1 (see week-1 checklist). The majors below are
+# direction, not gospel — resolve, freeze, then hand ownership to upstream-pin-check.
+# NOTE: "LeRobot dataset v3" in our docs refers to the DATASET FORMAT version,
+# which is versioned independently of the lerobot package version. Verify the
+# format constant (lerobot.common.datasets CODEBASE_VERSION) at resolution time
+# and record both in infra/decisions/002-pins.md.
+dependencies = [
+  "mujoco==3.10.0",
+  "torch==2.10.0",
+  "numpy==2.4.6",
+  "rerun-sdk==0.26.2",
+  "lerobot==0.4.4",   # dataset format CODEBASE_VERSION: v3.0 (versioned independently — see 002-pins.md)
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+# Monorepo, not a library: the editable install exists only to carry pinned
+# dependencies. Chapter code is run as files, never imported as a package.
+[tool.setuptools]
+packages = []
+py-modules = []
+
+[tool.pytest.ini_options]
+markers = [
+  "gpu: requires a GPU tier (excluded from ci-cpu)",
+  "slow: long-running (excluded from ci-cpu)",
+]
+
+[project.optional-dependencies]
+dev = ["ruff==0.15.20", "pytest==8.4.2", "pytest-xdist==3.6.1", "pyyaml==6.0.3"]  # pyyaml: CI gates parse meta.yaml without relying on lerobot's transitive tree
+notebooks = ["jupytext~=1.16", "nbclient~=0.10", "nbformat~=5.10"]
+export = ["onnx~=1.17", "onnxruntime~=1.20"]   # CPU export/parity lane (dev machines, ci-cpu)
+grader = ["fastapi~=0.115", "uvicorn~=0.32", "python-multipart~=0.0.12"]   # leaderboard HTTP shell only (grader/api.py); DRAFT infra/decisions/013 — core grader needs no new dep
+gpu = ["onnx~=1.17", "onnxruntime-gpu~=1.20"]
+# MJX chapter (ch2.3) only — the ONE jax excursion (see decisions/015). CPU by
+# default (jax installs a CPU jaxlib on macOS/Linux); GPU users add jax[cuda12].
+# mujoco-mjx is pinned to the mujoco version so the XLA sim matches the C sim.
+mjx = ["jax~=0.10", "mujoco-mjx==3.10.0", "flax~=0.12", "optax~=0.2"]

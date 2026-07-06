@@ -1,0 +1,268 @@
+/* ch1.8 "The Tiny VLA II: Train It" concept-toy — the RECORDED VLA ROLLOUT REPLAY
+ * + FUSION-ATTENTION toy.
+ *
+ * Co-located CSS for VlaRolloutToy.tsx (imported at the top of that file).
+ * Namespaced `vr-*` so it never collides with the global `ct-*`/`bk-*` or the sibling
+ * toys' `fr-*`/`vb-*`/etc. classes. The SVG poster + the attention bars are pure
+ * DOM/SVG driving the site's flipping design tokens, so they are genuinely
+ * THEME-AWARE in both light and dark; the replay CANVAS re-resolves those same
+ * tokens every frame (see draw()), so a theme toggle is reflected live there too.
+ * Every var carries a light fallback so the toy renders if mounted outside the shell.
+ *
+ * Colour discipline (the demo's scheme, matching embed.yaml + the ch1.1 renderer):
+ *   - --entity-block magenta  → the T-block
+ *   - --entity-pusher amber   → the pusher / agent + its recorded path
+ *   - --entity-target emerald → the fixed goal pose (dashed)
+ *   - --signal blue           → the recorded block trail + the scrubber/focus (the
+ *                               one interactive handle)
+ *   - neutral ink / paper      → the arena, grid, and the attention bars (data, a map)
+ */
+
+.vr {
+  display: grid;
+  gap: 0.85rem;
+}
+
+/* ------------------------------------------------------------ the replay panel */
+.vr-panel { display: grid; gap: 0.55rem; }
+
+/* square arena — the server-rendered poster IS the JS-off frame (no reflow on boot) */
+.vr-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--paper, #f7f3ea);
+}
+.vr-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.vr-poster, .vr-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.vr-poster-svg { width: 100%; height: 100%; display: block; }
+
+/* --- SSR poster marks (the recorded path, drawn without motion) --------------- */
+.vr-arena { fill: var(--paper, #f7f3ea); stroke: var(--paper-edge, #ded3ba); stroke-width: 1; }
+.vr-grid line { stroke: color-mix(in srgb, var(--rule-strong, #c8bc9e) 55%, transparent); stroke-width: 1; }
+.vr-target rect { fill: none; stroke: var(--entity-target, #0c7d5f); stroke-width: 2; stroke-dasharray: 5 4; }
+.vr-target-label {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px;
+  letter-spacing: 0.05em; fill: var(--entity-target, #0c7d5f);
+}
+.vr-tee-path {
+  fill: none; stroke: var(--signal, #1f56de); stroke-width: 1.6;
+  opacity: 0.55; stroke-linejoin: round; stroke-linecap: round;
+}
+.vr-pusher-path {
+  fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.3;
+  opacity: 0.4; stroke-dasharray: 3 3; stroke-linejoin: round;
+}
+.vr-tee rect { fill: var(--entity-block, #a5257d); }
+.vr-tee-start rect { opacity: 0.28; }
+.vr-tee-end rect { opacity: 1; }
+.vr-pusher-ring { fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.5; opacity: 0.5; }
+.vr-pusher-core { fill: var(--entity-pusher, #b0560f); }
+.vr-poster-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px;
+  letter-spacing: 0.04em; fill: var(--ink-mute, #6d6252);
+}
+
+/* --- the honest "recorded, not live" badge (always visible on the figure) ------ */
+.vr-badge {
+  position: absolute; top: 0.55rem; right: 0.55rem;
+  padding: 0.22rem 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; letter-spacing: 0.04em; text-transform: lowercase;
+  color: var(--ink-mute, #6d6252);
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+
+/* --- HUD (frame / step / outcome) --------------------------------------------- */
+.vr-hud {
+  position: absolute; top: 0.55rem; left: 0.55rem;
+  display: grid; gap: 0.24rem;
+  padding: 0.45rem 0.6rem;
+  min-width: 8.5rem;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+.vr-hud-row { display: flex; gap: 0.9rem; justify-content: space-between; align-items: baseline; }
+.vr-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.vr-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.vr-v.vr-ok { color: var(--entity-target, #0c7d5f); }
+
+/* --- legend -------------------------------------------------------------------- */
+.vr-legend {
+  position: absolute; left: 0.6rem; bottom: 0.5rem; right: 0.6rem;
+  display: flex; flex-wrap: wrap; gap: 0.75rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+  pointer-events: none;
+}
+.vr-lg { display: inline-flex; align-items: center; }
+.vr-lg::before {
+  content: ""; width: 0.62rem; height: 0.62rem; border-radius: 3px;
+  margin-right: 0.32rem; background: currentColor;
+}
+.vr-lg-tee { color: var(--entity-block, #a5257d); }
+.vr-lg-pusher { color: var(--entity-pusher, #b0560f); }
+.vr-lg-target { color: var(--entity-target, #0c7d5f); }
+.vr-lg-target::before { background: none; border: 1.5px dashed currentColor; }
+
+/* --- controls: play/pause + the frame scrubber (the ONE control) --------------- */
+.vr-controls { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.vr-scrub {
+  flex: 1 1 160px; min-width: 130px;
+  accent-color: var(--signal, #1f56de); cursor: pointer;
+}
+.vr-scrub:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.vr-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.36rem 0.78rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.vr-btn:hover:not(:disabled) { border-color: var(--signal, #1f56de); }
+.vr-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.vr-btn:disabled { opacity: 0.5; cursor: default; }
+.vr-btn--primary {
+  border-color: var(--signal, #1f56de);
+  color: var(--signal, #1f56de);
+  font-weight: 600;
+}
+.vr-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.vr-note b { color: var(--ink, #23201b); }
+
+/* ------------------------------------------------------------ attention panel */
+.vr-att {
+  display: grid; gap: 0.6rem;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--paper, #f7f3ea) 60%, transparent),
+    color-mix(in srgb, var(--paper-2, #f0e9d9) 60%, transparent));
+}
+.vr-att-head { display: grid; gap: 0.15rem; }
+.vr-att-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--ink, #23201b);
+}
+.vr-att-sub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+.vr-att-sub code, .vr-att-cap code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.94em; color: var(--ink, #23201b);
+}
+
+/* the hero grouped bars (vision / state / language) */
+.vr-abar { display: grid; gap: 0.4rem; }
+.vr-abar-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 3rem;
+  align-items: center; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vr-abar-lab { font-size: 0.74rem; color: var(--ink, #23201b); font-weight: 600; }
+.vr-abar-track {
+  height: 0.85rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent);
+  overflow: hidden;
+}
+.vr-abar-fill { height: 100%; border-radius: 3px; transition: width 0.2s ease; }
+.vr-abar-state { background: var(--entity-target, #0c7d5f); }
+.vr-abar-lang { background: var(--signal, #1f56de); }
+.vr-abar-cls { background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+/* vision — the NOT-load-bearing channel: muted, so nothing implies it is the hero */
+.vr-abar-vision { background: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); }
+.vr-abar-val {
+  font-size: 0.74rem; font-variant-numeric: tabular-nums; text-align: right;
+  color: var(--ink, #23201b);
+}
+.vr-abar-note {
+  grid-column: 2 / 4;
+  justify-self: start;
+  margin-top: -0.15rem;
+  font-size: 0.6rem; letter-spacing: 0.02em;
+  color: var(--alert, #c0362a);
+}
+
+/* per-word language breakdown */
+.vr-words {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 45%, transparent);
+}
+.vr-words-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; letter-spacing: 0.02em; color: var(--ink-mute, #6d6252);
+  margin-bottom: 0.35rem;
+}
+.vr-words-grid { display: grid; gap: 0.22rem; }
+.vr-word {
+  display: grid;
+  grid-template-columns: 4rem 1fr 3rem;
+  align-items: center; gap: 0.45rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vr-word-w { font-size: 0.68rem; color: var(--ink, #23201b); overflow: hidden; text-overflow: ellipsis; }
+.vr-word-track {
+  height: 0.5rem; border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.vr-word-fill {
+  height: 100%; border-radius: 2px;
+  background: color-mix(in srgb, var(--signal, #1f56de) 62%, transparent);
+  transition: width 0.2s ease;
+}
+.vr-word-val {
+  font-size: 0.64rem; font-variant-numeric: tabular-nums; text-align: right;
+  color: var(--ink-mute, #6d6252);
+}
+
+.vr-att-cap {
+  margin: 0;
+  font-size: 0.74rem; line-height: 1.6; color: var(--ink, #23201b);
+}
+.vr-att-cap b { font-weight: 700; }
+.vr-att-cap em { font-style: italic; color: var(--ink-mute, #6d6252); }
+.vr-att-prov {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; color: var(--ink-mute, #6d6252);
+}
+
+/* ------------------------------------------------------------------ footer */
+.vr-foot {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.55; color: var(--ink-mute, #6d6252);
+  padding-top: 0.1rem;
+  border-top: 1px solid color-mix(in srgb, var(--rule-strong, #c8bc9e) 70%, transparent);
+}
+.vr-foot b { color: var(--ink, #23201b); }
+
+/* honour reduced-motion: kill every transition the toy uses (autoplay is also
+   suppressed in the component — it boots PAUSED under prefers-reduced-motion) */
+@media (prefers-reduced-motion: reduce) {
+  .vr-btn, .vr-abar-fill, .vr-word-fill { transition: none; }
+}

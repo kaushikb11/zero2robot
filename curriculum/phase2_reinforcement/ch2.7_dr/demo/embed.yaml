@@ -1,0 +1,43 @@
+# Demo embed stub — ch2.7 "narrow_vs_randomized_across_the_gap".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring.
+#
+# This is the "break-the-policy" playground the map promises. Two copies of the
+# quadruped run side by side under the SAME shifted test dynamics — one driven by
+# the NARROW policy (trained only on nominal dynamics), one by the RANDOMIZED
+# policy (trained across a band of mass/friction/gravity). The visitor drags a
+# DYNAMICS slider (mass scale) and watches where each policy holds and where it
+# falls: the eval sweep, made physical.
+demo: narrow_vs_randomized_across_the_gap
+scene: quadruped           # curriculum/common/envs/quadruped/quadruped.xml, verbatim
+policy:
+  narrow: dr_narrow.onnx        # PENDING export; the width-0 PPO actor,     contract v1: obs float32[1,23] -> action float32[1,8]
+  randomized: dr_randomized.onnx  # PENDING export; the width-1 PPO actor, same contract
+# The dynamics shift is applied in the RUNTIME, not the policy: the embed scales
+# the compiled model's body mass / foot friction / gravity exactly as dr.py's
+# apply_scales does, on top of the pinned contact solver. No re-export to reshift.
+compare:
+  - {label: "narrow policy", policy: narrow}
+  - {label: "randomized policy", policy: randomized}
+camera:
+  lookat: [0.0, 0.0, 0.25]
+  distance: 2.2
+  azimuth: 90
+  elevation: -10           # side-on: the torso height / tip reads cleanest from the side (quadruped 'side' camera)
+interaction: dynamics-slider  # visitor drags mass_scale 0.6..1.8; watch each policy's survival margin
+hud:
+  - sim_time
+  - torso_height           # the state that decides survival (falls below FALL_HEIGHT => down)
+  - mass_scale             # the knob; the actuator-limited cliff sits past ~1.2x (measured)
+notes: >
+  The HONEST teaching beat (see prose): on this free-tier quadruped STAND, the two
+  policies behave alike across most of the slider — standing is a stable
+  equilibrium a nominal policy already handles, and past ~1.2x mass the +-12 Nm
+  servos saturate and BOTH policies fall. So the visitor SEES the boundary of what
+  domain randomization can buy: robustness across a RANGE, not a stronger robot.
+  The embed is deliberately the counterpoint to a triumphant DR demo — it teaches
+  WHEN randomization helps (a brittle, dynamics-sensitive behavior) and when it
+  cannot (a passively stable task against a physics ceiling). If a later Scale-Lab
+  policy learns to WALK, re-point this embed at it — a gait IS friction-sensitive,
+  and the contrast should sharpen.

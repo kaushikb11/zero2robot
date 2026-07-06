@@ -1,0 +1,28 @@
+# Demo embed stub — ch3.7 "scale_data_coverage".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: scale_data.py writes
+# metrics.json + cross_embodiment.json + a .rrd; it does NOT export an ONNX
+# policy (the measurement trains two throwaway BC policies). This embed is a
+# DATA visualization, not a live-policy demo — the author decides at drop time
+# whether it ships as an interactive coverage map or a static rerun panel.
+demo: scale_data_coverage
+scene: pusht                 # curriculum/common/envs/pusht — the spawn annulus the demos tile
+data: scale_data.rrd         # the rerun recording scale_data.py writes to --out
+shows:
+  - source_starts            # the few source-demo initial object poses (sparse dots in the annulus)
+  - augmented_starts         # the many re-solved, success-filtered augmented starts (dense coverage)
+  - success_bars             # source-only vs source+augmented BC rollout success, side by side
+interaction: none            # static coverage + bar view for the feasibility draft (author may add scrub)
+hud:
+  - source_success           # ~0.08 mean (coverage-starved 12 demos)
+  - augmented_success        # ~0.21 mean (8x re-solved augmentation)
+  - aug_yield                # ~0.98 (fraction of perturbed re-solves the expert still finished)
+notes: >
+  The hero image is COVERAGE: a dozen sparse source-demo starts, then the cloud
+  of augmented starts the MimicGen-style perturb-and-re-solve fills the spawn
+  annulus with — and the two success bars that grow with it. The honest caption
+  is the ch1.2 thesis scaled: the policy did not change between the two bars,
+  only the data did. Absolute success stays modest at free-tier; the ORDERING
+  (augmented > source, every seed) is the point. OXE/DROID are the same picture
+  at a million trajectories — named here, never downloaded.

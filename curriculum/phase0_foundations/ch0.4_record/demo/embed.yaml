@@ -1,0 +1,32 @@
+# Demo embed stub — ch0.4 "pusht-teleop".
+# Playground integration point: playground/ owns the WASM runtime, the teleop UI
+# (src/teleop/), and the z2r-teleop-1 interchange writer (src/teleop/
+# lerobot_writer.ts). This file declares WHAT the embed shows; the record.py
+# ingest path (--from-interchange) is the Python side of the SAME contract
+# (decision 008). Coordinate at the playground contracts level before wiring.
+demo: pusht-teleop
+scene: pusht                 # curriculum/common/envs/pusht/pusht.xml in MuJoCo-WASM; obs[10]/action[2] must equal pusht_env.py exactly
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.1
+  azimuth: 90
+  elevation: -70             # near top-down: teleop reads best looking straight down at the plane
+interaction: drag-to-push    # visitor drags the pusher; pointer delta -> pusher target velocity [vx, vy] (float32[2], the action)
+controls:
+  - record                   # start/stop capturing (obs, action) per control step (10 Hz)
+  - reset                    # env.reset(seed) — new block/pusher spawn, ends the current episode
+  - download                 # export the recorded episodes as a z2r-teleop-1 interchange bundle (zip)
+hud:
+  - episode_index
+  - frame_count              # frames captured so far in this episode
+  - success                  # env's in-target latch — did this demonstration reach the goal
+records:
+  interchange_version: z2r-teleop-1   # what the download produces; record.py --from-interchange converts it to LeRobot v3
+notes: >
+  The hero flow is the full loop: drag the pusher to walk the T onto the green
+  target, hit record over a few episodes, download the bundle, then run
+  `record.py --from-interchange <bundle>` to get a LeRobot v3 dataset identical
+  in schema to gen_demos. Graceful-degrade ladder (playground/CLAUDE.md): full
+  sim -> reduced render -> video fallback + Colab link; never a blank screen.
+  This is the artifact-continuity anchor — the dataset recorded here is the one
+  the learner trains on in ch1.1 and curates in ch1.2.

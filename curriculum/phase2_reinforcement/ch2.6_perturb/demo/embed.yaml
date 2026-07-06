@@ -1,0 +1,39 @@
+# Demo embed stub — ch2.6 "cartpole_latency_degrade".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring.
+#
+# This chapter's hero is DEGRADATION, not competence — the opposite of ch2.1's
+# "trained PPO balances" hero. Two copies of the SAME trained cartpole policy run
+# side by side: one on clean observations, one whose observations are delayed 4
+# control steps (80 ms) through a ring buffer. The clean one holds; the delayed
+# one visibly oscillates and falls. The visitor drags a LATENCY slider and
+# watches the balance survive, wobble, then collapse — the reality gap made
+# physical, and the setup for ch2.7 (train across it).
+demo: cartpole_latency_degrade
+scene: cartpole            # curriculum/common/envs/cartpole/cartpole.xml, verbatim
+policy: ppo_agent.onnx     # PENDING export; the ch2.1 PPO actor, contract v1: obs float32[1,5] -> action float32[1,1]
+# perturbation is applied in the RUNTIME, not the policy: the embed delays the
+# obs fed to the (unchanged) policy by `latency_steps`, exactly as perturb.py's
+# ObsDelay ring buffer does. No re-export needed to change the delay.
+compare:
+  - {label: "clean", latency_steps: 0}
+  - {label: "+80 ms latency", latency_steps: 4}
+camera:
+  lookat: [0.0, 0.0, 0.6]
+  distance: 4.0
+  azimuth: 90
+  elevation: 0             # side-on: the pole angle reads cleanest from the side (cartpole 'side' camera)
+interaction: latency-slider  # visitor drags observation latency 0..8 steps; watch the balance margin vanish
+hud:
+  - sim_time
+  - pole_angle             # the state the delayed policy is fighting to control on stale information
+  - latency_steps          # the knob; the fall happens between ~2 and ~4 steps (measured, seeds 0-2)
+notes: >
+  The teaching beat is that NOTHING about the policy changed between the two
+  panels — same weights, same clean-sim training. Only the world changed: the
+  observation now arrives late. A policy that never trained on stale state has no
+  memory to compensate, so it acts on where the pole WAS, over-corrects, and
+  falls. Contrast deliberately with the ch2.1 hero (the same policy recovering
+  from a shove): competence in the world it trained on, brittleness the instant
+  that world shifts. That gap is ch2.7's entire motivation.

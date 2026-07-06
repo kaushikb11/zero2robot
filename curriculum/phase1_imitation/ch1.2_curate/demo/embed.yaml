@@ -1,0 +1,31 @@
+# Demo embed stub — ch1.2 "pusht_curate_quality".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring (tensor contract v1 — both
+# policies below are the same bc_policy.onnx shape as ch1.1, one trained on raw
+# data and one on curated). See ch1.1 demo/embed.yaml for the shared scene.
+demo: pusht_curate_quality
+scene: pusht                 # curriculum/common/envs/pusht/pusht.xml, verbatim
+policies:                    # TWO policies on the SAME held-out start, side by side
+  raw: bc_policy_raw.onnx        # contract v1: observation float32[1,10] -> action float32[1,2]
+  curated: bc_policy_curated.onnx
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.1
+  azimuth: 90
+  elevation: -60
+interaction: reset-seed      # visitor re-seeds the block start; both policies run the SAME seed
+sync: shared-start           # both panels reset to identical poses so the comparison is honest
+hud:
+  - pos_err                  # per policy — watch the raw panel stall on far starts
+  - success
+  - start_bucket             # near / far — the far starts are where curation pays off
+notes: >
+  The hero is the SIDE-BY-SIDE: identical method and compute, two datasets. On
+  near-goal starts the panels look alike; drag the reset until the block spawns
+  far from the target and the raw-trained policy shoves-and-stalls while the
+  curated one commits to the rotation. This is the chapter's measured result
+  (raw 8% vs curated 22%, the gap concentrated on far starts) made kinetic.
+  A THIRD optional panel (bc_policy_break.onnx, trained with --break
+  low_disagreement) can be toggled to show the trap: tidy-looking data, worse
+  policy. Author decides whether the embed ships two panels or three.

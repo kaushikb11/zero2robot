@@ -1,0 +1,25 @@
+# Demo embed stub — ch0.3 "frames-drag".
+# Playground integration point: playground/ owns the WASM runtime and the embed
+# component; this file declares WHAT the embed shows. Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: frames-drag
+scene: frames               # no MuJoCo bodies to step — this embed renders coordinate frames, not physics
+camera:
+  lookat: [0.1, 0.0, 0.0]
+  distance: 0.9
+  azimuth: 120
+  elevation: -30
+interaction: drag-frame     # visitor drags the tee frame (position + yaw); the pusher's coords IN that frame update live
+frames:                     # the coordinate frames drawn as RGB basis arrows (x red, y green, z blue)
+  - world                   # identity frame at the origin — the fixed reference
+  - tee                     # world_from_tee: the draggable block frame
+  - pusher                  # a point the visitor watches re-expressed as the tee frame moves
+hud:
+  - pusher_in_tee           # the live [x, y, z] of the pusher in the tee's frame — the chapter's whole point
+  - tee_yaw                 # the block's rotation, so the visitor connects the arrows to a number
+notes: >
+  The hero behavior is composition made visible: drag the tee frame and the
+  pusher's coordinates in that frame change while its world coordinates do not.
+  A toggle re-runs the Break It (feed the tee quaternion in xyzw order) so the
+  visitor sees the block's axes swing to the wrong orientation on a one-click flip.
+  No policy, no physics step — this demo is frame bookkeeping, nothing else.

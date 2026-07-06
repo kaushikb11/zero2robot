@@ -1,0 +1,160 @@
+---
+// OpenInColab — the "Open in Colab" affordance for a chapter page. The offline
+// learning path (notebooks/CLAUDE.md) ships a generated .ipynb per stable
+// chapter; Google Colab can open any of them straight from GitHub at
+//   https://colab.research.google.com/github/{ORG}/{REPO}/blob/{BRANCH}/notebooks/{id}.ipynb
+// so a learner runs the exact chapter code on a free T4 without a local install.
+//
+// HONEST BY CONSTRUCTION (mirrors RTRT.astro's posture):
+//   - Renders NOTHING unless a notebook actually exists on disk for this
+//     chapter. We check notebooks/{id}.ipynb at BUILD time (Node fs), so the
+//     DRAFT chapters that have no generated notebook (ch0.5-inspect,
+//     ch1.2-curate) surface no button — never a dead link.
+//   - The GitHub org/repo/branch are NOT public yet (human-owned). They live in
+//     ONE place — COLAB_REPO below — behind a `public` flag. While `public` is
+//     false the button renders in a DISABLED state that states why; flip the one
+//     flag (and fix org/repo/branch) the day the repo goes public and every
+//     chapter's button links correctly with no other change.
+//
+// JS-OFF SAFE: pure SSR — one anchor (or one disabled span) + scoped styles.
+// Nothing to hydrate.
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { REPO_ROOT } from "../lib/curriculum.ts";
+
+// --- single source of truth for the Colab target -----------------------------
+// TODO(repo-public): the GitHub org/repo are placeholders matching the HF
+// `zero2robot/` org used for datasets/checkpoints and the clone URL in
+// infra/ci/gen_notebook.py (REPO_URL). Set `public: true` and confirm
+// org/repo/branch the day the repository is published. Until then the button
+// renders disabled (a live link would 404 against a private/absent repo).
+const COLAB_REPO = {
+  org: "zero2robot",
+  repo: "zero2robot",
+  branch: "main",
+  public: false,
+} as const;
+
+function colabUrl(notebookId: string): string {
+  const { org, repo, branch } = COLAB_REPO;
+  return `https://colab.research.google.com/github/${org}/${repo}/blob/${branch}/notebooks/${notebookId}.ipynb`;
+}
+
+interface Props {
+  chapterId: string; // e.g. "ch1.1-bc" — the notebook basename under notebooks/
+}
+const { chapterId } = Astro.props;
+
+// A notebook exists for this chapter iff notebooks/{id}.ipynb is on disk. Drafts
+// without a generated notebook get no button at all.
+const hasNotebook = existsSync(
+  resolve(REPO_ROOT, "notebooks", `${chapterId}.ipynb`),
+);
+const enabled = hasNotebook && COLAB_REPO.public;
+const href = enabled ? colabUrl(chapterId) : undefined;
+
+// Inline Colab-style mark (two linked rings). Inlined as markup — never an
+// external asset — so it survives the JS-off / offline / strict-CSP path the
+// site commits to. currentColor so it tints with the button label.
+const markSvg = `<svg class="colab__mark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><circle cx="7" cy="12" r="4.2"></circle><circle cx="17" cy="12" r="4.2"></circle></svg>`;
+---
+
+{
+  hasNotebook && (
+    <div class="colab" data-enabled={String(enabled)}>
+      {enabled ? (
+        <a
+          class="colab__btn"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Fragment set:html={markSvg} />
+          <span class="colab__label">Open in Colab</span>
+        </a>
+      ) : (
+        <span
+          class="colab__btn colab__btn--disabled"
+          aria-disabled="true"
+          title="Available once the GitHub repository is public — see COLAB_REPO in OpenInColab.astro"
+        >
+          <Fragment set:html={markSvg} />
+          <span class="colab__label">Open in Colab</span>
+          <span class="colab__soon">soon</span>
+        </span>
+      )}
+      <p class="colab__note">
+        {enabled
+          ? "Runs this chapter's generated notebook on a free Colab T4 — no local install."
+          : "Free-tier notebook — the button goes live when the course repository is published."}
+      </p>
+    </div>
+  )
+}
+
+<style>
+  .colab {
+    max-width: var(--measure);
+    margin: 1.4rem auto 0;
+  }
+
+  .colab__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    color: var(--signal-ink);
+    background: var(--signal);
+    border: 1px solid var(--signal);
+    border-radius: 3px;
+    line-height: 1;
+    transition: filter 0.12s ease;
+  }
+
+  .colab__btn:hover {
+    filter: brightness(1.08);
+  }
+
+  .colab__btn:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  .colab__btn--disabled {
+    color: var(--ink-mute);
+    background: var(--paper-2);
+    border-color: var(--rule-strong);
+    cursor: not-allowed;
+  }
+
+  .colab__mark {
+    flex: none;
+  }
+
+  .colab__soon {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    color: var(--ink-mute);
+  }
+
+  .colab__note {
+    margin: 0.5rem 0 0;
+    font-size: 0.78rem;
+    color: var(--ink-mute);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .colab__btn {
+      transition: none;
+    }
+  }
+</style>

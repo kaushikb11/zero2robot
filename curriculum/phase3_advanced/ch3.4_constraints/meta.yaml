@@ -1,0 +1,99 @@
+id: ch3.4-constraints
+title: "Build a Physics Engine II: Joints & Constraints"
+artifact: constraints.py     # 352 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
+task: pendulum-chains        # 1-/2-/3-link distance-constrained chains — all from-scratch numpy
+objectives:
+  - Express a joint as a CONSTRAINT g(q) = 0 (a fixed-length distance lock) and see that a constraint force is not written down — it is SOLVED FOR as the Lagrange multiplier that keeps the constraint's second derivative zero
+  - Assemble the constraint Jacobian J and solve the small SPD system J M^-1 J^T lambda = -(Jdot v + external) for lambda, then apply J^T lambda as an ADDED force term — reusing ch3.3's exact (q, v, m, force) state and integrator registry unchanged
+  - Measure CONSTRAINT DRIFT (link-length error) as the honesty metric, parallel to ch3.3's energy drift — the naive acceleration-level solve lets the links stretch without bound; Baumgarte STABILIZATION feeds the violation back and holds them
+  - Connect the hard-constraint numerics you just fought (drift, stiffness, a stabilization gain you must hand-tune, energy the feedback quietly injects) to WHY MuJoCo's constraints are SOFT and stabilized — the setup chapter 3.5 (contact) pays off
+
+scale_lab: false
+# ch3.4 is free-tier core of the from-scratch physics arc (map: 3.3-3.6 need only
+# Phase 0). The whole run is ~0.5 s of pure-numpy integration + linear solves on any
+# CPU — nothing to scale onto a GPU. The scale knobs (--dt, --steps, --baumgarte) are
+# the LESSON: shrink --dt and both the drift AND the energy error shrink (the scheme
+# converges — that is how you know the constraint math is right); grow --steps and the
+# naive drift pulls away while the stabilized band holds. No Scale Lab.
+
+# READ-THE-REAL-THING: the map pairs this arc with a real constrained-dynamics reference.
+# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# sha and must never invent one. Good candidates: MuJoCo's documentation/source on its
+# CONSTRAINT model (the soft, regularized, convex constraint solver — the principled
+# answer to exactly the hard-constraint drift/stiffness this chapter measures by hand),
+# or a constrained-dynamics text (Featherstone, Rigid Body Dynamics Algorithms; or
+# Baumgarte's 1972 stabilization paper — the source of the feedback term here).
+read_the_real_thing: true
+# rtrt:
+#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
+#   commit: <author pins a real sha>
+#   focus:
+#     - the docs' "Computation" / constraint model: soft constraints, the impedance/reference
+#       parameters — the principled version of the Baumgarte gain we hand-tune here
+#     - engine_core_constraint / the PGS-or-CG constraint solver: J M^-1 J^T is the same matrix
+#       we build by hand, but regularized (soft) rather than solved as a hard equality
+#     - why hard equality constraints + explicit integration DRIFT (this chapter's headline)
+#       and why MuJoCo chose a convex, stabilized formulation instead
+
+demo: constraint_drift       # 2D pendulum path + the constraint-violation curve (none vs baumgarte); pure numpy
+
+# Reference run: the FULL default (--system double --seed 0, semi_implicit, dt 0.005,
+# 4000 steps = 20 s sim time). All numbers seed 0 on cpu, numpy 2.4.6, measured
+# 2026-07-06. These are the DRIFT HEADLINE — the honesty metric, stated so the
+# none >> baumgarte ordering is unmissable.
+reference_run:
+  provenance: "seed 0 on cpu, numpy 2.4.6; --system double (default), semi_implicit, dt 0.005, 4000 steps (20 s sim time); measured 2026-07-06"
+  system: double
+  integrator: semi_implicit
+  # --- NAIVE (no stabilization): the links STRETCH without bound ---
+  none_max_violation: 0.384014620396    # worst link-length error hits 0.38 (of L=1) — the pendulum literally comes apart in the arithmetic
+  none_energy_rel_max: 0.427091167688   # energy wanders too (the drifting geometry moves the potential); scale = sum(m)*g*sum(L)
+  # --- BAUMGARTE stabilization (omega = 20): the links HOLD ---
+  baumgarte_max_violation: 0.023470285993   # worst error 16x smaller; the feedback pulls the violation back each step
+  baumgarte_final_violation: 0.001436710083 # settles to ~1e-3 — bounded, not growing
+  baumgarte_energy_rel_max: 0.32484945881   # still imperfect (the feedback does a little work) — the honest trade
+  # CONSTRAINT MATH VERIFIED CORRECT (author: keep this — it is the proof the solver is right):
+  #   Run `constraints.py --system pendulum --integrator rk4 --stabilization none`: with an
+  #   ACCURATE integrator the NAIVE solve keeps the link length to viol=8.79e-6 and conserves
+  #   energy to energy_rel_max=1.21e-5. Both the length error AND the energy error shrink toward
+  #   zero as dt shrinks (semi-implicit is ~1st order, rk4 far steeper) — a convergent scheme,
+  #   which is how you know the Jacobian / Lagrange-multiplier math is correct and not a fudge.
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The ORDERING is the rock and is seed-robust (checked seeds 0/1/2 on pendulum/double/triple):
+  #    naive max-violation is 5x-17x the stabilized one. Lead with it, not the exact number.
+  #  * The double pendulum is CHAOTIC: seed 0 vs seed 1 (a ~0.05 rad IC nudge) diverge to a tip
+  #    distance of ~1.1 over 20 s. It is nonetheless BITWISE deterministic per seed (pure numpy).
+  #    "Deterministic" is not "predictable" — that distinction is exercise 3.
+  #  * Do NOT sell Baumgarte as free: it HOLDS the constraint but injects a little energy and needs
+  #    a hand-tuned gain (omega); too large and dt*omega approaches instability. That cost is the
+  #    whole reason MuJoCo uses a soft, principled constraint model instead — the chapter's payoff.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
+# provenance, not a bare magic number). checks.py reads these instead of inlining
+# tolerances. All checks are pure-numpy and bitwise deterministic, so the bands are TIGHT.
+exercise_checks:
+  smoke_double:                    # constraints.py --smoke --seed 0 (double, 800 steps, semi_implicit) — the signature the checks reproduce
+    provenance: "seed 0 on cpu, numpy 2.4.6, --smoke (800 steps, dt 0.005, double, semi_implicit); measured 2026-07-06"
+    none_max_violation: 0.092535126225
+    baumgarte_max_violation: 0.011473630656
+    baumgarte_final_violation: 0.010217195799
+    reproduce_abs: 1.0e-6          # constraints.py's own smoke run reproduces these to well within this band
+    drift_ratio_min: 3.0           # none/baumgarte max-violation is ~8x at smoke length; 3x is the seed/system-robust floor
+  ex1:                             # ex1_predict_drift.py (predict-then-run)
+    answer: "B"                    # without stabilization the link-length error GROWS steadily (drifts) — it does not stay 0 or stay bounded
+  ex2:                             # ex2_completion_constraint.py (code-completion: Jdot v term + Baumgarte feedback)
+    reproduce_abs: 1.0e-12         # the completed constraint force must match the reference solve to within this
+  ex3:                             # ex3_chaos_determinism.py (predict-then-run: chaos vs determinism)
+    answer: "C"                    # each seed is bitwise reproducible, yet nearby seeds diverge wildly — deterministic but not predictable
+    tip_divergence_min: 0.5        # seed 0 vs seed 1 double-pendulum tip distance over 20 s (measured ~1.12) is far above this
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
+# is not built yet (ch3.4 is an agent draft pending the teaching-pass); notebook-tier-test
+# writes both on generation, and the gate skips a chapter that carries neither key.
+
+# region_hashes intentionally omitted until the site build renders this chapter
+# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
+# on first render; do not hand-write them.
+
+notebook_hash: 26edae789ab2cfa854431af4616ebede42b9ea13a62f6a722949f2e2c915e8e2        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 65bbfd4462cccdebeca821dfec0cb05a2ecad56af96856f76afb61ac8b1aadb2   # sha256 of the generated notebook bytes; mismatch => hand-edited

@@ -1,0 +1,128 @@
+# Train loop — teach a robot with your mouse, watch it learn, watch it drive
+
+The whole point of the playground: the dataset you record with your mouse trains a
+policy that then **drives the same scene you taught it**. This is the exact,
+runnable loop. Every command below is real.
+
+```
+ browser teleop (your mouse)              →  z2r-teleop-1 interchange (.zip download)
+   record.py --from-interchange           →  LeRobot v3 dataset
+   bc.py --data <dataset>                 →  bc_policy.onnx  (tensor contract v1, obs[10]/action[2])
+   drag bc_policy.onnx into the playground →  it drives (Run policy) / recovers (Perturb block)
+```
+
+You never leave the dataset format behind: the same v3 dataset feeds chapters 0.5,
+1.1, and 1.2. The `.onnx` the playground drives is the same file `bc.py` exports and
+`assert_parity.py` gates.
+
+---
+
+## 1. Record episodes in the browser
+
+Open the playground (`npm run dev`, then http://localhost:5173):
+
+1. **Drag** the red pusher into the blue T-block to shove it onto the green target.
+2. Hit **● Record episode**, drive a demo, hit **■ Stop** (each demo = one episode).
+   Record a handful — the more (and the more varied the starts), the better BC does.
+3. **⤓ Download dataset** → your browser saves `pusht_teleop_interchange.zip`.
+
+That zip is the **`z2r-teleop-1` interchange** (decision 008): a format-stable
+`interchange.json` (episode arrays: `observation.state[10]`, `action[2]`) plus any
+PNG frames. It is *not* a LeRobot dataset yet — the canonical v3 write happens in
+Python with the pinned `lerobot` library, so format parity with the training sets is
+free (same `LeRobotDataset.create` path as `gen_demos.py`).
+
+Unzip it:
+
+```bash
+unzip ~/Downloads/pusht_teleop_interchange.zip -d /tmp/my-teleop
+# → /tmp/my-teleop/interchange.json  (+ frames/ if you recorded 96×96 images)
+```
+
+## 2. Convert the interchange → LeRobot v3 dataset
+
+```bash
+# from the repo root, with the project venv
+.venv/bin/python curriculum/phase0_foundations/ch0.4_record/record.py \
+  --from-interchange /tmp/my-teleop \
+  --out outputs/my-run
+# → outputs/my-run/dataset  (LeRobot v3: parquet + meta/, loadable by bc.py)
+```
+
+**No mouse handy?** Skip the browser and generate scripted-expert demos instead —
+same dataset shape, drops straight into step 3:
+
+```bash
+.venv/bin/python curriculum/common/envs/pusht/gen_demos.py \
+  --episodes 120 --seed 0 --out outputs/my-run/dataset --no-video
+```
+
+## 3. Train BC and export the ONNX
+
+```bash
+.venv/bin/python curriculum/phase1_imitation/ch1.1_bc/bc.py \
+  --data outputs/my-run/dataset \
+  --out  outputs/my-run/bc
+# → outputs/my-run/bc/bc_policy.onnx   (this is the file the playground drives)
+```
+
+`bc.py` fits a 3-layer MLP with MSE, rolls it out in the real env, and exports to
+**tensor contract v1** via `export_onnx.py`: input `observation` float32 `[1, 10]`,
+output `action` float32 `[1, 2]`, stamped `z2r_contract_version=v1`, `z2r_obs_dim=10`,
+`z2r_act_dim=2`. Normalization **and** denormalization are baked into the model as
+buffers — so the browser feeds it the **raw** `buildObs(sim)` and steps with the
+**raw** action, no transform on either side. `assert_parity.py` gates torch↔onnx
+agreement (< 1e-4) before the file is written.
+
+Knobs (nanoGPT-style, free-tier default first):
+
+```bash
+# quick CI-scale smoke (3 epochs, tiny hermetic dataset) — proves the pipe, not the policy
+.venv/bin/python curriculum/phase1_imitation/ch1.1_bc/bc.py --smoke --seed 0 --no-rerun
+
+# honest run: more demos + epochs → higher success rate
+.venv/bin/python .../bc.py --data outputs/my-run/dataset --epochs 600 --eval_episodes 50
+```
+
+BC is honest: it can only imitate the demos it averages over, so success caps around
+~60%. That is the product's whole ethos — you *find where it breaks*.
+
+## 4. Drive it in the playground
+
+Back in the browser:
+
+1. **⤒ Load .onnx** (or **drag `bc_policy.onnx` onto the scene**). It runs the
+   fail-closed contract gate: contract v1, `observation` float32 `[1,10]`, `action`
+   float32 `[1,2]`, stamped dims matching the graph. A mismatched model (wrong dims,
+   dtype, or version) is **refused** with a human-readable reason and never drives.
+2. **▶ Run policy** — the pusher is now driven by *your* trained policy, exactly as
+   `bc.py`'s eval rollout does it: `action = policy(env.obs()); env.step(action)`.
+   The obs fed in is byte-identical to the training obs (parity asserted in
+   `scripts/obs_parity_check.mjs`).
+3. **⚡ Perturb block** — knock the T askew and watch the policy try to push it home.
+   One click knocks *and* starts driving. It won't always recover; that's the point.
+   The live tally shows `drove N (M ✓)`.
+
+---
+
+## Colab
+
+The same three Python commands run unchanged in a Colab cell (the playground gives
+you the `.zip`; `record.py --from-interchange` + `bc.py` do the rest, then you
+download `bc_policy.onnx` and drag it back in). A pre-wired, one-click Colab
+*notebook* is generated by the repo's notebook pipeline (`notebooks/` is generated,
+not hand-authored) and is a separate follow-up — this file is the runnable recipe it
+will wrap.
+
+## The contract, in one place
+
+| | |
+|---|---|
+| input tensor | `observation`, float32, `[1, 10]` |
+| output tensor | `action`, float32, `[1, 2]` |
+| metadata | `z2r_contract_version=v1`, `z2r_obs_dim=10`, `z2r_act_dim=2` |
+| obs layout | `pusher_x, pusher_y, tee_x, tee_y, sin_tee_yaw, cos_tee_yaw, target_x, target_y, sin_target_yaw, cos_target_yaw` |
+| action | `pusher_vx, pusher_vy` — target velocity, env clips to ±1 |
+
+Source of truth: `src/policy/contracts.ts` (browser) ↔ `curriculum/common/export_onnx.py`
+(exporter). `src/teleop/pusht_obs.ts` is the single source for the obs layout.

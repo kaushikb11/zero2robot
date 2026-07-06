@@ -1,0 +1,36 @@
+---
+// Landing. Composes the F3 landing frame (Hero + flagship toy, ValueProps,
+// CurriculumArc) with the F2 progress dashboard in the Hero's "progress" slot.
+// Marketing copy lives inside the landing components behind their own scoped
+// draft band (copy is DevRel/author-owned); the curriculum arc is real data.
+// Fully static + JS-off readable; only the hero toy + the progress island need JS.
+import ChapterLayout from "../layouts/ChapterLayout.astro";
+import Hero from "../components/landing/Hero.astro";
+import ValueProps from "../components/landing/ValueProps.astro";
+import CurriculumArc from "../components/landing/CurriculumArc.astro";
+import ProgressOverview from "../components/progress/ProgressOverview.tsx";
+import { discoverChapters } from "../lib/curriculum.ts";
+import { chapterExercises, isGated } from "../lib/exercises.ts";
+
+// Serialisable chapter list for the progress island (client-side): read-state +
+// per-chapter exercise ids drive honest completion. Only GATED (predict-then-run)
+// exercises can ever record a commit signal in localStorage, so completion counts
+// ONLY those — otherwise the ring could never fill (bug-hunt/code-completion/
+// hyperparameter run locally and "never phone home", so the site can't track them).
+const progressChapters = discoverChapters().map((ch) => ({
+  slug: ch.slug,
+  title: ch.title,
+  number: ch.number,
+  phaseKey: ch.phaseKey,
+  phaseLabel: ch.phaseLabel,
+  exerciseIds: chapterExercises(ch.chapterDir).filter(isGated).map((e) => e.id),
+}));
+---
+
+<ChapterLayout title="zero2robot — interactive textbook">
+  <Hero>
+    <ProgressOverview slot="progress" client:visible chapters={progressChapters} />
+  </Hero>
+  <ValueProps />
+  <CurriculumArc />
+</ChapterLayout>

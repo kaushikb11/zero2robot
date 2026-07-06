@@ -1,0 +1,88 @@
+id: ch2.7-dr
+title: "Sim-to-Real Intuition Lab II: Randomize to Generalize"
+artifact: dr.py            # 383 LOC (measured); target ~250, hard cap 450 (trains TWO PPO policies + sweeps both)
+task: quadruped            # curriculum/common/envs/quadruped; reuses ch2.1 PPO, unchanged, on the locomotion env
+dataset:
+  reference: null          # no dataset — this chapter TRAINS its policies (narrow vs randomized) from scratch
+  learner_path: false
+objectives:
+  - Explain domain randomization as the answer to ch2.6's reality gap — you cannot fix the world, so randomize the SIM dynamics (mass/friction/gravity) each episode so the policy learns a behavior robust across the range
+  - Implement DR from scratch by scaling the compiled MjModel's physical params in place, ON TOP of the quadruped's pinned contact solver (never the solver iterations/cone), preserving per-seed bitwise CPU determinism
+  - Train a NARROW (nominal-only) and a RANDOMIZED policy that differ in exactly one knob (--dr_width), then EVALUATE BOTH across a swept test-dynamics gap with ch1.6 honesty (mean return +- std AND survival rate over held-out episodes)
+  - MEASURE the result and read it honestly — DR CAN extend robustness across the gap (seed 1 holds to 1.4x mass where narrow falls at 1.2x) but at a free-tier budget does so UNRELIABLY; the mean survival edge {-0.02,+0.22,-0.09} sits inside the seed band (the ch1.6 "single numbers lie" trap in an RL costume)
+  - Name WHEN DR pays off reliably — a dynamics-BRITTLE behavior (a gait, contact-rich manipulation) trained with ENOUGH compute — and recognize its limit: DR widens the reachable range, it never lifts the actuator ceiling (the deepest gap survives at no band width)
+
+# The two policies are TRAINED here from scratch (this chapter needs no external
+# checkpoint — unlike ch2.6, which loads ch2.1/2.2 policies). No policy binary
+# ships (.pt would be gitignored, root invariant 5); dr.py trains, sweeps, and
+# writes metrics.json only. The demo (PENDING export) would need dr_narrow.onnx /
+# dr_randomized.onnx exported from a learner's own run.
+policies:
+  narrow: trained in-file at --dr_width 0 (nominal dynamics every episode)
+  randomized: trained in-file at --dr_width 1 (mass/friction/gravity resampled per episode)
+
+scale_lab: false           # map lists ch2.7 tier T4; free-tier CPU config measured (~1.4 min/run). See NOTE below.
+# SCALE-LAB / SCOPE NOTE (flagged for the author — this is the chapter's central
+# honesty tension): the map row implies a clean "randomize to generalize" WIN. The
+# measured reality on the free-tier quadruped STAND is a HIGH-VARIANCE result — DR
+# helps on some seeds, not others, and the mean benefit is within the seed band
+# (see reference_run). Two honest paths for the author: (a) ship this "measure it,
+# with error bars" version (defensible, ties to ch2.6/ch1.6); or (b) a Scale Lab
+# that spends the compute to make the randomized policy converge reliably (400k
+# steps/policy is not enough here), and/or re-points the chapter at a WALKING
+# policy (ch2.5 walk.py, not yet built — a gait is far more dynamics-brittle and a
+# cleaner DR substrate). Do NOT hand-wave this into a triumph the data doesn't show.
+read_the_real_thing: true
+# read_the_real_thing block LEFT FOR THE AUTHOR. Anchors are the domain-
+# randomization literature this chapter previews: Tobin et al. 2017 (domain
+# randomization for sim-to-real transfer), Peng et al. 2018 (dynamics
+# randomization for manipulation), OpenAI 2018/2019 (Dactyl / learning dexterity).
+# Do NOT invent a commit sha or DOI here; the read-the-real-thing skill pins the
+# real upstream source when the study segment is authored. The teaching contrast:
+# those results randomize a genuinely dynamics-brittle task AND train long — the
+# two conditions this free-tier quadruped stand does not meet.
+demo: narrow_vs_randomized_across_the_gap  # hero: narrow vs randomized policy under the SAME shifted dynamics, side by side — the break-the-policy sweep
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances.
+# PROVENANCE: measured 2026-07-06 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6,
+# --total_steps 400000, --sweep_knob mass (grid [0.8,1.0,1.2,1.4,1.6]), eval_episodes 16.
+# The whole pipeline (PPO train + DR draws + eval) is seeded => bit-reproducible on
+# CPU (smoke twice-run identical), so the per-seed numbers do not flake; the
+# variance the chapter teaches is ACROSS DYNAMICS and SEED (ch2.1 spike H1/H2: no
+# single-run break-it — every graded fact is a seed-robust STRUCTURAL claim).
+reference_run:
+  # Survival rate per policy across the mass gap, seeds 0 / 1 / 2:
+  #                 mass 0.8      1.0       1.2            1.4            1.6
+  #   narrow        1.00        1.00      0.44/0.94/0.88  0.00/0.38/0.44  0.00/0.00/0.06
+  #   randomized    1.00        1.00      0.38/1.00/1.00  0.00/1.00/0.00  0.00/0.19/0.00
+  # Off-nominal-mean survival edge (randomized - narrow): -0.02 / +0.22 / -0.09.
+  # Reading: both stand at nominal on every seed; both collapse at the DEEPEST gap
+  # (1.6x) on every seed; the MIDDLE swings hard with the seed (seed 1: randomized
+  # holds to 1.4x where narrow is gone; seeds 0/2: no edge). The mean benefit is
+  # within the seed band — DR is real but unreliable at 400k steps. THAT is the lesson.
+  dr_width_sweep: "cpu, seeds 0-1, randomized policy: nominal_return ~203-207 at width {0,1,2} (no premium); DEEPEST-gap (1.6x) survival stays <=0.19 at EVERY width (the actuator ceiling); mid-gap survival rises with width but noisily"
+exercise_checks:
+  ex1:                     # ex1_predict_generalization.py — trains narrow+randomized, seeds 0-2
+    provenance: "cpu, --total_steps 400000, seeds 0-2; measured 2026-07-06: nominal survival [1,1,1] both policies; deepest-gap (mass 1.6) survival narrow [0,0,0.06] / randomized [0,0.19,0]; off-nominal survival edge {-0.02,+0.22,-0.09} (within the seed band)"
+    nominal_survival_min: 0.9      # both policies stand at nominal on every seed (measured 1.00)
+    deepgap_survival_max: 0.35     # both policies collapse at the DEEPEST gap on every seed (measured max 0.19)
+  ex2:                     # ex2_investigate_dr_width.py — randomized policy at width {0,1,2}, seeds 0-1
+    provenance: "cpu, --total_steps 400000, widths {0,1,2}, seeds 0-1; measured 2026-07-06: deepest-gap (mass 1.6) survival <=0.19 at every width; nominal return ~203-207 (flat, no premium)"
+    deepgap_survival_max: 0.35     # no band width lifts the deepest-gap survival off the floor (the physical ceiling)
+
+# region_hashes: NOT recorded yet — the site build records them when it first
+# renders this chapter (check_prose_code_drift only gates once they are present).
+# notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill.
+
+region_hashes:
+  setup: eab797a583729ab77f57df6371ecae8ddd9c7f9919ca29f6501590377622559b
+  randomize: 415eaeb4553eb93355f226eec8fb85ac3aa4df26aacf457f68dbef3a21e0617a
+  model: d5d77b08f1cd4b98c6fe31931644f38951668c799673bafe189e0c3f9b18e66b
+  ppo: 69a10376befc13205b10f65403ebfe706dc6465bdf24db9f399d566c6344542a
+  eval: edc32485cedc201d12bb1c046809e24abe7658e97b7daa369be3864e34cd8ec5
+  report: 9364dda88d32bbd763017b7c3329c010a5c6753430c03c4f4ab33e193d54c986
+
+notebook_hash: 44fb1f9fea282c7bb52792ec04968abc1a71160c24b4d6430f0c4f3bf80cc76a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 5b8e76bb82ea80e9bb2ff98c044f1ed1a31b6b038b41adf77124dcd011de2024   # sha256 of the generated notebook bytes; mismatch => hand-edited

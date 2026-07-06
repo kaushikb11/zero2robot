@@ -1,0 +1,55 @@
+id: ch0.5-inspect
+title: "Seeing Like a Robot (rerun)"
+artifact: inspect.py        # target ~100 LOC (map); actual ~276 — load + reconstruct + rerun + 2 break modes. CPU-only.
+task: pusht                 # inspects the learner's ch0.4 PushT dataset (LeRobot v3); provisions a scripted stand-in when none is given
+objectives:
+  - Load a LeRobot v3 dataset back and read its two structural facts — the SCHEMA (what every frame is) and the EPISODE INDEX (where one demonstration ends and the next begins)
+  - See like a robot — decode the observation the robot saw, especially the sin/cos-encoded yaw (obs[4:6]); atan2(sin, cos), arguments in that exact order, or every orientation you read is reflected
+  - Reconstruct the success rate HIDING in the data — the dataset stores no success/reward column, so recompute "reached the target" from the observations using the env's own POS_TOL / ANG_TOL
+  - Use rerun as the debugging tool for the whole book: replay an episode onto the canonical entity paths and scrub it on the sim_time timeline, reading a demonstration like a story
+scale_lab: false
+read_the_real_thing: false
+demo: pusht-inspect
+
+# Reference values + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not bare magic numbers). checks.py reads
+# these instead of hardcoding tolerances. Re-measure if any of the stack moves.
+exercise_checks:
+  provenance: "seed 0 on cpu, mujoco 3.10.0 / lerobot 0.4.4 (CODEBASE_VERSION v3.0) / numpy 2.4.6; scripted stand-in (ScriptedExpert noise=0.08); measured 2026-07-05"
+  ex1:                          # predict-then-run: decode the yaw wrong (--break yaw-swap) and watch success collapse
+    provenance: "inspect.py --seed 0 --episodes 3 --no-rerun, natural episode ends; --break none vs yaw-swap over the SAME provisioned dataset"
+    success_rate_none: 1.0      # all 3 stand-in demos end on target when the yaw is decoded correctly
+    success_rate_yaw_swap: 0.0  # atan2(cos, sin) reflects every angle -> ang_err ~pi/2 -> nothing reads as reached
+    n_episodes: 3               # a reading bug changes the READING, never the episode count or the schema
+    invariant_keys: ["n_episodes", "n_frames", "episode_lengths", "obs_dim", "act_dim", "fps", "feature_keys"]
+  ex2:                          # bug-hunt: frame_errors reads the target pose from the wrong obs indices
+    provenance: "two hand-built terminal states with a known reading; target is obs[6:8], NOT the pusher at obs[0:2]"
+    on_target_state: [0.15, -0.10, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]   # block ON target (pos_err 0), pusher elsewhere
+    off_target_state: [0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]    # block 0.20 m from target
+    on_target_pos_err: 0.0      # distance tee(obs[2:4]) -> target(obs[6:8]); 0 when the block is on the goal
+    off_target_pos_err: 0.2
+    pos_err_band: 0.001         # exact arithmetic; a hair of float slack
+    expected_reached: [true, false]
+  ex3:                          # code-completion: reconstruct "reached" from the terminal frame
+    provenance: "the terminal-frame in-tolerance rule (PushTEnv.POS_TOL / ANG_TOL) applied to two golden trajectories"
+    reached_trajectory: [true, false]   # a demo that ENDS on target reads reached; one that ends adrift does not
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/
+# Colab variant is not built yet; notebook-tier-test writes both on generation
+# (ch0.1 likewise carries neither until its notebook lands).
+
+# region_hashes: sha256 of each include-by-region span in inspect.py, checked by
+# check_prose_code_drift against the artifact. Populated at chapter-build time;
+# re-render (or re-run the drift gate) if the artifact's regions change.
+
+region_hashes:
+  setup: ada462616687346dc771d711e01db7017ab77ff5ab203c6ec8b4199e2746bc38
+  provision: 4404ffc2e3d8537800976104df4b844d8be577616589cb1f81a539d7e16d06de
+  load: a5bec7c19dadb5117382095b9d23daf14fd9defd0a677ac00c97fe4c845151d9
+  success: 780cfd9e7bf2dd7af0557be9605ce13f284a0e59f9a09f92c5c34992e292e929
+  inspect: 32f979f8db13273e8915ceebeb90862a3ade1bb94f5d978f2b88f81a4084f31c
+  rerun: d809c72a6f837c243f621583cbb46bc3e5e35413dc1dc674a2247e9c54f1d20f
+  run: 6175e60212c9eb90824fd52e2e4dd5868e9d85696d47a4942064b10b51d27277
+
+notebook_hash: 885a98cec20ffb94fada7637382f1746675851c4d77d49be487500e20a120677        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: b2b310c4f8ebdcd58d455e57e582ef69636fa793a4103f91ef7b2c15296da3de   # sha256 of the generated notebook bytes; mismatch => hand-edited

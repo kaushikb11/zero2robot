@@ -1,0 +1,35 @@
+# Demo embed stub — ch3.3 "engine_energy_drift".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Unlike most chapters this demo needs NO MuJoCo
+# and NO WASM physics — the engine is ~270 lines of pure numpy, so the embed can
+# run the integrators directly (or replay a recorded engine.rrd). Coordinate at
+# the playground contracts level before wiring (see playground/CLAUDE.md).
+demo: engine_energy_drift
+scene: none                 # no MJCF: the "scene" is a point mass + a force law, drawn from engine.py's systems
+runtime: numpy-inline       # the dynamics are trivial to run in-browser; no WASM MuJoCo needed for this chapter
+system_default: orbit       # the hero system; a selector offers spring + freefall (the honest counter-example)
+panels:
+  - id: trajectories
+    kind: path2d            # the three orbits overlaid: Euler spiraling out, semi-implicit closed, RK4 closed
+    series: [euler, semi_implicit, rk4]
+    colors: [ "#d94c40", "#4caf50", "#4073d9" ]   # matches engine.py COLORS (red / green / blue)
+  - id: energy_drift
+    kind: timeseries        # THE hero panel: relative energy vs step, one curve per integrator
+    y: rel_energy_drift
+    series: [euler, semi_implicit, rk4]
+    annotate: "Euler climbs and never returns; semi-implicit wobbles in a fixed band; RK4 is flat"
+controls:
+  - id: system
+    kind: select
+    options: [orbit, spring, freefall]   # freefall is the Break-It: watch the symplectic advantage vanish
+  - id: dt
+    kind: slider
+    min: 0.002
+    max: 0.05               # drag it up and every curve's drift grows — dt is the knob, not a tier
+interaction: pick-integrator-and-dt
+notes: >
+  The hero behavior is the energy-drift panel: three curves that tell the whole
+  chapter without a word — one runs away, one is bounded, one is flat. The system
+  selector's real payload is 'freefall', where Euler and semi-implicit drift in
+  OPPOSITE directions and the tidy story breaks, on purpose. No policy, no goal —
+  this demo is an integrator being honest about its own error.

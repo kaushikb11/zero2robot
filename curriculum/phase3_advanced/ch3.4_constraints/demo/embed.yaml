@@ -1,0 +1,41 @@
+# Demo embed stub — ch3.4 "constraint_drift".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Like ch3.3 this demo needs NO MuJoCo and NO WASM
+# physics — the engine is ~350 lines of pure numpy, so the embed runs the
+# constraint solver directly (or replays a recorded constraints.rrd). Coordinate
+# at the playground contracts level before wiring (see playground/CLAUDE.md).
+demo: constraint_drift
+scene: none                 # no MJCF: the "scene" is a chain of point masses + distance locks, from constraints.py's systems
+runtime: numpy-inline       # the linear solve (J M^-1 J^T lambda = ...) is tiny; no WASM MuJoCo needed for this chapter
+system_default: double      # the hero: the chaotic double pendulum
+panels:
+  - id: pendulum_path
+    kind: path2d            # the tip bob's traced path, none vs baumgarte overlaid in the x-y plane
+    series: [none, baumgarte]
+    colors: [ "#d94c40", "#4caf50" ]   # matches constraints.py COLORS (red drifts / green holds)
+  - id: constraint_violation
+    kind: timeseries        # THE hero panel: worst link-length error vs step, one curve per stabilization
+    y: max_link_length_error
+    series: [none, baumgarte]
+    annotate: "Without stabilization the links stretch without bound; Baumgarte holds them near zero"
+controls:
+  - id: system
+    kind: select
+    options: [pendulum, double, triple]   # more links = richer chaos, same distance-constraint code
+  - id: baumgarte
+    kind: slider
+    min: 0.0                # 0 == the naive solve (watch the links drift apart)
+    max: 60.0               # crank it up and the feedback stiffens — too far and dt*omega goes unstable
+  - id: dt
+    kind: slider
+    min: 0.001
+    max: 0.01               # shrink it and BOTH the drift and the energy error shrink — the scheme converges
+interaction: pick-system-and-stabilization
+notes: >
+  The hero behavior is the constraint-violation panel: two curves that tell the
+  whole chapter — one climbs away (the links coming apart in the arithmetic), one
+  hugs zero (stabilization holding them). The double pendulum's tip path is the
+  hook: visibly chaotic, yet bitwise reproducible. The baumgarte slider is the
+  payoff — a gain the learner must hand-tune, which is exactly the knob MuJoCo's
+  soft-constraint model replaces with something principled. No policy, no goal —
+  this demo is a joint being honest about the cost of holding itself together.

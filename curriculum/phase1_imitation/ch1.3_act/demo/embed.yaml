@@ -1,0 +1,44 @@
+# Demo embed stub — ch1.3 "aloha_cube_chunk".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): unlike ch1.1/ch1.2, this
+# policy does NOT fit tensor contract v1. act.py exports act_policy.onnx whose
+# output is an action CHUNK float32[1, K, 6], not a single action[1, 6], and
+# temporal ensembling is a STATEFUL runtime loop (a buffer of overlapping
+# chunks averaged with exponential weights). The browser embed therefore needs
+# a contract-v2-style path: run the chunk model each step, keep the ensembling
+# buffer in JS, execute the ensembled action. This embed is BLOCKED on that
+# contract; ship it only after playground/src/policy/contracts.ts gains a
+# chunked+ensembled policy type. Until then this file documents the intent.
+demo: aloha_cube_chunk
+scene: aloha_cube            # curriculum/common/envs/aloha_cube/aloha_cube.xml, verbatim
+policy: act_policy.onnx         # chunk output [1, K, 6] — contract v2 (chunk + ensembling), NOT v1
+runtime:
+  mode: chunk-ensemble        # predict a chunk each step; average overlapping chunks in JS
+  chunk_size: 8               # K; must match the exported model's output dim (act.py default)
+  ensemble_m: 0.1             # exponential decay for temporal ensembling (matches act.py default)
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.2
+  azimuth: 90
+  elevation: -70             # top-down: the handoff band in the middle is the thing to watch
+interaction: reset-seed       # visitor re-seeds the cube spawn (right-arm reach zone)
+hud:
+  - dist                      # cube -> target distance; watch it drop through the handoff
+  - right_held                # which arm holds the cube
+  - left_held
+toggles:
+  - break: no_ensemble        # optional second panel: same weights, no temporal ensembling
+    label: "temporal ensembling OFF"
+    shows: "jerkier end-effector trajectories; compare the action traces"
+notes: >
+  The hero is the mid-air handoff: the right arm picks the cube in its reach
+  zone, carries it to the middle, and hands off to the left arm, which delivers
+  to the target neither arm can reach alone. This is the temporally-coordinated
+  behavior a predicted CHUNK can commit to and a single-step policy cannot. The
+  optional --break no_ensemble panel makes temporal ensembling legible: identical
+  weights, but the ensembled action trace is smooth while the no_ensemble one
+  chatters at chunk boundaries. Author decides whether the embed ships one panel
+  or two, and coordinates the contract-v2 runtime with playground/.

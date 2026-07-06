@@ -1,0 +1,147 @@
+/* ===========================================================================
+   rtrt.css — scoped .rtrt-* styles for the "Now read the real thing" callout at
+   the foot of a chapter (after Practice, before the provenance colophon). It
+   only *reads* the site's design tokens defined in public/styles.css (--book,
+   --book-soft, --ink*, --paper-*, --rule*, --font-mono, --font-display,
+   --measure); it defines none of its own palette.
+
+   Discipline (from the design system):
+   - This is a STATIC reading pointer, not a live handle, so it wears the --book
+     "old ink" accent (the numerals/rules/links family) and NEVER --signal
+     (electric blue is reserved for LIVE interactive elements only).
+   - The pinned commit is set in --font-mono so it reads as an exact, quotable
+     ref — the whole honesty claim of the segment.
+   - Motion is gated behind prefers-reduced-motion: no-preference.
+   - The link carries a visible :focus-visible ring.
+   ======================================================================== */
+
+.rtrt {
+  max-width: var(--measure);
+  margin: 3.2rem auto 0;
+  padding: 1.5rem 1.6rem 1.7rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--book);
+  border-radius: 2px;
+}
+
+.rtrt__kicker {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--book);
+}
+
+.rtrt__title {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.rtrt__lede {
+  margin: 0 0 1.1rem;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
+/* --- the pinned pointer: repo @ commit ------------------------------------ */
+.rtrt__pin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0 0 1.2rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.rtrt__repo {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.rtrt__at {
+  font-family: var(--font-mono);
+  color: var(--ink-mute);
+}
+.rtrt__commit {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  color: var(--book);
+  background: color-mix(in srgb, var(--book) 8%, var(--paper));
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+}
+.rtrt__pinnote {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* --- what to read --------------------------------------------------------- */
+.rtrt__label {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.rtrt__list {
+  margin: 0 0 1.3rem;
+  padding: 0;
+  list-style: none;
+}
+.rtrt__list li {
+  position: relative;
+  padding: 0.32rem 0 0.32rem 1.1rem;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+.rtrt__list li + li {
+  border-top: 1px solid var(--rule);
+}
+.rtrt__list li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: var(--book-soft);
+  font-weight: 700;
+}
+
+/* --- the outbound link (static, book accent — NOT --signal) --------------- */
+.rtrt__link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--book);
+  text-decoration: none;
+  border-bottom: 1px solid var(--book-soft);
+  padding-bottom: 1px;
+}
+.rtrt__link:hover {
+  color: var(--book-soft);
+  border-bottom-color: var(--book);
+}
+.rtrt__link:focus-visible {
+  outline: 2px solid var(--book);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rtrt__link {
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+}

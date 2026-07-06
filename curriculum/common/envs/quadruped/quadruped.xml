@@ -1,0 +1,157 @@
+<!-- QUADRUPED locomotion scene (zero2robot Phase 2: ch2.4 reward design,
+     ch2.5 locomotion, ch2.7 domain randomization).
+
+     A minimal, FROM-SCRATCH quadruped: a box torso on a free joint + four
+     identical two-joint legs (a hip hinge + a knee hinge => 8 actuated joints),
+     each ending in a foot that touches a friction floor under gravity. The
+     policy commands the 8 joints and must make the robot STAND, then WALK
+     forward. This is the locomotion counterpart to cartpole (ch2.1) and
+     pusher-reach (ch2.2): the third infra-grade Phase-2 env.
+
+     NOT mujoco_menagerie. This is a deliberately tiny hand-written robot (2
+     DOF/leg, capsule links), not a Go1/ANYmal import. A realistic quadruple
+     would need a menagerie dependency (decision-log entry) and is heavier than
+     the free-tier teaching env needs. A from-scratch quadruped is in the
+     doctrine's from-scratch spirit, stays microsecond-cheap, and — crucially —
+     stays BITWISE-deterministic on CPU even with ground contact.
+
+     Frame convention: x forward, y left, z up. The torso's free joint gives it
+     the full 6 DOF (3 translation + 3 rotation) a floating base needs.
+
+     Legs (all four identical, built from the `leg`/`thigh`/`shin` defaults):
+       - hip hinge, axis +y  => the thigh swings in the sagittal (x-z) plane
+         (fore/aft), which is what produces forward walking.
+       - knee hinge, axis +y => the shin flexes in the same plane.
+       - each leg ends in a `foot` sphere; ONLY the feet + the floor collide
+         (contype/conaffinity 1). The torso and the leg links carry
+         contype/conaffinity 0, so the ONLY contacts in the scene are the four
+         foot-floor pairs. That minimal, fixed contact set is what keeps the
+         contact solve cheap and reproducible; a fall is caught by the env's
+         height/orientation termination, not by the torso hitting the floor.
+
+     Actuation: one POSITION actuator per joint (a PD servo, kp/kv below). The
+     policy commands a small target-angle OFFSET from the nominal standing pose
+     (see quadruped_env.py DEFAULT_POSE / ACTION_SCALE) — the standard legged-RL
+     "action = residual around a default crouch" setup. Position (not torque)
+     control is chosen so a hand-scripted stand/trot is stable and clearly beats
+     random; torque control is a one-line actuator swap (flagged in the README).
+
+     DETERMINISM (root CLAUDE.md invariant 2, CI-enforced). Ground contact CAN
+     make a naive sim nondeterministic, so this scene pins what matters:
+       - integrator="implicitfast", solver="Newton" with a FIXED iteration count
+         (iterations / ls_iterations set, not tolerance-early-exit dependent),
+         cone="pyramidal": a fully specified, single-threaded contact solve.
+       - MuJoCo's CPU mj_step is single-threaded and branch-deterministic, so
+         with the solver fully specified two runs of the same seed + actions are
+         byte-identical. Verified twice-run in test_quadruped_env.py, INCLUDING
+         the contact-rich stepping.
+       - foot friction and contact softness (solref/solimp) are set explicitly
+         on the foot default so behaviour does not ride on library defaults.
+
+     Physics: timestep 0.005 s (200 Hz) for stable foot contact; the env applies
+     FRAME_SKIP = 4 => 50 Hz control (matching cartpole/pusher-reach control rate).
+-->
+<mujoco model="quadruped">
+  <option timestep="0.005" integrator="implicitfast" solver="Newton"
+          iterations="50" ls_iterations="20" cone="pyramidal"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <global offwidth="640" offheight="480"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.92 0.92 0.94" rgb2="0.83 0.83 0.87"
+             width="256" height="256"/>
+    <material name="floor_mat" texture="grid" texrepeat="12 12" reflectance="0"/>
+  </asset>
+
+  <default>
+    <!-- leg links: capsules, NO collision (only feet touch the floor) -->
+    <default class="leg">
+      <geom type="capsule" size="0.018" rgba="0.30 0.35 0.60 1" contype="0" conaffinity="0"
+            mass="0.25"/>
+      <joint type="hinge" axis="0 1 0" damping="0.5" armature="0.01" frictionloss="0.02"/>
+    </default>
+    <!-- feet: the ONLY collidable robot geoms; friction + contact softness pinned -->
+    <default class="foot">
+      <geom type="sphere" size="0.022" rgba="0.80 0.35 0.30 1" contype="1" conaffinity="1"
+            mass="0.05" friction="1.0 0.02 0.001" solref="0.01 1" solimp="0.9 0.95 0.001"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <!-- tracking-ish side camera (moves with nothing; wide enough for a short walk) -->
+    <camera name="side" pos="0 -1.6 0.5" xyaxes="1 0 0 0 0.4 1"/>
+    <light name="top" pos="0 0 2" dir="0 0 -1" diffuse="0.7 0.7 0.7"/>
+
+    <!-- the ground: the one static collidable, friction pinned to match the feet -->
+    <geom name="floor" type="plane" size="0 0 0.05" material="floor_mat"
+          contype="1" conaffinity="1" friction="1.0 0.02 0.001"/>
+
+    <!-- floating-base torso: a box on a free joint (6 DOF) -->
+    <body name="torso" pos="0 0 0.30">
+      <freejoint name="root"/>
+      <geom name="torso_geom" type="box" size="0.18 0.09 0.035" rgba="0.20 0.24 0.42 1"
+            mass="3.0" contype="0" conaffinity="0"/>
+
+      <!-- FRONT-LEFT leg (+x front, +y left) -->
+      <body name="FL_thigh" pos="0.15 0.08 -0.02">
+        <joint name="FL_hip" class="leg"/>
+        <geom name="FL_thigh_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+        <body name="FL_shin" pos="0 0 -0.13">
+          <joint name="FL_knee" class="leg"/>
+          <geom name="FL_shin_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+          <geom name="FL_foot" class="foot" pos="0 0 -0.13"/>
+        </body>
+      </body>
+
+      <!-- FRONT-RIGHT leg -->
+      <body name="FR_thigh" pos="0.15 -0.08 -0.02">
+        <joint name="FR_hip" class="leg"/>
+        <geom name="FR_thigh_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+        <body name="FR_shin" pos="0 0 -0.13">
+          <joint name="FR_knee" class="leg"/>
+          <geom name="FR_shin_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+          <geom name="FR_foot" class="foot" pos="0 0 -0.13"/>
+        </body>
+      </body>
+
+      <!-- HIND-LEFT leg (-x hind) -->
+      <body name="HL_thigh" pos="-0.15 0.08 -0.02">
+        <joint name="HL_hip" class="leg"/>
+        <geom name="HL_thigh_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+        <body name="HL_shin" pos="0 0 -0.13">
+          <joint name="HL_knee" class="leg"/>
+          <geom name="HL_shin_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+          <geom name="HL_foot" class="foot" pos="0 0 -0.13"/>
+        </body>
+      </body>
+
+      <!-- HIND-RIGHT leg -->
+      <body name="HR_thigh" pos="-0.15 -0.08 -0.02">
+        <joint name="HR_hip" class="leg"/>
+        <geom name="HR_thigh_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+        <body name="HR_shin" pos="0 0 -0.13">
+          <joint name="HR_knee" class="leg"/>
+          <geom name="HR_shin_geom" class="leg" fromto="0 0 0 0 0 -0.13"/>
+          <geom name="HR_foot" class="foot" pos="0 0 -0.13"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- one PD position servo per joint; ctrl is the ABSOLUTE target joint angle
+         (rad). The env commands DEFAULT_POSE + ACTION_SCALE * action. kp/kv give
+         a firm-but-stable stance. forcerange caps the servo torque. -->
+    <position name="FL_hip_act"  joint="FL_hip"  kp="20" kv="0.5" ctrlrange="-1.2 1.2" forcerange="-12 12"/>
+    <position name="FL_knee_act" joint="FL_knee" kp="20" kv="0.5" ctrlrange="-2.4 0.2" forcerange="-12 12"/>
+    <position name="FR_hip_act"  joint="FR_hip"  kp="20" kv="0.5" ctrlrange="-1.2 1.2" forcerange="-12 12"/>
+    <position name="FR_knee_act" joint="FR_knee" kp="20" kv="0.5" ctrlrange="-2.4 0.2" forcerange="-12 12"/>
+    <position name="HL_hip_act"  joint="HL_hip"  kp="20" kv="0.5" ctrlrange="-1.2 1.2" forcerange="-12 12"/>
+    <position name="HL_knee_act" joint="HL_knee" kp="20" kv="0.5" ctrlrange="-2.4 0.2" forcerange="-12 12"/>
+    <position name="HR_hip_act"  joint="HR_hip"  kp="20" kv="0.5" ctrlrange="-1.2 1.2" forcerange="-12 12"/>
+    <position name="HR_knee_act" joint="HR_knee" kp="20" kv="0.5" ctrlrange="-2.4 0.2" forcerange="-12 12"/>
+  </actuator>
+</mujoco>

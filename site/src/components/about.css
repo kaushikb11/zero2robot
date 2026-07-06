@@ -1,0 +1,185 @@
+/* ============================================================================
+   about.css — scoped `.ab-*` styles for the START-HERE / about page.
+
+   Reads the shared design tokens defined on `.book` (site/public/styles.css):
+   warm paper + ink, oxblood (--book) chrome, ONE --signal blue reserved for
+   live/interactive things + focus rings, --font-mono for instrument chrome.
+   Defines NO palette of its own. The page body itself is the Variant C book
+   column (reuses .bk-titleblock / .bk-prose from styles.css); this file only
+   adds the draft band, the CTA row, and the keyboard-shortcut key list.
+
+   Discipline:
+   - marketing/voice copy sits inside the honest `.ab-draft` band (mirrors the
+     landing .ln-draft / the galley-proof .bk-ribbon) — never presented as final.
+   - the primary CTA is CHROME → oxblood, never signal blue.
+   - every transition is gated behind prefers-reduced-motion: no-preference.
+   - all text clears WCAG AA on the warm paper it sits on.
+   ========================================================================== */
+
+.ab-wrap {
+  max-width: var(--measure);
+  margin: 0 auto;
+}
+
+/* --- draft band — mirrors the galley-proof .bk-ribbon, scoped + inline ------
+   The pitch below is authored/voice copy pending the DevRel + author pass.
+   Warm paper, oxblood keyline; never signal blue (it is not interactive). */
+.ab-draft {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.75rem;
+  margin: 1.6rem 0 0;
+  background: color-mix(in srgb, var(--book) 7%, var(--paper));
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--book-soft);
+  border-radius: 3px 3px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+}
+.ab-draft b {
+  color: var(--book);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+}
+.ab-draft__src { color: var(--ink-mute); }
+@media (max-width: 40rem) {
+  .ab-draft__tail { display: none; }
+}
+
+/* the voice-copy zone the band labels — a dashed "still drafting" enclosure so a
+   reader can see exactly which words are placeholder, exactly like a chapter's
+   draft prose sits under its ribbon. */
+.ab-intro {
+  margin: 0 0 2.4rem;
+  padding: 1.2rem 1.4rem 0.4rem;
+  border: 1px solid var(--rule-strong);
+  border-top: 0;
+  border-left: 3px solid var(--book-soft);
+  border-radius: 0 0 3px 3px;
+  background: color-mix(in srgb, var(--paper-2) 55%, transparent);
+}
+.ab-intro p {
+  margin: 0 0 1rem;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.ab-intro p:first-of-type { color: var(--ink); }
+.ab-intro strong { color: var(--ink); font-weight: 600; }
+
+/* --- CTA row (chrome → oxblood, mirrors the landing .ln-btn) --------------- */
+.ab-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 2rem 0 0.5rem;
+}
+.ab-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.7rem 1.15rem;
+  min-height: 44px;              /* comfortable touch target */
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid var(--book-soft);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--book);
+  background: transparent;
+  text-decoration: none;
+}
+.ab-btn:hover {
+  background: color-mix(in srgb, var(--book) 8%, transparent);
+  border-color: var(--book);
+}
+.ab-btn--primary {
+  color: var(--paper);
+  background: var(--book);
+  border-color: var(--book);
+}
+.ab-btn--primary:hover {
+  background: color-mix(in srgb, var(--book) 88%, #000);
+  color: #fff;
+}
+.ab-btn__sub {
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ab-btn {
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+}
+
+/* --- inline keyboard keys + the shortcuts ledger --------------------------- */
+.ab-kbd {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.12em 0.42em;
+}
+
+/* the shortcuts table lives inside .bk-prose, but let long rows scroll rather
+   than overflow the reading column on a phone. */
+.ab-keys {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0 0.4rem;
+  display: block;
+  overflow-x: auto;
+}
+.ab-keys th,
+.ab-keys td {
+  text-align: left;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+.ab-keys thead th {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  border-bottom: 1.5px solid var(--rule-strong);
+  font-weight: 400;
+}
+.ab-keys td:first-child { white-space: nowrap; }
+.ab-keys td:last-child { color: var(--ink-soft); }
+.ab-keys tbody tr:last-child td { border-bottom: 1.5px solid var(--rule-strong); }
+
+/* the "?" help hint pill — a visible, JS-friendly affordance the orchestrator
+   can wire (data-help-open) or that simply documents the key. */
+.ab-help-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0.5rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+}
+.ab-help-hint:hover { border-color: var(--ink-mute); color: var(--ink); }
+.ab-help-hint:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }

@@ -1,0 +1,24 @@
+# Demo embed stub — ch0.2 "pusht-scene-build".
+# Playground integration point: playground/ owns the WASM runtime and the embed
+# component; this file declares WHAT the embed shows. Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: pusht-scene-build
+scene: authored             # SCENE_XML assembled region-by-region in scene.py — the learner-authored PushT scene
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.2
+  azimuth: 90
+  elevation: -75           # near-top-down: PushT is a planar task, read it from above
+interaction: toggle-weld    # visitor flips the --break split-tee switch live and watches the T hold together vs settle already split
+hud:
+  - sim_time
+  - tee_gap_settled        # the weld invariant at rest: 0.06 m welded, ~0.09 m already-split before any push
+  - tee_gap_max_dev        # whole-run peak deviation from 0.06: 0.0 iff welded, >=0.03 for a split T (the robust verdict)
+  - joint_types            # the compiled kinematic tree, mirroring the "build" region's validate step
+notes: >
+  The hero moment is the weld toggle: welded, the bar-stem gap sits locked at
+  0.06 m and the pusher shoves the T across the table as one rigid piece; split-tee,
+  the reset can only position the bar, so the T settles ALREADY split (gap ~0.09 m)
+  before the push even lands — two bodies can't be set down as one. This is the
+  chapter's whole lesson — two geoms in one body vs two bodies — in one switch. No
+  policy, no goal; just the scene the next fifteen chapters use.

@@ -1,0 +1,53 @@
+# Demo embed stub — ch1.4 "diffusion_multimodality".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): like ch1.3, this policy does NOT
+# fit tensor contract v1. diffusion.py exports diffusion_denoiser.onnx whose
+# signature is denoiser(noisy_action[1,2], timestep[1], observation[1,10]) ->
+# predicted_noise[1,2] — THREE inputs, and one action requires denoising_steps of
+# these chained through the reverse DDPM loop (a stateful sampler the runtime must
+# own, plus the action mean/std for un-standardizing). The browser embed therefore
+# needs a contract-v2-style path: run the denoiser T times per control step in JS,
+# stepping the DDPM posterior. This embed is BLOCKED on that contract; ship it only
+# after playground/src/policy/contracts.ts gains a sampler-aware policy type.
+#
+# The HERO of this chapter's embed is the 2D TOY, not the robot — it is where the
+# lesson is legible without any sim at all. Two panels:
+demo: diffusion_multimodality
+panels:
+  - id: toy_denoise
+    kind: points2d               # a pure 2D scatter canvas, no MuJoCo/WASM needed
+    title: "Denoising a multimodal target"
+    shows: >
+      The ring target (grey), the diffusion samples (blue) that land ON the ring
+      across ALL directions, and the regression samples (red) collapsed into the
+      empty center. Scrub the denoise_step timeline to watch pure noise resolve
+      into the ring — the forward pass melts the ring into noise, the reverse pass
+      rebuilds it. This is the whole idea and it runs in the browser with zero deps.
+    source: diffusion.rrd         # entities toy/target, toy/diffusion, toy/regression, toy/forward
+    timeline: denoise_step
+  - id: pusht_policy
+    kind: mujoco-wasm             # BLOCKED on contract v2 (sampler-aware runtime)
+    scene: pusht                  # curriculum/common/envs/pusht/pusht.xml, verbatim
+    policy: diffusion_denoiser.onnx   # 3-input denoiser core — contract v2 (sampler + un-standardize), NOT v1
+    runtime:
+      mode: ddpm-sample           # run the denoiser denoising_steps times per control step, in JS
+      denoising_steps: 100        # must match the exported schedule (diffusion.py default)
+      x0_clip: 3.0                # clamp predicted clean action during sampling (matches diffusion.py)
+    camera:
+      lookat: [0.0, 0.0, 0.02]
+      distance: 1.2
+      azimuth: 90
+      elevation: -70              # top-down
+    interaction: reset-seed       # visitor re-seeds the block spawn
+    hud:
+      - pos_err                   # block -> target distance; watch it drop
+notes: >
+  Author decides whether the embed ships the toy panel alone (unblocked, pure 2D,
+  the strongest teaching artifact) or waits to pair it with the PushT policy panel
+  (blocked on the contract-v2 sampler runtime). Recommendation: ship the toy panel
+  first — it carries the multimodality lesson end-to-end with no WASM and no new
+  contract, and it is the thing a learner should see move. Coordinate the sampler
+  runtime with playground/ before wiring the second panel.

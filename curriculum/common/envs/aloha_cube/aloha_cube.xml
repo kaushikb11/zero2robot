@@ -1,0 +1,122 @@
+<!-- ALOHA-style bimanual CUBE-TRANSFER scene (zero2robot Phase 1, ch1.3 ACT).
+
+     A deliberately SIMPLIFIED, top-down planar abstraction of the ALOHA
+     cube-transfer task. The point of the task is bimanual coordination: the
+     right arm alone cannot reach the target, the left arm alone cannot reach
+     the cube, so the cube MUST be handed off near the middle. That is exactly
+     the structure ACT's action chunking is meant to exploit, without pulling
+     in a 14-DOF ViperX model that would blow the free-tier / determinism floor.
+
+     Simplifications (see README "Honesty" section):
+       - Each "arm" is a planar end-effector on two velocity-actuated slides
+         (x, y) plus a one-DOF gripper. No links, no IK — the policy commands
+         the end-effector directly, same spirit as PushT's pusher.
+       - Grasping is ABSTRACTED as a `weld` equality constraint (see
+         aloha_cube_env.py): when a gripper is closed AND within GRASP_R of the
+         cube, the env welds the cube to that gripper. This is CPU-deterministic
+         and robust; it is NOT frictional pinch physics (that is a Scale Lab).
+       - The cube slides on a planar (slide-x, slide-y) joint with
+         frictionloss+damping, so it is quasi-static and never depends on
+         chaotic table contact — identical determinism discipline to PushT.
+
+     Reach limits are enforced by the slide-joint `range`s: right arm x in
+     [-0.05, 0.45], left arm x in [-0.45, 0.05]. They overlap only in
+     [-0.05, 0.05] (the handoff band). Cube spawns at x >= 0.15 (right-only),
+     target sits at x = -0.30 (left-only).
+-->
+<mujoco model="aloha_cube">
+  <option timestep="0.01" integrator="implicitfast"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <global offwidth="640" offheight="640"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.92 0.92 0.94" rgb2="0.83 0.83 0.87"
+             width="256" height="256"/>
+    <material name="table_mat" texture="grid" texrepeat="12 8" reflectance="0"/>
+  </asset>
+
+  <worldbody>
+    <camera name="top" pos="0 0 1.3" quat="1 0 0 0" fovy="52"/>
+
+    <!-- visual-only table plane at z=0 (nothing collides with it) -->
+    <geom name="table" type="plane" size="0.6 0.4 0.1" material="table_mat"
+          contype="0" conaffinity="0"/>
+
+    <!-- workspace walls (collide with the cube; grippers pass through) -->
+    <geom name="wall_n" type="box" pos="0  0.31 0.03" size="0.55 0.02 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_s" type="box" pos="0 -0.31 0.03" size="0.55 0.02 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_e" type="box" pos=" 0.55 0 0.03" size="0.02 0.33 0.03" rgba="0.6 0.6 0.6 1"/>
+    <geom name="wall_w" type="box" pos="-0.55 0 0.03" size="0.02 0.33 0.03" rgba="0.6 0.6 0.6 1"/>
+
+    <!-- fixed delivery target (visual only), in the LEFT arm's exclusive reach -->
+    <body name="target" pos="-0.30 0 0.0005">
+      <geom name="target_pad" type="cylinder" size="0.045 0.0005" pos="0 0 0"
+            rgba="0.35 0.8 0.4 0.5" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- transfer cube: slide-x, slide-y planar joint (quasi-static). -->
+    <body name="cube" pos="0.30 0 0.025">
+      <joint name="cube_x" type="slide" axis="1 0 0" damping="4" frictionloss="1.2"/>
+      <joint name="cube_y" type="slide" axis="0 1 0" damping="4" frictionloss="1.2"/>
+      <geom name="cube_geom" type="box" size="0.022 0.022 0.022"
+            rgba="0.85 0.35 0.30 1" mass="0.05"/>
+    </body>
+
+    <!-- RIGHT arm: end-effector on two actuated slides + a 1-DOF gripper.
+         x range keeps it out of the target zone (x >= -0.05). -->
+    <body name="right_ee" pos="0.30 0 0.025">
+      <!-- ranges are joint-local (displacement from the body home at x=+0.30);
+           qpos in [-0.35, 0.15] => world x in [-0.05, 0.45] (out of target zone) -->
+      <joint name="right_x" type="slide" axis="1 0 0" range="-0.35 0.15" damping="0.5"/>
+      <joint name="right_y" type="slide" axis="0 1 0" range="-0.28 0.28" damping="0.5"/>
+      <geom name="right_palm" type="cylinder" size="0.010 0.022" rgba="0.90 0.55 0.20 1"
+            mass="0.2" contype="0" conaffinity="0"/>
+      <!-- fixed jaw + moving finger: grip qpos 0 = open, 0.04 = closed -->
+      <geom name="right_jaw_fixed" type="box" size="0.004 0.010 0.016" pos="0.026 0 0"
+            rgba="0.75 0.45 0.15 1" contype="0" conaffinity="0"/>
+      <body name="right_finger" pos="0 0 0">
+        <joint name="right_grip" type="slide" axis="1 0 0" range="0 0.04" damping="1"/>
+        <geom name="right_finger_geom" type="box" size="0.004 0.010 0.016" pos="-0.026 0 0"
+              rgba="0.75 0.45 0.15 1" contype="0" conaffinity="0"/>
+      </body>
+    </body>
+
+    <!-- LEFT arm: mirror of the right; x range keeps it out of the cube zone
+         (x <= 0.05). Homes on the left. -->
+    <body name="left_ee" pos="-0.30 0 0.025">
+      <!-- joint-local ranges: qpos in [-0.15, 0.35] => world x in [-0.45, 0.05]
+           (out of the cube-spawn zone) -->
+      <joint name="left_x" type="slide" axis="1 0 0" range="-0.15 0.35" damping="0.5"/>
+      <joint name="left_y" type="slide" axis="0 1 0" range="-0.28 0.28" damping="0.5"/>
+      <geom name="left_palm" type="cylinder" size="0.010 0.022" rgba="0.25 0.55 0.90 1"
+            mass="0.2" contype="0" conaffinity="0"/>
+      <geom name="left_jaw_fixed" type="box" size="0.004 0.010 0.016" pos="-0.026 0 0"
+            rgba="0.15 0.45 0.75 1" contype="0" conaffinity="0"/>
+      <body name="left_finger" pos="0 0 0">
+        <joint name="left_grip" type="slide" axis="1 0 0" range="-0.04 0" damping="1"/>
+        <geom name="left_finger_geom" type="box" size="0.004 0.010 0.016" pos="0.026 0 0"
+              rgba="0.15 0.45 0.75 1" contype="0" conaffinity="0"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- arm end-effector target velocities [m/s], clipped to [-1, 1] -->
+    <velocity name="right_vx" joint="right_x" kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+    <velocity name="right_vy" joint="right_y" kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+    <velocity name="left_vx"  joint="left_x"  kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+    <velocity name="left_vy"  joint="left_y"  kv="20" ctrlrange="-1 1" forcerange="-30 30"/>
+    <!-- gripper position targets: ctrl is the finger displacement [m] -->
+    <position name="right_grip_act" joint="right_grip" kp="120" ctrlrange="0 0.04" forcerange="-40 40"/>
+    <position name="left_grip_act"  joint="left_grip"  kp="120" ctrlrange="-0.04 0" forcerange="-40 40"/>
+  </actuator>
+
+  <equality>
+    <!-- grasp abstraction: env toggles these on/off deterministically. -->
+    <weld name="right_hold" body1="right_ee" body2="cube" active="false"/>
+    <weld name="left_hold"  body1="left_ee"  body2="cube" active="false"/>
+  </equality>
+</mujoco>

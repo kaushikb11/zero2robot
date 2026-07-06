@@ -1,0 +1,40 @@
+id: ch0.4-record
+title: "Teleoperation & Your First Dataset"
+artifact: record.py         # target ~200 LOC, CPU/browser; two inputs, one canonical writer
+task: pusht                 # PushT teleop -> LeRobot v3 episodes (ALOHA-sim teleop arrives in a later phase)
+objectives:
+  - Understand what an episode IS — a list of (observation, action) pairs — and what your first dataset physically is on disk (LeRobot v3: parquet data + meta/info/stats/episodes/tasks)
+  - Record PushT episodes two ways — local scripted teleop and ingest of the browser's z2r-teleop-1 interchange — through the SAME canonical lerobot writer, so both are format-identical to gen_demos by construction
+  - Hold the obs[10]/action[2] layout that chapter 1.1's BC trains on, and see why the feature schema (dtypes, shapes, names) is the contract that must not drift
+  - Recognize this dataset as the artifact-continuity anchor: it follows you to 0.5 (inspect), 1.1 (behavior cloning), and 1.2 (curation)
+scale_lab: false
+read_the_real_thing: false
+demo: pusht-teleop
+
+# Reference values + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not bare magic numbers). checks.py reads
+# these instead of hardcoding tolerances. Re-measure if any of the stack moves.
+exercise_checks:
+  provenance: "seed 0 on cpu, mujoco 3.10.0 / lerobot 0.4.4 (CODEBASE_VERSION v3.0) / numpy 2.4.6; --smoke; measured 2026-07-04"
+  ex1:                          # predict-then-run: how episode count scales the dataset
+    provenance: "record.py --smoke drives a FIXED 40 control steps per episode; n_frames must be exactly 40 * --episodes"
+    smoke_steps_per_episode: 40 # the fixed smoke episode length
+    invariant_keys: ["obs_dim", "act_dim", "feature_keys", "fps"]  # unchanged as episode count grows
+  ex2:                          # bug-hunt: a wrong feature shape that breaks parity with the training data
+    provenance: "the parity contract mirrored from gen_demos.build_features / pusht_env.py"
+    obs_shape: [10]             # observation.state MUST be float32[10]
+    act_shape: [2]              # action MUST be float32[2]
+  ex3:                          # code-completion: the add_frame / save_episode loop
+    provenance: "a synthetic 2-episode set (3 + 2 frames) written via the completed writer, checked vs a gen_demos golden schema"
+    expected_frames: 5          # 3 + 2 frames across the two synthetic episodes
+
+notebook_hash: d999a7b833dda95d081923c0a295ba8cd8d65d20113af7d02c29d8772325cabe        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 5188f46d165dfc4b43843f606bb708beccc3c5808cb65bc904b3906b4fde95b4   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 382d940f72caab4b6493dfd87366dd2d1d3e6ec3749df349228d8f5201c9f6f9
+  features: adb3b7b64cefb1e0d5394f0003aa5f703625030ddcb0f2542b876582e34d43cf
+  teleop: 82865988d54c46fcee99f50d92729ccf9344c13cc939b571b3991f67190efcdf
+  ingest: f9c4926ea9f7291e911a9fd553a6101d08840dec2a4c66112165b91df9542b0d
+  write: d275eb150ffe1bd628aeeca7b1bf6bbfd7fedcb2083df892e2eb7a6d07d74ed3
+  run: f23e8c370b740e83170968c224edba2d9572ebff66f2444434c26d31fc1fe637

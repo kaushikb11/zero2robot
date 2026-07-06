@@ -1,0 +1,53 @@
+---
+// ValueProps.astro — a "what makes this different" strip between the hero and
+// the curriculum arc. Three claims that match the project's actual invariants
+// (free-tier floor, real code, honest provenance).
+//
+// COPY OWNERSHIP: authored marketing copy → DRAFT behind the shared draft band.
+// The invariants underneath are real (root CLAUDE.md), but the WORDING is a
+// placeholder for the DevRel/author voice pass. Fully server-rendered; no JS.
+import "./landing.css";
+
+const PROPS: { eyebrow: string; title: string; body: string }[] = [
+  {
+    eyebrow: "the code is the product",
+    title: "One file you can read top to bottom",
+    body:
+      "Every chapter is a single runnable script — ~120 to ~220 lines — no framework to excavate. You read it like a textbook, then run it.",
+  },
+  {
+    eyebrow: "runs on the free tier",
+    title: "A laptop or a free Colab T4 is enough",
+    body:
+      "Every learner-facing path completes on CPU or a free T4. Wall-clock times are measured and printed, never estimated.",
+  },
+  {
+    eyebrow: "honest by construction",
+    title: "Real sims, real policies, real numbers",
+    body:
+      "The browser demos run the same code you train. Seeds are mandatory, results are reproducible within recorded bands, and every claim shows its provenance.",
+  },
+];
+---
+
+<section class="ln-props" aria-labelledby="ln-props-title">
+  <div class="ln-props__head">
+    <h2 class="ln-kicker" id="ln-props-title">Why this course is built the way it is</h2>
+    <div class="ln-draft ln-draft--inline" role="note" aria-label="Draft section copy — pending DevRel and author pass">
+      <b>draft</b>
+      <span class="ln-draft__src">placeholder copy · the invariants are real, the wording isn't final</span>
+    </div>
+  </div>
+
+  <ul class="ln-props__grid">
+    {
+      PROPS.map((p) => (
+        <li class="ln-prop">
+          <p class="ln-prop__eyebrow">{p.eyebrow}</p>
+          <h3 class="ln-prop__title">{p.title}</h3>
+          <p class="ln-prop__body">{p.body}</p>
+        </li>
+      ))
+    }
+  </ul>
+</section>

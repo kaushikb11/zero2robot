@@ -1,0 +1,398 @@
+/* ============================================================================
+   progress.css — the PROGRESS & COMPLETION system skin (.pg-*).
+
+   Same design language as the rest of the site (Variant C, public/styles.css):
+   warm paper insets, mono instrument labels, oxblood chrome for links, and the
+   shared --entity-target emerald reserved here for the ONE thing it already
+   means elsewhere (the sidebar "read ✓") — completion. Progress bars are static
+   data, so they never wear --signal blue (that stays for live/interactive
+   things); --signal is used only for focus rings, per the token contract.
+
+   Text meets WCAG AA on the warm paper insets: entity-tinted text uses the
+   darker --entity-target-ink token (the base emerald falls below 4.5:1 on
+   paper-2). Bar-transition motion is gated behind prefers-reduced-motion.
+   ========================================================================== */
+
+/* --- dashboard shell ---------------------------------------------------- */
+.pg-overview {
+  max-width: var(--measure);
+  margin: 2.4rem auto;
+  padding: 1.4rem 1.5rem 1.6rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.pg-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+.pg-overall {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.pg-overall-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.pg-overall-num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-3);
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the "continue where you left off →" link — a book-chrome CTA (oxblood), not
+   signal blue: it is navigation, not a live instrument handle. */
+.pg-continue {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--book);
+  text-decoration: none;
+  border-bottom: 1px solid var(--book-soft);
+  padding-bottom: 1px;
+  max-width: 100%;
+}
+.pg-continue:hover {
+  background: color-mix(in srgb, var(--book) 8%, transparent);
+}
+.pg-continue-title {
+  color: var(--ink-mute);
+}
+.pg-continue:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+/* --- bars (static data → emerald fill, never signal blue) --------------- */
+.pg-overall-bar,
+.pg-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink-mute) 16%, transparent);
+  overflow: hidden;
+}
+.pg-overall-bar {
+  height: 9px;
+  margin-bottom: 0.2rem;
+}
+.pg-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--entity-target);
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pg-bar-fill {
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.15, 1);
+  }
+}
+
+/* --- empty state -------------------------------------------------------- */
+.pg-empty {
+  margin: 0.9rem 0 0;
+  font-size: 0.94rem;
+  font-style: italic;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+
+/* --- per-phase rows ----------------------------------------------------- */
+.pg-phases {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+.pg-phase {
+  display: grid;
+  gap: 0.4rem;
+}
+.pg-phase-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.pg-phase-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.pg-phase-pct {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   CompletionBadge (.pg-badge) — a tiny per-chapter completion ring + label,
+   for nav rows and cards. Ring fill is the completion fraction; it turns solid
+   emerald at 100%. Text stays ink-dark (AA); the emerald is a graphic element.
+   ========================================================================== */
+.pg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  line-height: 1;
+}
+.pg-ring {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.pg-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink-mute) 24%, transparent);
+  stroke-width: 2.5;
+}
+.pg-ring-fill {
+  fill: none;
+  stroke: var(--entity-target);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  /* start the arc at 12 o'clock */
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transform-box: view-box;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pg-ring-fill {
+    transition: stroke-dasharray 0.4s cubic-bezier(0.4, 0, 0.15, 1);
+  }
+}
+.pg-badge-text {
+  color: var(--ink-soft);
+}
+/* fully-complete chapters read with the emerald "done" ink (AA on paper) */
+.pg-badge[data-complete="true"] .pg-badge-text {
+  color: var(--entity-target-ink);
+}
+
+/* ============================================================================
+   APPEND-ONLY (F-dashboard): the /progress page + Achievements island. New
+   `.pg-*` rules only — nothing above is edited. Same design language: warm paper
+   insets, mono instrument labels, oxblood chrome for links, emerald reserved for
+   completion, --signal blue only for focus rings. WCAG AA on paper; every bar/
+   ring transition already sits behind prefers-reduced-motion via the shared
+   .pg-bar-fill / .pg-ring-fill rules above.
+   ========================================================================== */
+
+/* --- dashboard shell (full-page variant of .pg-overview) ---------------- */
+.pg-dash {
+  max-width: var(--measure);
+  margin: 1.6rem auto 2.4rem;
+  padding: 1.4rem 1.5rem 1.6rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.pg-dash-sub {
+  margin: 0.8rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+
+/* --- per-phase sections + their chapter rows ---------------------------- */
+.pg-dash-phases {
+  margin-top: 1.4rem;
+  display: grid;
+  gap: 1.6rem;
+}
+.pg-dash-phase {
+  display: grid;
+  gap: 0.5rem;
+}
+.pg-dash-phase-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.pg-chapters {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+.pg-chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.55rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+.pg-chapter:hover {
+  background: color-mix(in srgb, var(--book) 5%, transparent);
+}
+.pg-chapter[data-complete="true"] {
+  border-color: color-mix(in srgb, var(--entity-target) 30%, transparent);
+  background: color-mix(in srgb, var(--entity-target) 7%, transparent);
+}
+.pg-chapter-link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--ink);
+  flex: 1 1 14rem;
+}
+.pg-chapter-link:hover .pg-chapter-title {
+  border-bottom-color: var(--book-soft);
+}
+.pg-chapter-link:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.pg-chapter-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.pg-chapter-title {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  color: var(--ink);
+  border-bottom: 1px solid transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================================
+   Achievements (.pg-ach) — milestone tiles. Locked tiles read as muted paper;
+   unlocked tiles gain the emerald "done" treatment (reinforced with a ✓ glyph +
+   "locked/unlocked" text, never colour alone).
+   ========================================================================== */
+.pg-ach {
+  max-width: var(--measure);
+  margin: 2rem auto 2.4rem;
+}
+.pg-ach-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.pg-ach-title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  color: var(--ink);
+  margin: 0;
+}
+.pg-ach-count {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+.pg-ach-note {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+.pg-ach-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.7rem;
+}
+.pg-ach-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+/* locked tiles sit back; the emerald arrives only on a real unlock */
+.pg-ach-item[data-unlocked="false"] {
+  opacity: 0.72;
+}
+.pg-ach-item[data-unlocked="true"] {
+  border-color: color-mix(in srgb, var(--entity-target) 42%, var(--rule));
+  background: color-mix(in srgb, var(--entity-target) 8%, var(--paper-2));
+}
+.pg-ach-item:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+.pg-ach-glyph {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  color: var(--ink-mute);
+  flex: 0 0 auto;
+}
+.pg-ach-item[data-unlocked="true"] .pg-ach-glyph {
+  color: var(--entity-target-ink);
+}
+.pg-ach-body {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.pg-ach-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink);
+}
+.pg-ach-item[data-unlocked="true"] .pg-ach-name {
+  color: var(--entity-target-ink);
+}
+.pg-ach-state {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+}
+.pg-ach-item[data-unlocked="true"] .pg-ach-state {
+  color: var(--entity-target-ink);
+}
+.pg-ach-blurb {
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}

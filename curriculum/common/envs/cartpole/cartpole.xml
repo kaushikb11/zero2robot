@@ -1,0 +1,70 @@
+<!-- CARTPOLE balance scene (zero2robot Phase 2, ch2.1 PPO).
+
+     The classic control task: a cart slides on a horizontal rail; a pole is
+     hinged to the cart and must be kept upright by pushing the cart left/right.
+     Underactuated (one actuator, two DOF) — the policy can only push the cart,
+     never the pole directly. This is the low-variance, learnable env ch2.1's
+     PPO is smoke-tested on (CleanRL's canonical first task is CartPole).
+
+     Design (mirrors PushT / AlohaCube determinism discipline):
+       - cart: a box on a single slide joint (the rail), driven by ONE motor
+         (force actuator). ctrl = [force], gear 10 => +-10 N at ctrl +-1.
+       - pole: a capsule on a hinge joint (axis +y => swings in the x-z plane).
+         hinge qpos = 0 is upright; +theta tips the tip toward +x.
+       - NO collisions anywhere (contype/conaffinity 0): the pole never touches
+         the cart or ground, the cart is confined to the rail by its slide
+         joint. With no contact solver the dynamics are a pure inverted
+         pendulum — bitwise CPU-deterministic, and microsecond-cheap.
+       - frictionless joints (classic CartPole dynamics; no damping term).
+
+     Physics: cart 1.0 kg, pole 0.1 kg / 1.0 m, g = -9.81. timestep 0.01 s;
+     the env applies FRAME_SKIP = 2 => 50 Hz control (classic tau = 0.02 s).
+
+     Reach limits: the slide joint range (+-2.9) is slightly wider than the
+     env's CART_LIMIT (2.4 m) so termination fires on the env check, never on a
+     hard joint stop (which would inject a contact/limit force).
+-->
+<mujoco model="cartpole">
+  <option timestep="0.01" integrator="implicitfast"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.45" diffuse="0.6 0.6 0.6" specular="0.1 0.1 0.1"/>
+    <global offwidth="640" offheight="480"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.92 0.92 0.94" rgb2="0.83 0.83 0.87"
+             width="256" height="256"/>
+    <material name="floor_mat" texture="grid" texrepeat="10 4" reflectance="0"/>
+  </asset>
+
+  <worldbody>
+    <!-- side camera looking along +y at the x-z plane the cartpole lives in -->
+    <camera name="side" pos="0 -4.0 0.6" xyaxes="1 0 0 0 0 1"/>
+
+    <!-- visual-only floor and rail (nothing collides) -->
+    <geom name="floor" type="plane" pos="0 0 -0.6" size="3.5 1.0 0.1" material="floor_mat"
+          contype="0" conaffinity="0"/>
+    <geom name="rail" type="capsule" fromto="-2.9 0 0 2.9 0 0" size="0.02"
+          rgba="0.5 0.5 0.55 1" contype="0" conaffinity="0"/>
+
+    <!-- cart on the rail: one slide joint, driven by the motor below -->
+    <body name="cart" pos="0 0 0">
+      <joint name="slider" type="slide" axis="1 0 0" range="-2.9 2.9"/>
+      <geom name="cart_geom" type="box" size="0.1 0.05 0.05" rgba="0.30 0.35 0.60 1"
+            mass="1.0" contype="0" conaffinity="0"/>
+
+      <!-- pole hinged at the cart center; qpos 0 = straight up (+z) -->
+      <body name="pole" pos="0 0 0">
+        <joint name="hinge" type="hinge" axis="0 1 0"/>
+        <geom name="pole_geom" type="capsule" fromto="0 0 0 0 0 1.0" size="0.02"
+              rgba="0.80 0.35 0.30 1" mass="0.1" contype="0" conaffinity="0"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- single force actuator on the cart: ctrl in [-1, 1] => +-10 N -->
+    <motor name="slide_force" joint="slider" gear="10" ctrlrange="-1 1"/>
+  </actuator>
+</mujoco>

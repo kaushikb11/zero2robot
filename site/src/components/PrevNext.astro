@@ -1,0 +1,37 @@
+---
+// PrevNext — sequential chapter navigation at the foot of a chapter. Static.
+import type { ChapterInfo } from "../lib/curriculum.ts";
+
+interface Props {
+  prev?: ChapterInfo | null;
+  next?: ChapterInfo | null;
+}
+const { prev, next } = Astro.props;
+---
+
+<nav class="prevnext" aria-label="Previous and next chapter">
+  {
+    prev ? (
+      <a class="prevnext__link prevnext__link--prev" href={`/${prev.slug}/`} rel="prev">
+        <span class="prevnext__dir">← Previous</span>
+        <span class="prevnext__label">
+          {prev.number} · {prev.title}
+        </span>
+      </a>
+    ) : (
+      <span class="prevnext__spacer" />
+    )
+  }
+  {
+    next ? (
+      <a class="prevnext__link prevnext__link--next" href={`/${next.slug}/`} rel="next">
+        <span class="prevnext__dir">Next →</span>
+        <span class="prevnext__label">
+          {next.number} · {next.title}
+        </span>
+      </a>
+    ) : (
+      <span class="prevnext__spacer" />
+    )
+  }
+</nav>

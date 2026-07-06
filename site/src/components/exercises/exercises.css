@@ -1,0 +1,399 @@
+/* ===========================================================================
+   exercises.css — scoped .ex-* styles for the chapter Practice section and the
+   PredictGate island. Imported by BOTH Exercises.astro and PredictGate.tsx
+   (Vite dedupes). It only *reads* the site's design tokens defined in
+   public/styles.css (--ink, --paper-*, --signal, --alert, --entity-*-ink,
+   --font-mono, --measure) — it defines none of its own palette.
+
+   Discipline (from the design system):
+   - --signal (electric blue) appears ONLY on the LIVE interactive handles: the
+     choice radios and the Commit button. Nothing static wears it.
+   - --alert is the failing readout only (a prediction that missed).
+   - --entity-target-ink (emerald, AA on paper) is the matched-prediction mark.
+   - Entity-coloured text always uses the *-ink variants (AA ≥ 4.5:1 on paper).
+   - Every transition is gated behind prefers-reduced-motion: no-preference.
+   - Every interactive element has a visible :focus-visible ring.
+   ======================================================================== */
+
+.ex-section {
+  max-width: var(--measure);
+  margin: 3.2rem auto 0;
+}
+
+/* --- section head + honesty note (mirrors the draft-ribbon posture) -------- */
+.ex-head {
+  border-top: 2px solid var(--rule-strong);
+  padding-top: 1.1rem;
+  margin-bottom: 1.6rem;
+}
+.ex-practice-title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  color: var(--book);
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+.ex-candidate-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-mute);
+}
+.ex-candidate-note b {
+  color: var(--book);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+.ex-candidate-tail {
+  color: var(--ink-mute);
+  font-style: normal;
+}
+
+/* --- exercise list + cards -------------------------------------------------- */
+.ex-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.ex-card {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: 5px;
+  padding: 1.25rem 1.4rem 1.35rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.ex-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.55rem;
+}
+.ex-badge {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--paper-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  white-space: nowrap;
+}
+/* a quiet type accent on the left keyline — informative, never loud */
+.ex-card:has(.ex-badge[data-type="predict-then-run"]) { border-left-color: var(--book-soft); }
+.ex-card:has(.ex-badge[data-type="bug-hunt"]) { border-left-color: var(--entity-pusher-ink); }
+.ex-card:has(.ex-badge[data-type="code-completion"]) { border-left-color: var(--entity-target-ink); }
+
+.ex-card-title {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  color: var(--ink);
+  margin: 0;
+}
+.ex-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 0 0 0.9rem;
+}
+
+/* --- prompt prose (rendered from the docstring markdown) -------------------- */
+.ex-prompt {
+  color: var(--ink);
+  font-size: var(--step-0);
+  line-height: 1.62;
+}
+.ex-prompt > :first-child { margin-top: 0; }
+.ex-prompt > :last-child { margin-bottom: 0; }
+.ex-prompt p { margin: 0 0 0.8rem; }
+.ex-prompt ul {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ex-prompt ul li {
+  padding: 0.4rem 0.7rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+.ex-prompt ul li strong {
+  font-family: var(--font-mono);
+  color: var(--book);
+  margin-right: 0.15rem;
+}
+/* the indented diff / command blocks in the docstrings render as <pre><code> */
+.ex-prompt pre {
+  background: var(--paper-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  padding: 0.7rem 0.85rem;
+  overflow-x: auto;
+  margin: 0 0 0.9rem;
+}
+.ex-prompt pre code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink);
+  background: none;
+  white-space: pre;
+}
+.ex-prompt code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--paper-3);
+  border-radius: 3px;
+  padding: 0.05em 0.32em;
+}
+
+/* --- run cell (the local command; the ONLY "grading" is you, locally) ------- */
+.ex-runcell { margin-top: 1.1rem; }
+.ex-runcell--static {
+  border-top: 1px solid var(--rule);
+  padding-top: 0.95rem;
+}
+.ex-runcell-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-mute);
+  margin: 0 0 0.4rem;
+}
+.ex-cmd-line {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+.ex-cmd {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  padding: 0.5rem 0.7rem;
+}
+.ex-cmd-copy {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  padding: 0 0.7rem;
+  cursor: pointer;
+}
+.ex-cmd-copy:hover { background: var(--paper-3); }
+
+/* --- the predict-then-run gate --------------------------------------------- */
+.ex-gate {
+  margin-top: 1.15rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+}
+.ex-gate-fs {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.ex-gate-legend {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0;
+}
+.ex-gate-instr {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--ink-mute);
+  margin: 0.4rem 0 0.85rem;
+}
+.ex-gate-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+.ex-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.ex-choice-key {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+}
+/* the LIVE interactive handle wears signal blue when chosen */
+.ex-choice[data-selected="true"] {
+  border-color: var(--signal);
+  background: var(--signal-soft);
+  box-shadow: inset 0 0 0 1px var(--signal-line);
+}
+.ex-choice[data-selected="true"] .ex-choice-key { color: var(--signal); }
+.ex-choice:has(input:disabled) { opacity: 0.72; cursor: default; }
+/* keep the native radio for a11y/keyboard, but small and aligned */
+.ex-choice input[type="radio"] {
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: var(--signal);
+  margin: 0;
+}
+
+.ex-btn {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  border-radius: 5px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+.ex-btn--primary {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--signal-ink);
+  box-shadow: 0 1px 4px -1px var(--signal-line);
+}
+.ex-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* --- the reveal (mounted ONLY after a prediction is committed) -------------- */
+.ex-reveal {
+  border-top: 1px dashed var(--rule-strong);
+  padding-top: 0.95rem;
+}
+.ex-reveal-verdict {
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0 0 0.85rem;
+  color: var(--ink);
+}
+.ex-reveal-verdict b { font-family: var(--font-mono); }
+.ex-reveal-mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+.ex-reveal-verdict[data-correct="true"] { color: var(--entity-target-ink); }
+.ex-reveal-verdict[data-correct="true"] b { color: var(--entity-target-ink); }
+.ex-reveal-verdict[data-correct="false"] .ex-reveal-mark { color: var(--alert); }
+
+.ex-reveal-refs {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.95rem;
+}
+.ex-reveal-refs-head {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-mute);
+  margin: 0 0 0.55rem;
+}
+.ex-refs-dl { margin: 0; }
+.ex-refs-row {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.22rem 0;
+  border-top: 1px solid var(--rule);
+}
+.ex-refs-row:first-child { border-top: 0; }
+.ex-refs-row dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-mute);
+}
+.ex-refs-row dd {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--ink);
+  margin: 0;
+  text-align: right;
+  word-break: break-word;
+}
+.ex-refs-prov {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--ink-mute);
+  margin: 0.55rem 0 0;
+}
+
+.ex-link-btn {
+  margin-top: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--signal);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- focus + motion --------------------------------------------------------- */
+.ex-choice:focus-within,
+.ex-cmd-copy:focus-visible,
+.ex-btn:focus-visible,
+.ex-link-btn:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ex-choice,
+  .ex-cmd-copy,
+  .ex-btn { transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, color 120ms ease; }
+  .ex-reveal { animation: ex-reveal-in 220ms ease both; }
+  @keyframes ex-reveal-in {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: none; }
+  }
+}

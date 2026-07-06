@@ -1,0 +1,86 @@
+---
+// RTRT — the "Now read the real thing" callout at the foot of a chapter. After a
+// chapter builds a policy from scratch (ACT, diffusion, SmolVLA, LeRobot …), this
+// points the learner at the ORIGINAL production implementation, at a PINNED
+// upstream commit, and names exactly what to read.
+//
+// HONEST BY CONSTRUCTION:
+//   - Renders NOTHING unless the chapter DECLARES an rtrt pointer. The bridge
+//     already gates on `read_the_real_thing: true` AND a repo+commit mapping
+//     (curriculum_bridge._rtrt); here we just guard the prop. No chapter declares
+//     one yet → this renders nothing. Authors add the `rtrt:` block per chapter
+//     (schema documented in curriculum_bridge._rtrt) — we never invent one.
+//   - The link resolves the PINNED commit (…/tree/{sha|tag}), never a branch or
+//     HEAD, so the reading can't drift out from under the prose.
+//   - repo, commit, url, and what-to-read are surfaced verbatim from the
+//     author-supplied meta.yaml — nothing is fabricated at render time.
+//
+// DESIGN POSTURE: a static reading pointer, not a live handle — it wears the
+// --book "old ink" accent and NEVER --signal (reserved for LIVE interactive
+// elements only).
+//
+// JS-OFF SAFE: pure SSR — a heading, static text, a list, and one anchor. No
+// script, nothing to hydrate.
+import type { RTRT } from "../lib/curriculum.ts";
+import "./rtrt.css";
+
+interface Props {
+  rtrt?: RTRT | null;
+}
+const { rtrt } = Astro.props;
+
+// A 40-char sha reads better truncated; a tag (or any non-sha) passes through
+// unchanged. The full commit is preserved in the title attribute either way.
+const isSha = rtrt ? /^[0-9a-f]{40}$/i.test(rtrt.commit) : false;
+const commitLabel = rtrt && isSha ? rtrt.commit.slice(0, 10) : rtrt?.commit;
+
+// Browse the repo AT the pinned commit. GitHub resolves /tree/{sha} (and /tree/
+// {tag}) to the exact snapshot the prose was written against.
+const pinnedUrl = rtrt ? `${rtrt.url.replace(/\/$/, "")}/tree/${rtrt.commit}` : "";
+---
+
+{
+  rtrt && (
+    <aside class="rtrt" aria-labelledby="rtrt-h">
+      <p class="rtrt__kicker">Go deeper</p>
+      <h2 class="rtrt__title" id="rtrt-h">
+        Now read the real thing
+      </h2>
+      <p class="rtrt__lede">
+        You just built this from scratch. Here is the production implementation it
+        distills — pinned to one commit so the code can never move under you.
+      </p>
+
+      <p class="rtrt__pin">
+        <span class="rtrt__repo">{rtrt.repo}</span>
+        <span class="rtrt__at" aria-hidden="true">
+          @
+        </span>
+        <code class="rtrt__commit" title={rtrt.commit}>
+          {commitLabel}
+        </code>
+        <span class="rtrt__pinnote">pinned {isSha ? "commit" : "ref"}</span>
+      </p>
+
+      {rtrt.whatToRead.length > 0 && (
+        <>
+          <p class="rtrt__label">What to read</p>
+          <ul class="rtrt__list">
+            {rtrt.whatToRead.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <a
+        class="rtrt__link"
+        href={pinnedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Browse {rtrt.repo} at the pinned {isSha ? "commit" : "ref"} →
+      </a>
+    </aside>
+  )
+}

@@ -1,0 +1,266 @@
+/* ========================================================================
+   SearchOverlay (.se-*) — the site's keyboard-first command palette.
+
+   Skinned from the shared design tokens (site/public/styles.css, defined on
+   .book): warm paper surfaces, ink text, the ONE --signal blue for the live
+   selection + focus, --font-mono for instrument chrome. Fallback literals are
+   supplied so the overlay is still legible if it ever mounts outside .book.
+
+   A11y/perf notes:
+   - WCAG AA: ink-on-paper body text clears well past 4.5:1; the active row uses
+     --signal with white text (AA), and the muted context line uses --ink-mute
+     (~5:1 on paper).
+   - All open/close + hover transitions are gated behind
+     prefers-reduced-motion: no-preference, so reduced-motion users get instant,
+     motionless state changes.
+   - Full-width sheet on small screens; a centered palette on larger ones.
+   ======================================================================== */
+
+.se-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: max(3vh, 1rem) 1rem 1rem;
+}
+
+.se-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 10, 0.44);
+  backdrop-filter: blur(2px);
+}
+
+.se-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(42rem, 100%);
+  max-height: min(70vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 24px 60px -12px rgba(20, 16, 10, 0.5),
+    0 8px 20px -8px rgba(20, 16, 10, 0.35);
+  overflow: hidden;
+}
+
+/* --- input row ------------------------------------------------------------ */
+.se-inputrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--rule, #ddd2ba);
+  background: color-mix(in srgb, var(--book, #883322) 4%, var(--paper, #f7f3ea));
+}
+
+.se-glyph {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--ink-mute, #6d6252);
+}
+
+.se-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink, #23201b);
+  font-family: var(--font-body, Georgia, serif);
+  font-size: 1.12rem;
+  line-height: 1.4;
+  padding: 0.15rem 0;
+}
+.se-input::placeholder {
+  color: var(--ink-mute, #6d6252);
+  opacity: 0.85;
+}
+.se-input:focus {
+  outline: none;
+}
+
+.se-close {
+  flex: none;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: var(--paper-2, #f0e9d9);
+  color: var(--ink-mute, #6d6252);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+.se-close:focus-visible {
+  outline: 2px solid var(--signal, #1f56de);
+  outline-offset: 2px;
+}
+
+/* --- results list --------------------------------------------------------- */
+.se-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+}
+
+.se-opt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0.2rem 0.7rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.se-opt-num {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  color: var(--ink-mute, #6d6252);
+  font-variant-numeric: tabular-nums;
+}
+.se-opt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.se-opt-title {
+  font-family: var(--font-body, Georgia, serif);
+  font-size: 1.02rem;
+  line-height: 1.25;
+  color: var(--ink, #23201b);
+}
+.se-opt-context {
+  font-size: 0.84rem;
+  line-height: 1.3;
+  color: var(--ink-mute, #6d6252);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.se-opt-phase {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute, #6d6252);
+  white-space: nowrap;
+}
+
+/* Active row — the ONE signal blue marks the live selection (AA: white on blue). */
+.se-opt--active {
+  background: var(--signal, #1f56de);
+}
+.se-opt--active .se-opt-num,
+.se-opt--active .se-opt-title,
+.se-opt--active .se-opt-context,
+.se-opt--active .se-opt-phase {
+  color: var(--signal-ink, #ffffff);
+}
+.se-opt--active .se-mark {
+  color: var(--signal-ink, #ffffff);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.se-mark {
+  background: var(--signal-soft, rgba(31, 86, 222, 0.1));
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 0.08em;
+}
+
+/* --- status / empty ------------------------------------------------------- */
+.se-status {
+  list-style: none;
+  padding: 1rem 0.7rem;
+  color: var(--ink-mute, #6d6252);
+  font-size: 0.92rem;
+}
+.se-status--error {
+  color: var(--alert, #c0362a);
+}
+
+/* --- footer legend -------------------------------------------------------- */
+.se-footer {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.8rem;
+  border-top: 1px solid var(--rule, #ddd2ba);
+  background: var(--paper-2, #f0e9d9);
+  color: var(--ink-mute, #6d6252);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+.se-kbd {
+  display: inline-block;
+  min-width: 1.1em;
+  text-align: center;
+  padding: 0.05em 0.35em;
+  margin-right: 0.25em;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #473f34);
+}
+
+/* --- motion: gated so reduced-motion users get instant state changes ------ */
+@media (prefers-reduced-motion: no-preference) {
+  .se-dialog {
+    animation: se-pop 140ms ease-out;
+  }
+  .se-backdrop {
+    animation: se-fade 140ms ease-out;
+  }
+  .se-opt {
+    transition: background-color 90ms ease-out;
+  }
+}
+@keyframes se-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes se-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- small screens: a full-width sheet ------------------------------------ */
+@media (max-width: 34rem) {
+  .se-root {
+    padding: 0;
+  }
+  .se-dialog {
+    width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .se-opt-phase {
+    display: none;
+  }
+}

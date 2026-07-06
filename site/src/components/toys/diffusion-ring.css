@@ -1,0 +1,187 @@
+/* ch1.4 "Generative Policies I: Diffusion" — the MULTIMODALITY concept-toy.
+ *
+ * Co-located CSS for diffusion-ring.tsx (imported at the top of that file).
+ * Namespaced `dr-*` so it never collides with the global `ct-*`/`bk-*` classes
+ * in public/styles.css. It only *reads* the site's design tokens (--signal,
+ * --alert, --ink, --ink-mute, --paper*, --rule-strong, --font-mono); every var
+ * carries a fallback so the toy still renders if mounted outside the page shell,
+ * and each token is redefined by the dark theme at :root, so this whole figure is
+ * theme-aware for free. Colour discipline (frozen concept-toy contract):
+ *   - neutral --ink-mute → the ring target + sector spokes (a map, not an entity)
+ *   - ONE --signal blue  → the diffusion samples (the method that works) + the
+ *                          active denoising-steps control
+ *   - --alert red        → the collapsed MSE regressor (the failure)
+ */
+
+.dr {
+  display: grid;
+  gap: 0;
+}
+
+/* square arena — theme-aware paper, subtle inset */
+.dr-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.dr-figure--placeholder {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+.dr-placeholder-text {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  color: var(--ink-mute, #6d6252);
+  line-height: 1.6;
+}
+.dr-placeholder-text code {
+  font-size: 0.92em;
+  color: var(--ink, #23201b);
+}
+
+.dr-svg { display: block; width: 100%; height: 100%; }
+
+/* backdrop */
+.dr-arena { fill: none; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.2; }
+.dr-ring {
+  fill: none;
+  stroke: var(--ink-mute, #6d6252);
+  stroke-width: 1.4;
+  stroke-dasharray: 5 5;
+  stroke-opacity: 0.65;
+}
+.dr-spoke {
+  stroke: var(--rule-strong, #c8bc9e);
+  stroke-width: 1;
+  stroke-opacity: 0.55;
+}
+.dr-center { fill: var(--ink-mute, #6d6252); opacity: 0.75; }
+
+/* the three point clouds — colour discipline is the whole legibility story */
+.dr-dot { stroke: none; }
+.dr-target .dr-dot { fill: var(--ink-mute, #6d6252); opacity: 0.28; }
+.dr-regress .dr-dot {
+  fill: var(--alert, #c0362a);
+  opacity: 0.75;
+}
+.dr-diffusion .dr-dot {
+  fill: var(--signal, #1f56de);
+  opacity: 0.82;
+}
+
+/* client-only, reduced-motion-safe draw-in (staggered via inline animation-delay) */
+.dr-dot--draw {
+  animation: dr-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes dr-pop {
+  from { opacity: 0; transform: scale(0.2); transform-box: fill-box; transform-origin: center; }
+  to   { opacity: 0.82; transform: scale(1); transform-box: fill-box; transform-origin: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* belt-and-braces: the component also skips the animate class, but if a dot ever
+     carries it, do not move — just show it. */
+  .dr-dot--draw { animation: none; }
+}
+
+/* legend */
+.dr-legend-bg {
+  fill: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+  stroke: var(--rule-strong, #c8bc9e);
+  stroke-width: 1;
+}
+.dr-legend-t {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  fill: var(--ink-mute, #6d6252);
+}
+.dr-sw-diff { fill: var(--signal, #1f56de); }
+.dr-sw-reg { fill: var(--alert, #c0362a); }
+.dr-sw-tgt { fill: var(--ink-mute, #6d6252); }
+
+/* HUD — the live instrument (mode coverage + off-ring pull) */
+.dr-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  display: grid; gap: 0.28rem;
+  padding: 0.5rem 0.7rem;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  pointer-events: none;
+  max-width: min(72%, 260px);
+}
+.dr-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.dr-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.01em; }
+.dr-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.dr-v.dr-ok  { color: var(--signal, #1f56de); }
+.dr-v.dr-bad { color: var(--alert, #c0362a); }
+
+/* controls — the ONE control is the denoising-steps segmented radiogroup */
+.dr-controls {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.dr-seg-row {
+  display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+}
+.dr-seg-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+
+.dr-seg {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  overflow: hidden;
+  background: var(--paper, #f7f3ea);
+}
+.dr-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums;
+  padding: 0.34rem 0.85rem;
+  border: none;
+  border-left: 1px solid var(--rule-strong, #c8bc9e);
+  background: transparent;
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dr-seg-btn:first-child { border-left: none; }
+.dr-seg-btn:hover { background: color-mix(in srgb, var(--signal, #1f56de) 12%, transparent); }
+.dr-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.dr-seg-btn[data-active="true"] {
+  background: var(--signal, #1f56de);
+  color: var(--signal-ink, #ffffff);
+}
+
+.dr-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.8rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.dr-btn:hover { border-color: var(--signal, #1f56de); }
+.dr-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.dr-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+}

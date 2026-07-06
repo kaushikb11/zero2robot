@@ -1,0 +1,231 @@
+/* ========================================================================
+   HelpOverlay (.hlp-*) — the keyboard-shortcuts & how-to overlay.
+
+   Skinned from the shared design tokens (site/public/styles.css, defined on
+   .book): warm paper surfaces, ink text, oxblood (--book) chrome for the
+   eyebrow, the ONE --signal blue reserved for focus rings + the footer link,
+   --font-mono for instrument chrome. Fallback literals are supplied so the
+   overlay stays legible if it ever mounts outside a .book subtree (the island
+   is appended to <body>, which carries .book on every page).
+
+   A11y / motion notes:
+   - WCAG AA: ink-on-paper body text clears well past 4.5:1; muted labels use
+     --ink-mute (~5:1 on paper). The close button + link show a visible
+     :focus-visible ring; a full focus trap lives in the TSX.
+   - Open/close transitions are gated behind prefers-reduced-motion:
+     no-preference, so reduced-motion users get instant, motionless changes.
+   - Full-height sheet on small screens; a centered card on larger ones. The
+     body scrolls internally so the page underneath never does.
+   ======================================================================== */
+
+.hlp-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: max(4vh, 1rem) 1rem 1rem;
+}
+
+.hlp-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 10, 0.44);
+  backdrop-filter: blur(2px);
+}
+
+.hlp-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(42rem, 100%);
+  max-height: min(84vh, 46rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 24px 60px -12px rgba(20, 16, 10, 0.5),
+    0 8px 20px -8px rgba(20, 16, 10, 0.35);
+  overflow: hidden;
+}
+
+/* --- head ---------------------------------------------------------------- */
+.hlp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--rule, #ddd2ba);
+  background: color-mix(in srgb, var(--book, #883322) 4%, var(--paper, #f7f3ea));
+}
+.hlp-eyebrow {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--book, #883322);
+}
+.hlp-title {
+  margin: 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 600;
+  font-size: 1.36rem;
+  line-height: 1.15;
+  color: var(--ink, #23201b);
+}
+.hlp-close {
+  flex: none;
+  align-self: flex-start;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: var(--paper-2, #f0e9d9);
+  color: var(--ink-mute, #6d6252);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+.hlp-close:hover { color: var(--ink, #23201b); border-color: var(--ink-mute, #6d6252); }
+.hlp-close:focus-visible {
+  outline: 2px solid var(--signal, #1f56de);
+  outline-offset: 2px;
+}
+
+/* --- body: the shortcut groups ------------------------------------------- */
+.hlp-body {
+  padding: 0.4rem 1.1rem 0.6rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+}
+.hlp-group {
+  padding: 0.9rem 0 0.4rem;
+  border-top: 1px solid var(--rule, #ddd2ba);
+}
+.hlp-group:first-child { border-top: 0; }
+.hlp-group-title {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+}
+.hlp-group-note {
+  margin: -0.25rem 0 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+  font-style: italic;
+}
+
+.hlp-list { margin: 0; }
+.hlp-row {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, auto) 1fr;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+  padding: 0.35rem 0;
+}
+.hlp-keys {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+.hlp-keychip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+.hlp-sep {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+}
+.hlp-kbd {
+  display: inline-block;
+  min-width: 1.2em;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--ink-soft, #473f34);
+  background: var(--paper-2, #f0e9d9);
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0.08em 0.42em;
+  white-space: nowrap;
+}
+.hlp-desc {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--ink, #23201b);
+}
+
+/* --- footer -------------------------------------------------------------- */
+.hlp-footer {
+  display: flex;
+  gap: 0.8rem 1.2rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid var(--rule, #ddd2ba);
+  background: var(--paper-2, #f0e9d9);
+  color: var(--ink-mute, #6d6252);
+  font-size: 0.84rem;
+}
+.hlp-link {
+  color: var(--book, #883322);
+  text-decoration: none;
+  border-bottom: 1px solid var(--book-soft, #a9543f);
+}
+.hlp-link:hover { background: color-mix(in srgb, var(--book, #883322) 8%, transparent); }
+.hlp-link:focus-visible {
+  outline: 2px solid var(--signal, #1f56de);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+.hlp-footer-hint {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+
+/* --- motion: gated so reduced-motion users get instant state changes ------ */
+@media (prefers-reduced-motion: no-preference) {
+  .hlp-dialog { animation: hlp-pop 140ms ease-out; }
+  .hlp-backdrop { animation: hlp-fade 140ms ease-out; }
+}
+@keyframes hlp-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hlp-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- small screens: a full-height sheet ----------------------------------- */
+@media (max-width: 34rem) {
+  .hlp-root { padding: 0; }
+  .hlp-dialog {
+    width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .hlp-row { grid-template-columns: 1fr; gap: 0.15rem; }
+}

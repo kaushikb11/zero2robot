@@ -1,0 +1,232 @@
+/* ch1.2 "Data Is the Policy" concept-toy — the DATA-CURATION toy.
+ *
+ * Co-located CSS for CurateQualityToy.tsx (imported at the top of that file).
+ * Namespaced `cq-*` so it never collides with the global `ct-*`/`bk-*` classes
+ * in public/styles.css, nor with the other toys' `sl-*`/`fr-*` scopes. It only
+ * *reads* the site's design tokens (--ink, --ink-mute, --signal, --alert,
+ * --entity-target, --paper*, --rule-strong, --font-mono); every var carries a
+ * fallback so the toy still renders if mounted outside the page shell. All
+ * surfaces are token-driven (no hard-coded paper/ink), so the toy is theme-aware
+ * in both light and dark. Colour discipline (per the frozen concept-toy contract):
+ *   - --entity-target emerald → the demos that reached the goal + the curated win
+ *   - neutral --ink-mute      → the culled / didn't-reach demos (not the lesson's alarm)
+ *   - ONE --alert red         → reserved for the Break-It trap (its bar + chip + option)
+ *   - --signal blue           → the live focus ring on the one control only
+ */
+
+.cq {
+  display: grid;
+  gap: 0;
+}
+
+/* the figure holds the poster (JS-off) and the live view as inset siblings, so
+   swapping between them on boot never reflows the page */
+.cq-figure {
+  position: relative;
+  margin: 0;
+  min-height: 30rem;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 92%, transparent);
+}
+.cq-poster,
+.cq-live {
+  position: absolute;
+  inset: 0;
+}
+.cq-poster[hidden],
+.cq-live[hidden] { display: none; }
+.cq-poster-fig { width: 100%; height: 100%; }
+
+/* shared panel layout: the recorded pile up top, the result below */
+.cq-panel {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem 0.95rem;
+}
+
+/* --- the recorded pile (unit chart of 500 episode dots) --- */
+.cq-pile { display: grid; grid-template-rows: auto 1fr auto; gap: 0.4rem; min-height: 0; }
+.cq-pile-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.4rem 0.9rem;
+}
+.cq-pile-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em; color: var(--ink, #23201b);
+}
+.cq-legend { display: flex; gap: 0.9rem; flex-wrap: wrap; }
+.cq-legend-item {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+  font-variant-numeric: tabular-nums;
+}
+.cq-swatch { width: 0.62rem; height: 0.62rem; border-radius: 50%; display: inline-block; }
+.cq-swatch--reached { background: var(--entity-target, #0c7d5f); }
+.cq-swatch--failed { background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+
+.cq-pile-svg { display: block; width: 100%; height: 100%; min-height: 0; }
+
+/* dots: colour = outcome (reached / not); opacity + ring = kept / culled */
+.cq-dot { transition: opacity 0.25s ease, fill 0.2s ease; }
+.cq-dot--reached { fill: var(--entity-target, #0c7d5f); }
+.cq-dot--failed { fill: var(--ink-mute, #6d6252); }
+.cq-dot--kept { opacity: 0.92; }
+.cq-dot--culled { opacity: 0.14; }
+
+.cq-pile-foot {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.3rem 0.8rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+.cq-pile-foot b { color: var(--ink, #23201b); font-variant-numeric: tabular-nums; }
+
+/* --- the result (success bars vs the raw baseline) --- */
+.cq-result {
+  display: grid; gap: 0.4rem;
+  padding: 0.7rem 0.75rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 60%, transparent);
+}
+.cq-result-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.cq-result-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.cq-delta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  padding: 0.08rem 0.45rem; border-radius: 100px;
+  border: 1px solid transparent;
+}
+.cq-delta--good {
+  color: var(--entity-target, #0c7d5f);
+  border-color: color-mix(in srgb, var(--entity-target, #0c7d5f) 45%, transparent);
+  background: color-mix(in srgb, var(--entity-target, #0c7d5f) 12%, transparent);
+}
+.cq-delta--trap {
+  color: var(--alert, #c0362a);
+  border-color: color-mix(in srgb, var(--alert, #c0362a) 45%, transparent);
+  background: color-mix(in srgb, var(--alert, #c0362a) 12%, transparent);
+}
+.cq-delta--raw { color: var(--ink-mute, #6d6252); border-color: var(--rule-strong, #c8bc9e); }
+
+.cq-bar-row {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 3ch;
+  align-items: center; gap: 0.6rem;
+}
+.cq-bar-row[data-muted="true"] { opacity: 0.62; }
+.cq-bar-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cq-bar-track {
+  height: 0.72rem; border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent);
+}
+.cq-bar-fill {
+  height: 100%; width: 0%;
+  border-radius: 3px 0 0 3px;
+  transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), background 0.2s ease;
+}
+.cq-bar-fill--raw { background: color-mix(in srgb, var(--ink, #23201b) 55%, var(--paper, #f7f3ea)); }
+.cq-bar-fill--good { background: var(--entity-target, #0c7d5f); }
+.cq-bar-fill--trap { background: var(--alert, #c0362a); }
+.cq-bar-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b); text-align: right;
+}
+
+.cq-result-foot {
+  display: grid; grid-template-columns: auto 1fr; gap: 0.2rem 0.8rem;
+  margin-top: 0.15rem; padding-top: 0.4rem;
+  border-top: 1px dashed color-mix(in srgb, var(--rule-strong, #c8bc9e) 80%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+}
+.cq-foot-k { color: var(--ink-mute, #6d6252); }
+.cq-foot-v { color: var(--ink, #23201b); font-variant-numeric: tabular-nums; text-align: right; }
+.cq-foot-sub { color: var(--ink-mute, #6d6252); }
+
+/* --- the one control: the "which demos to keep" radiogroup --- */
+.cq-controls { display: grid; gap: 0.55rem; padding: 0.9rem 0.1rem 0.1rem; }
+.cq-control-lead {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.cq-radiogroup {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+.cq-option {
+  display: grid; gap: 0.2rem; align-content: start;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 7px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.cq-option:hover:not(:disabled) { border-color: var(--ink-mute, #6d6252); }
+.cq-option:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.cq-option:disabled { opacity: 0.55; cursor: default; }
+.cq-option[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--ink, #23201b) 40%, transparent);
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 40%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink, #23201b) 22%, transparent);
+}
+.cq-option[aria-checked="true"][data-kind="good"] {
+  border-color: var(--entity-target, #0c7d5f);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--entity-target, #0c7d5f) 45%, transparent);
+}
+.cq-option[aria-checked="true"][data-kind="trap"] {
+  border-color: var(--alert, #c0362a);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert, #c0362a) 45%, transparent);
+}
+.cq-option-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em;
+}
+.cq-option-sub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.63rem; color: var(--ink-mute, #6d6252); line-height: 1.35;
+}
+.cq-option-stat {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252); margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.cq-option-stat b { color: var(--ink, #23201b); }
+.cq-option[aria-checked="true"][data-kind="good"] .cq-option-stat b { color: var(--entity-target, #0c7d5f); }
+.cq-option[aria-checked="true"][data-kind="trap"] .cq-option-stat b { color: var(--alert, #c0362a); }
+
+.cq-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252); line-height: 1.5;
+}
+
+/* narrow screens: stack the three options */
+@media (max-width: 34rem) {
+  .cq-radiogroup { grid-template-columns: 1fr; }
+  .cq-bar-row { grid-template-columns: 6.5rem 1fr 3ch; }
+}
+
+/* reduced motion: no bar sweeps, no dot fades */
+@media (prefers-reduced-motion: reduce) {
+  .cq-dot,
+  .cq-bar-fill,
+  .cq-option { transition: none; }
+}

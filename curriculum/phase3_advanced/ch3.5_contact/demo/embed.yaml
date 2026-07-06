@@ -1,0 +1,48 @@
+# Demo embed stub — ch3.5 "contact_quality".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Like ch3.3/3.4 this demo needs NO MuJoCo and NO
+# WASM physics — the engine is ~400 lines of pure numpy, so the embed runs the two
+# contact solvers directly (or replays a recorded contact.rrd). Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: contact_quality
+scene: none                 # no MJCF: the "scene" is a point mass with a radius over the line y=0, from contact.py's scenes
+runtime: numpy-inline       # per-step contact solve is a scalar clamp / a few PGS sweeps; no WASM MuJoCo needed
+scene_default: drop         # the hero: a ball dropped onto the table
+panels:
+  - id: body_height
+    kind: timeseries        # the ball's height vs step, penalty vs lcp overlaid — one sinks/rings, one lands and holds
+    y: height
+    series: [penalty, lcp]
+    colors: [ "#d94c40", "#4caf50" ]   # matches contact.py COLORS (red sinks/jitters / green holds)
+  - id: penetration
+    kind: timeseries        # THE hero panel: penetration depth vs step, one curve per method
+    y: penetration_over_radius
+    series: [penalty, lcp]
+    annotate: "Penalty drives deep on impact and rests INSIDE the table (mg/k); the LCP solve holds on the surface"
+  - id: energy
+    kind: timeseries        # the phantom-energy panel — shines in the bounce scene (penalty gains energy from nothing)
+    y: total_energy
+    series: [penalty, lcp]
+controls:
+  - id: scene
+    kind: select
+    options: [drop, bounce, stack]   # bounce shows energy injection; stack shows the few-contact (body-body) solve
+  - id: stiffness
+    kind: slider
+    min: 1.0e3              # soft: barely penetrates the timestep limit, but the ball sinks deep
+    max: 1.0e5              # stiff: little sinking, but dt_crit ~ 2*sqrt(m/k) shrinks — crank dt and penalty explodes
+  - id: dt
+    kind: slider
+    min: 0.001
+    max: 0.04               # push past penalty's dt_crit (~0.02 at k=1e4) and watch ONLY the penalty curve detonate
+interaction: pick-scene-and-contact-method
+notes: >
+  The hero behavior is the penetration panel: two curves that tell the whole
+  chapter — penalty drives deep and settles below the surface (and, past dt_crit,
+  flies off the top of the plot), while the LCP-flavored solve lands the body on
+  the table and holds it. The dt slider is the payoff: drag it past penalty's
+  critical timestep and the red curve explodes while green is unmoved — the
+  timestep-instability learners have seen since ch0.1, finally isolated. The
+  stiffness slider is the trap (stiffer sinks less but destabilizes sooner). No
+  policy, no goal — this demo is a table being honest about how hard it is to be
+  a table.

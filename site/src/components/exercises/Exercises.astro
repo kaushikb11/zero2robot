@@ -1,0 +1,124 @@
+---
+// Exercises — the chapter's "Practice" section. Surfaces every SUGGESTED
+// exercise candidate the chapter authored (curriculum/**/exercises/suggested/),
+// server-rendered from the bridge (lib/exercises.ts). The site stores no
+// exercise content of its own — single source of truth stays in curriculum/.
+//
+// HONESTY POSTURE (mirrors the draft-prose ribbon): these live in
+// exercises/suggested/ = agent-drafted CANDIDATES, so the section wears a subtle
+// "practice · candidate exercises" note. The site NEVER executes or auto-grades:
+// every exercise shows its prompt + a local run command ("exercises never phone
+// home"). Only predict-then-run exercises get the interactive <PredictGate>,
+// which reveals the answer strictly AFTER a prediction is committed.
+//
+// JS-OFF: the whole section is static HTML — prompts, run commands, and (for
+// predict-then-run) the inert choice radios all survive a <script> strip. Only
+// the reveal-after-commit gating needs JavaScript.
+import { marked } from "marked";
+import { chapterExercises, isGated } from "../../lib/exercises.ts";
+import PredictGate from "./PredictGate.tsx";
+import "./exercises.css";
+
+interface Props {
+  chapterDir: string; // repo-relative chapter directory
+  chapterSlug: string; // === chapter id; the localStorage key namespace
+}
+const { chapterDir, chapterSlug } = Astro.props;
+
+const exercises = chapterExercises(chapterDir);
+
+// Render each prompt's markdown once, at build time (prose only — never code
+// execution). Default marked options keep hard-wrapped prose flowing; the bridge
+// already reshaped the "A) …" option lines into a real markdown list.
+const rendered = exercises.map((ex) => ({
+  ex,
+  gated: isGated(ex),
+  promptHtml: marked.parse(ex.prompt, { async: false }) as string,
+}));
+---
+
+{
+  exercises.length > 0 && (
+    <section class="ex-section" aria-labelledby="ex-practice-h">
+      <div class="ex-head">
+        <h2 class="ex-practice-title" id="ex-practice-h">
+          Practice
+        </h2>
+        <p class="ex-candidate-note">
+          <b>practice · candidate exercises</b>
+          <span class="ex-candidate-tail">
+            drafted by the exercise generator, pending human promotion. Answers
+            reveal only after you predict — honor system.
+          </span>
+        </p>
+      </div>
+
+      <ol class="ex-list">
+        {rendered.map(({ ex, gated, promptHtml }) => (
+          <li class="ex-card" id={`ex-${ex.id}`}>
+            <div class="ex-card-head">
+              <span class="ex-badge" data-type={ex.type}>
+                {ex.type}
+              </span>
+              <h3 class="ex-card-title">
+                Exercise {ex.num ?? ex.id}
+              </h3>
+            </div>
+
+            <p class="ex-kicker">{ex.title}</p>
+
+            <div class="ex-prompt" set:html={promptHtml} />
+
+            {gated ? (
+              <PredictGate
+                client:visible
+                chapterSlug={chapterSlug}
+                exId={ex.id}
+                choices={ex.choices as string[]}
+                answer={ex.answer as string}
+                runCmd={ex.run_cmd}
+                refs={ex.refs}
+              />
+            ) : (
+              <div class="ex-runcell ex-runcell--static">
+                <p class="ex-runcell-label">Run it locally:</p>
+                <div class="ex-cmd-line">
+                  <code class="ex-cmd">{ex.run_cmd}</code>
+                  <button
+                    type="button"
+                    class="ex-cmd-copy"
+                    data-copy={ex.run_cmd}
+                    aria-label="Copy the run command"
+                  >
+                    copy
+                  </button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+{/* Progressive enhancement for the STATIC run-command copy buttons only. The
+    PredictGate island's own copy button is a Preact handler (no data-copy), so
+    this never double-binds. The command is selectable text with JS off. */}
+<script>
+  document.querySelectorAll<HTMLButtonElement>("button.ex-cmd-copy[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cmd = btn.dataset.copy ?? "";
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const prev = btn.textContent;
+        btn.textContent = "copied";
+        window.setTimeout(() => {
+          btn.textContent = prev;
+        }, 1600);
+      } catch {
+        /* clipboard blocked — the <code> beside it is selectable regardless */
+      }
+    });
+  });
+</script>

@@ -1,0 +1,232 @@
+/* ========================================================================
+   ActChunkToy (.ac-*) — ch1.3 "ACT: Commit to the Chunk" concept-toy.
+
+   The chunking + temporal-ensembling SCHEMATIC: one landscape SVG stage (a chunk
+   staircase over a weight-bar chart) above its controls, in the same warm plate
+   mat as every hero. Pure SVG + client-side maths — NO MuJoCo-WASM, so it hydrates
+   the SSR poster in place with no dynamic import and no reflow (poster == live).
+
+   Namespaced `ac-*` so it never collides with the global `ct-*`/`bk-*` classes or
+   the sibling toys. It only *reads* the site design tokens (public/styles.css);
+   every var carries a fallback so it still renders if mounted outside the shell.
+
+   Colour discipline (frozen concept-toy contract):
+     - neutral ink   → the timeline map (gridlines, non-voting chunks, axes)
+     - ONE --signal  → the LIVE/voting elements: the focus read-line, the chunks
+                       that vote, the ensemble weight bars
+     - a warm accent → the OLDEST vote (the one weighted most — the lesson)
+     - --alert red   → ONLY the degenerate readouts (K=1 no-chunk, ensembling OFF)
+
+   The stage is a hardcoded-LIGHT instrument in BOTH themes (matching the other
+   toys — see public/styles.css §"hardcoded-LIGHT instruments"). Because the
+   shared override lists only .ct-figure/.bk-svg, this file pins the instrument's
+   text tokens to light values inside .ac-figure for BOTH dark signals, so labels
+   never render light-on-light in dark mode. Controls OUTSIDE the figure keep the
+   page tokens and flip with the theme.
+   ======================================================================== */
+.ac {
+  display: grid;
+  gap: 0;
+}
+
+/* the stage — poster and live SVG share the exact box, so nothing reflows */
+.ac-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 680 / 560;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+}
+.ac-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ac-figure[data-degenerate="true"] { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--alert, #c0362a) 30%, transparent); }
+
+.ac-svg { display: block; width: 100%; height: 100%; }
+
+/* ---------- panel headings + axes (neutral instrument ink) ---------- */
+.ac-h {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+  fill: var(--ink-soft, #473f34);
+}
+.ac-grid line { stroke: color-mix(in srgb, var(--rule-strong, #c8bc9e) 50%, transparent); stroke-width: 1; }
+.ac-tick text { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; fill: var(--ink-mute, #6d6252); font-variant-numeric: tabular-nums; }
+.ac-tick text[data-focus="true"] { fill: var(--signal, #1f56de); font-weight: 700; }
+.ac-axis-cap { font-size: 10.5px !important; letter-spacing: 0.06em; fill: var(--ink-mute, #6d6252); }
+.ac-baseline { stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.4; }
+
+/* ---------- panel A: the chunk staircase ---------- */
+.ac-chunk-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; fill: var(--ink-mute, #6d6252); }
+.ac-chunk rect {
+  fill: color-mix(in srgb, var(--ink-mute, #6d6252) 20%, transparent);
+  stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent);
+  stroke-width: 1;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+/* the chunks that cover the focus timestep are the overlapping votes (signal) */
+.ac-chunk[data-voter="true"] rect {
+  fill: color-mix(in srgb, var(--signal, #1f56de) 22%, #fdfbf6);
+  stroke: var(--signal, #1f56de);
+}
+.ac-chunk[data-voter="true"] .ac-chunk-lbl { fill: var(--signal, #1f56de); font-weight: 600; }
+/* the OLDEST voter — the one weighted most — wears the warm accent */
+.ac-chunk[data-oldest="true"] rect {
+  fill: color-mix(in srgb, var(--entity-pusher, #b0560f) 30%, #fdfbf6);
+  stroke: var(--entity-pusher, #b0560f);
+}
+.ac-chunk[data-oldest="true"] .ac-chunk-lbl { fill: var(--entity-pusher-ink, #9c4a0b); font-weight: 700; }
+
+/* the focus read-line down the overlapping chunks */
+.ac-focus { stroke: var(--signal, #1f56de); stroke-width: 2; stroke-dasharray: 5 4; opacity: 0.9; }
+.ac-focus-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; font-weight: 600;
+  fill: var(--signal, #1f56de); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- panel B: the ensemble weight bars ---------- */
+.ac-curve { fill: none; stroke: var(--ink-mute, #6d6252); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: 0.75; }
+.ac-bar rect {
+  fill: color-mix(in srgb, var(--signal, #1f56de) 74%, #fdfbf6);
+  transition: y 0.16s ease, height 0.16s ease, fill 0.15s ease;
+}
+.ac-bar[data-oldest="true"] rect { fill: var(--entity-pusher, #b0560f); }
+.ac-bar[data-executed="true"] rect { fill: var(--alert, #c0362a); }
+.ac-bar[data-zero="true"] rect { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent); }
+.ac-bar-share { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 600; fill: var(--ink, #23201b); font-variant-numeric: tabular-nums; }
+.ac-bar[data-oldest="true"] .ac-bar-share { fill: var(--entity-pusher-ink, #9c4a0b); }
+.ac-bar-i, .ac-bar-q { font-family: var(--font-mono, ui-monospace, monospace); fill: var(--ink-mute, #6d6252); font-variant-numeric: tabular-nums; }
+.ac-bar-i { font-size: 10.5px; }
+.ac-bar-q { font-size: 9.5px; }
+.ac-end-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 600; fill: var(--entity-pusher-ink, #9c4a0b); letter-spacing: 0.02em; }
+.ac-end-lbl--mute { fill: var(--ink-mute, #6d6252); font-weight: 400; }
+
+/* reduced motion: no positional easing on the bars/chunks */
+@media (prefers-reduced-motion: reduce) {
+  .ac-bar rect, .ac-chunk rect { transition: none; }
+}
+
+/* ---------- HUD — the live linked numbers (poster ships the default readout) ---------- */
+.ac-hud {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  display: grid; gap: 0.26rem;
+  padding: 0.5rem 0.65rem;
+  min-width: 12.5rem;
+  background: color-mix(in srgb, #fdfbf6 88%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  pointer-events: none;
+}
+.ac-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.ac-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.01em; }
+.ac-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.ac-v.ac-hot { color: var(--entity-pusher-ink, #9c4a0b); }
+.ac-v.ac-bad { color: var(--alert, #c0362a); }
+
+.ac-status {
+  position: absolute; left: 0.7rem; bottom: 0.55rem; right: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  pointer-events: none;
+}
+.ac-status[data-degenerate="true"] { color: var(--alert, #c0362a); }
+
+/* ---------- controls (JS-only; the poster reads without them) ---------- */
+.ac-controls { display: grid; gap: 0.5rem; padding: 0.85rem 0.1rem 0.1rem; }
+.ac-slider-row { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.ac-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+  min-width: 5.5ch;
+}
+.ac-slider-label b { color: var(--signal, #1f56de); }
+.ac-slider { flex: 1 1 180px; min-width: 150px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.ac-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.ac-slider:disabled { opacity: 0.5; cursor: default; }
+.ac-slider-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--signal, #1f56de); min-width: 4.5ch; text-align: right;
+}
+
+.ac-btn-row { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.ac-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #473f34);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ac-btn:hover:not(:disabled) { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.ac-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ac-btn:disabled { opacity: 0.5; cursor: default; }
+.ac-btn--icon { padding: 0.3rem 0.7rem; font-size: 0.9rem; line-height: 1; }
+.ac-btn--primary {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff); border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.34));
+}
+.ac-btn--primary:hover:not(:disabled) { color: #fff; background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.ac-btn--alert {
+  background: var(--alert, #c0362a); color: #fff; border-color: var(--alert, #c0362a);
+  box-shadow: 0 1px 4px -1px color-mix(in srgb, var(--alert, #c0362a) 50%, transparent);
+}
+.ac-btn--alert:hover:not(:disabled) { color: #fff; background: color-mix(in srgb, var(--alert, #c0362a) 90%, #000); }
+.ac-stepper {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px;
+}
+.ac-stepper-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--ink, #23201b); min-width: 5ch; text-align: center;
+}
+.ac-note { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem; color: var(--ink-mute, #6d6252); margin-left: auto; }
+
+/* measured caption — the honest tie to the reference run */
+.ac-cap {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.ac-cap b { color: var(--ink-soft, #473f34); }
+.ac-cap em { font-style: italic; color: var(--ink-soft, #473f34); }
+.ac-cap .ac-cap-hi { color: var(--entity-target-ink, #096047); }
+.ac-cap .ac-cap-lo { color: var(--alert, #c0362a); }
+
+/* visually-hidden aria-live region */
+.ac-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- dark theme: the stage stays a LIGHT instrument (see header note).
+   Pin the instrument text tokens to light values inside the figure for BOTH dark
+   signals — the explicit toggle and the OS default — so labels never render
+   light-on-light. Controls outside .ac-figure keep the page tokens (they flip). */
+:root[data-theme="dark"] .ac-figure {
+  --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
+  --signal: #1f56de; --alert: #c0362a; --rule-strong: #c8bc9e;
+  --entity-pusher: #b0560f; --entity-pusher-ink: #9c4a0b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ac-figure {
+    --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
+    --signal: #1f56de; --alert: #c0362a; --rule-strong: #c8bc9e;
+    --entity-pusher: #b0560f; --entity-pusher-ink: #9c4a0b;
+  }
+}
+
+@media (max-width: 34rem) {
+  .ac-hud { font-size: 0.6rem; min-width: 10rem; padding: 0.4rem 0.5rem; top: 0.45rem; right: 0.45rem; }
+  .ac-note { display: none; }
+}

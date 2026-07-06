@@ -1,0 +1,316 @@
+/* ch1.7 "Tokens Meet Torques (the data)" concept-toy — the VLA DATASET BROWSER
+ * + LANGUAGE-LEAK toy.
+ *
+ * Co-located CSS for VlaBrowserToy.tsx (imported at the top of that file).
+ * Namespaced `vb-*` so it never collides with the global `ct-*`/`bk-*`/`sl-*`
+ * classes. This toy has NO canvas — it is pure DOM/SVG-free markup — so unlike the
+ * hardcoded-light sim stages it is genuinely THEME-AWARE for free: it reads the
+ * page's design tokens (--paper*, --ink*, --signal, --alert, --rule-strong,
+ * --font-mono), which the shell flips in dark mode, and every var carries a light
+ * fallback so it still renders if mounted outside the page shell.
+ *
+ * Colour discipline:
+ *   - neutral ink / paper      → the panels + the frozen-feature bars (data, not signal)
+ *   - the two task hues        → pusht (magenta) vs aloha (amber), brightened in dark
+ *   - ONE --signal blue        → the active toggle segment + focus rings
+ *   - --alert red              → the LEAK: the appended words, the leaked bar/tokens
+ *   - --entity-target green    → the calm/clean R² bar (the safe baseline)
+ */
+
+.vb {
+  display: grid;
+  gap: 0.9rem;
+  /* task hues — base in light; the dark blocks below swap to the bright -hi variants
+     so magenta/amber stay legible on near-black paper. */
+  --vb-pusht: var(--entity-block, #a5257d);
+  --vb-aloha: var(--entity-pusher, #b0560f);
+}
+
+/* ------------------------------------------------------------------ the browser */
+.vb-browser {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--paper, #f7f3ea) 60%, transparent),
+    color-mix(in srgb, var(--paper-2, #f0e9d9) 60%, transparent));
+}
+.vb-browser:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.vb-browser-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.7rem; flex-wrap: wrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vb-count { font-size: 0.78rem; color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.vb-count b { color: var(--ink, #23201b); font-variant-numeric: tabular-nums; }
+.vb-badge {
+  font-size: 0.72rem; letter-spacing: 0.03em;
+  padding: 0.2rem 0.6rem; border-radius: 100px;
+  border: 1px solid currentColor;
+  color: var(--vb-pusht);
+}
+.vb-badge[data-task="aloha"] { color: var(--vb-aloha); }
+
+/* input cards */
+.vb-card {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 78%, transparent);
+}
+.vb-card-k {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+  margin-bottom: 0.45rem;
+}
+.vb-card-k2 { margin-top: 0.7rem; }
+.vb-card-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+  margin-top: 0.4rem; opacity: 0.85;
+}
+.vb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+@media (max-width: 460px) { .vb-grid2 { grid-template-columns: 1fr; } }
+
+/* the instruction */
+.vb-instr {
+  margin: 0;
+  font-size: 0.95rem; line-height: 1.4;
+  color: var(--ink, #23201b);
+}
+.vb-instr-leak {
+  color: var(--alert, #c0362a);
+  font-weight: 600;
+  border-bottom: 2px solid color-mix(in srgb, var(--alert, #c0362a) 55%, transparent);
+}
+
+/* token chips */
+.vb-tokens { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: baseline; }
+.vb-tok {
+  display: inline-flex; align-items: baseline; gap: 0.25rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 70%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  color: var(--ink, #23201b);
+}
+.vb-tok-w { letter-spacing: 0.01em; }
+.vb-tok-id {
+  font-size: 0.6rem; color: var(--ink-mute, #6d6252);
+  font-variant-numeric: tabular-nums;
+}
+.vb-tok[data-special="true"] { opacity: 0.62; font-style: italic; }
+.vb-tok[data-leak="true"] {
+  border-color: var(--alert, #c0362a);
+  background: color-mix(in srgb, var(--alert, #c0362a) 12%, transparent);
+  color: var(--alert, #c0362a);
+}
+.vb-tok[data-leak="true"] .vb-tok-id { color: var(--alert, #c0362a); }
+.vb-tok-pad {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252); opacity: 0.7;
+  align-self: center;
+}
+
+/* the frozen-CNN 64-D feature sparkline (diverging bars around a midline) */
+.vb-feat {
+  position: relative;
+  display: flex; align-items: stretch; gap: 1px;
+  height: 44px;
+  border-bottom: 0; /* midline drawn below */
+}
+.vb-feat::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px dashed color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent);
+}
+.vb-featbar {
+  position: relative; flex: 1 1 0;
+  min-width: 1px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 72%, transparent);
+  border-radius: 1px;
+  transition: height 0.18s ease;
+}
+.vb-featbar[data-pos="false"] {
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent);
+}
+
+/* state — the 10 proprioception numbers */
+.vb-state { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.vb-statev {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.35rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 70%, transparent);
+  color: var(--ink-soft, #473f34);
+}
+
+/* action bars — diverging around a centre zero line */
+.vb-actbars { display: grid; gap: 0.35rem; }
+.vb-actrow { display: flex; align-items: center; gap: 0.6rem; }
+.vb-actlab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+  min-width: 2.6ch;
+}
+.vb-acttrack {
+  position: relative; flex: 1 1 auto; height: 12px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  border-radius: 3px;
+}
+.vb-actzero {
+  position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent);
+}
+.vb-actfill {
+  position: absolute; top: 1px; bottom: 1px;
+  border-radius: 2px;
+  background: var(--vb-pusht);
+  transition: width 0.18s ease;
+}
+.vb-actfill[data-pos="true"]  { border-radius: 0 2px 2px 0; }
+.vb-actfill[data-pos="false"] { border-radius: 2px 0 0 2px;
+  background: color-mix(in srgb, var(--vb-pusht) 62%, var(--paper, #f7f3ea)); }
+.vb-actval {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b); min-width: 5ch; text-align: right;
+}
+
+/* ------------------------------------------------------------------ controls */
+.vb-controls { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.vb-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.vb-btn:hover { border-color: var(--signal, #1f56de); }
+.vb-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.vb-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+
+/* ------------------------------------------------------------------ the leak */
+.vb-leak {
+  display: grid; gap: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 55%, transparent);
+}
+.vb-leak-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.7rem; flex-wrap: wrap;
+}
+.vb-leak-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+}
+
+/* segmented clean/leaked toggle */
+.vb-toggle {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px; overflow: hidden;
+}
+.vb-seg {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.02em;
+  padding: 0.32rem 0.85rem;
+  border: 0; background: transparent;
+  color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.vb-seg + .vb-seg { border-left: 1px solid var(--rule-strong, #c8bc9e); }
+.vb-seg:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: -2px; }
+.vb-seg[data-on="true"] {
+  background: var(--signal, #1f56de);
+  color: var(--signal-ink, #ffffff);
+}
+/* when the LEAKED segment is the active one, tint it with the alert hue instead of
+   signal — the toggle itself signals "this is the dangerous mode". */
+.vb-seg:last-child[data-on="true"] {
+  background: var(--alert, #c0362a);
+  color: #fff;
+}
+
+/* the two R² bars */
+.vb-r2 { display: grid; gap: 0.5rem; }
+.vb-r2row {
+  display: flex; align-items: center; gap: 0.6rem;
+  opacity: 0.72; transition: opacity 0.15s ease;
+}
+.vb-r2row[data-active="true"] { opacity: 1; }
+.vb-r2lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-soft, #473f34);
+  min-width: 15ch;
+}
+.vb-r2track {
+  position: relative; flex: 1 1 auto; height: 16px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent);
+  border-radius: 4px; overflow: hidden;
+}
+.vb-r2fill {
+  height: 100%; width: 0;
+  border-radius: 4px;
+  transition: width 0.28s ease;
+}
+.vb-r2-clean { background: var(--entity-target, #0c7d5f); }
+.vb-r2-leak  { background: var(--alert, #c0362a); }
+.vb-r2val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--ink, #23201b); min-width: 8ch; text-align: right;
+}
+.vb-r2row[data-active="true"] .vb-r2val {
+  color: var(--ink, #23201b);
+}
+
+.vb-leak-cap {
+  margin: 0;
+  font-size: 0.82rem; line-height: 1.5;
+  color: var(--ink-soft, #473f34);
+}
+.vb-leak-cap b { color: var(--ink, #23201b); }
+.vb-leak-cap em { font-style: italic; color: var(--alert, #c0362a); font-weight: 600; }
+.vb-leak-sub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+  font-variant-numeric: tabular-nums;
+}
+.vb-prov { opacity: 0.85; }
+
+/* ------------------------------------------------------------------ dark theme
+ * The design tokens already flip in dark mode (the shell redefines --paper/--ink/…
+ * on `.book`), so panels + text are theme-aware with no work here. We only brighten
+ * the two fixed task hues so magenta/amber keep contrast on near-black paper. */
+:root[data-theme="dark"] .vb {
+  --vb-pusht: var(--entity-block-hi, #ec74c1);
+  --vb-aloha: var(--entity-pusher-hi, #f0a25c);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .vb {
+    --vb-pusht: var(--entity-block-hi, #ec74c1);
+    --vb-aloha: var(--entity-pusher-hi, #f0a25c);
+  }
+}
+
+/* ------------------------------------------------------------------ reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .vb-featbar, .vb-actfill, .vb-r2fill, .vb-r2row, .vb-seg, .vb-btn { transition: none; }
+}

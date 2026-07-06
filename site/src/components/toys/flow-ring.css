@@ -1,0 +1,176 @@
+/* ch1.5 "Flow Matching" concept-toy — the RING + STEP-EFFICIENCY toy.
+ *
+ * Co-located CSS for flow-ring.tsx (imported at the top of that file). Namespaced
+ * `fr-*` so it never collides with the global `ct-*`/`bk-*` or the sibling toys'
+ * `sl-*`/etc. classes. Unlike the WASM toys (which render a fixed light canvas and
+ * are re-pinned to light tokens in dark mode), this toy is PURE SVG and drives
+ * every colour from the site's flipping design tokens — so it is genuinely
+ * theme-aware in BOTH light and dark, with no hardcoded surface colours. Every var
+ * carries a light fallback so the toy still renders if mounted outside the shell.
+ *
+ * Colour scheme (the demo's, matching embed.yaml + ch1.4's sibling):
+ *   - --signal blue → the FLOW samples (the hero; also the live slider + focus)
+ *   - --alert red   → the REGRESSION baseline collapsed to the center
+ *   - neutral ink   → the target ring + orientation axes (the map, not the lesson)
+ */
+
+.fr {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* square scatter arena — server-rendered default IS the JS-off frame */
+.fr-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 50% 42%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 92%, var(--signal, #1f56de) 8%),
+      var(--paper-2, #f0e9d9));
+}
+.fr-scatter { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* --- scatter marks ------------------------------------------------------- */
+/* orientation: faint crosshair axes + the target unit-ring guide (neutral ink) */
+.fr-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 30%, transparent); stroke-width: 1; }
+.fr-ring-guide {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent);
+  stroke-width: 1.2; stroke-dasharray: 4 5;
+}
+/* the real target points — the ring in every direction (neutral, recede) */
+.fr-target circle { fill: var(--ink-mute, #6d6252); opacity: 0.4; }
+/* the regression baseline — collapsed to the dead center (alert red) */
+.fr-regress circle { fill: var(--alert, #c0362a); opacity: 0.8; }
+/* the flow samples at the current step count — the hero (signal blue) */
+.fr-flow circle { fill: var(--signal, #1f56de); opacity: 0.85; }
+/* the center the regressor lands on and NO flow sample occupies */
+.fr-center { fill: none; stroke: var(--ink-mute, #6d6252); stroke-width: 1.4; opacity: 0.7; }
+
+/* --- HUD (invisible made visible: modes covered at the current step) ------ */
+.fr-hud {
+  position: absolute; top: 0.6rem; left: 0.6rem;
+  display: grid; gap: 0.28rem;
+  padding: 0.5rem 0.65rem;
+  min-width: 10.5rem;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.fr-hud-row { display: flex; gap: 0.9rem; justify-content: space-between; align-items: baseline; }
+.fr-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.fr-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.fr-v.fr-ok  { color: var(--signal, #1f56de); }
+.fr-v.fr-bad { color: var(--alert, #c0362a); }
+.fr-meter {
+  height: 5px; border-radius: 3px; margin: 0.05rem 0 0.1rem;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent);
+  overflow: hidden;
+}
+.fr-meter-fill {
+  height: 100%; background: var(--signal, #1f56de);
+  transition: width 0.18s ease, background 0.2s ease;
+}
+.fr-meter-fill[data-under="true"] { background: var(--alert, #c0362a); }
+
+/* legend */
+.fr-legend {
+  position: absolute; left: 0.6rem; bottom: 0.55rem; right: 0.6rem;
+  display: flex; flex-wrap: wrap; gap: 0.75rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+  pointer-events: none;
+}
+.fr-lg { display: inline-flex; align-items: center; }
+.fr-lg::before {
+  content: ""; width: 0.62rem; height: 0.62rem; border-radius: 50%;
+  margin-right: 0.32rem; background: currentColor;
+}
+.fr-lg-flow { color: var(--signal, #1f56de); }
+.fr-lg-regress { color: var(--alert, #c0362a); }
+.fr-lg-target { color: var(--ink-mute, #6d6252); }
+.fr-lg-target::before { opacity: 0.5; }
+
+/* --- the SECOND linked view: modes-covered vs steps ---------------------- */
+.fr-curve {
+  margin: 0;
+  padding: 0.5rem 0.6rem 0.35rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.fr-curve-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.1rem;
+}
+.fr-curve-svg { display: block; width: 100%; height: auto; }
+
+.fr-cv-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 35%, transparent); stroke-width: 1; }
+.fr-cv-full { stroke: color-mix(in srgb, var(--signal, #1f56de) 55%, transparent); stroke-width: 1; stroke-dasharray: 4 4; }
+.fr-cv-line { fill: none; stroke: var(--signal, #1f56de); stroke-width: 2; stroke-linejoin: round; }
+.fr-cv-drop { stroke: color-mix(in srgb, var(--signal, #1f56de) 45%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+.fr-cv-node circle { fill: var(--signal, #1f56de); }
+.fr-cv-node.is-under circle { fill: var(--alert, #c0362a); }
+.fr-cv-node.is-active circle { stroke: var(--paper, #f7f3ea); stroke-width: 2; }
+.fr-cv-node.is-active.is-under circle { fill: var(--alert, #c0362a); }
+.fr-cv-xlab, .fr-cv-ylab, .fr-cv-xtitle, .fr-cv-full-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.fr-cv-xlab { font-size: 11px; }
+.fr-cv-node.is-active .fr-cv-xlab { fill: var(--signal, #1f56de); font-weight: 700; }
+.fr-cv-ylab { font-size: 10px; }
+.fr-cv-xtitle { font-size: 10px; letter-spacing: 0.05em; }
+.fr-cv-full-lab { font-size: 10px; fill: color-mix(in srgb, var(--signal, #1f56de) 85%, var(--ink, #23201b)); }
+
+/* --- controls (JS-only): the ONE control is the Euler-step slider --------- */
+.fr-controls { display: grid; gap: 0.5rem; padding: 0.15rem 0.1rem 0.1rem; }
+.fr-slider-row { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.fr-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.fr-slider-label b { color: var(--signal, #1f56de); }
+.fr-slider {
+  flex: 1 1 190px; min-width: 150px;
+  accent-color: var(--signal, #1f56de); cursor: pointer;
+}
+.fr-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.fr-steps-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--signal, #1f56de); min-width: 6.5ch; text-align: right;
+}
+.fr-steps-val.fr-steps-under { color: var(--alert, #c0362a); }
+
+.fr-btn-row { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.fr-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.38rem 0.8rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.fr-btn:hover { border-color: var(--signal, #1f56de); }
+.fr-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.fr-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+}
+
+/* honour reduced-motion: kill the only transitions the toy uses */
+@media (prefers-reduced-motion: reduce) {
+  .fr-meter-fill, .fr-btn { transition: none; }
+}

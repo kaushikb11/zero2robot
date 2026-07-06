@@ -1,0 +1,62 @@
+id: ch2.5-walk
+title: "Locomotion: The Quadruped Walks"
+artifact: walk.py          # 398 LOC (measured); target ~400, hard cap 450
+task: quadruped            # curriculum/common/envs/quadruped — 5-term locomotion reward, obs[23]/action[8]
+dataset:
+  reference: null          # RL generates its own data by acting; no demo dataset
+  learner_path: false
+objectives:
+  - Train SAC (reused from ch2.2, algorithm unchanged) on the quadruped and MEASURE a walking gait EMERGE from the reward — forward distance and velocity rising over training, nobody scripting a gait
+  - Read the observation design — why joint angles + velocities (proprioception), torso height + up-vector (posture), and torso linear velocity (momentum); why an up-vector not a quaternion; why no clock / no contact flag
+  - Read the action design — why RESIDUAL joint-position targets around a default crouch (action 0 = stand), not raw torque, make the search tractable
+  - Meet domain randomization as a preview (ch2.7): jitter one dynamics parameter (torso mass) per episode so the gait can't overfit one body
+  - Be honest about the free-tier ceiling — the emergent gait clears the stand and moves forward but does NOT reach the scripted trot's +2.14 m at a CPU-laptop budget; the shape of the emergence is the lesson, the full trot is the Scale Lab
+scale_lab: false           # map lists a humanoid-at-4090 Scale Lab as a REFERENCE (not built). A quadruped SL here = same walk.py, --hidden_dim 512 --total_steps 500k+ on GPU, measure whether the emergent gait reaches/beats the trot. PENDING a measured GPU run.
+read_the_real_thing: true
+# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor: a MuJoCo Menagerie
+# quadruped (Unitree Go1/Go2) trained with an established legged-RL loop
+# (legged_gym / rsl_rl lineage) — the production setup the learner graduates to.
+# Do NOT invent a commit sha here; the read-the-real-thing skill pins the real
+# upstream commit.
+#   repo: <PLACEHOLDER — resolve the real org/commit via the skill>
+demo: quadruped_walk       # hero: the learned policy's legs fall into a stride and the torso travels forward — a gait nobody scripted (see demo/embed.yaml)
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances.
+# H2 note (ch2.1 spike): the graded assertion is the STRONG gait-emergence signal
+# over N seeds (eval forward distance clearly positive, well past the ~-0.01 m
+# stand), never a flaky single run.
+# HONESTY / nuance (measured): the emergent gait BEATS the scripted trot on
+# forward DISTANCE (+3.02 m vs +2.15 m at 60k, seed 0) but is LESS STABLE — it
+# walks fast and falls before the 500-step horizon (mean eval length ~249 vs the
+# trot's full 500), so its total RETURN (~247) sits BELOW the trot's (~307). The
+# lesson is gait emergence (fast forward motion appears from the reward alone),
+# with an honest asterisk: emergent != robust at the free-tier budget. The return
+# curve also peaks mid-training (~375 at 45k) then dips — RL is non-monotonic.
+reference_run:
+  provenance: "cpu, seed 0, total_steps 60000; torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6; measured 2026-07-06; wall-clock 7.81 min (wallclock.csv ch2.5-walk cpu-laptop)"
+  mean_eval_forward_dist: 3.0246   # m at 60k (stand ~-0.01, random ~-0.30, trot +2.15) — BEATS the trot on distance
+  mean_eval_return: 247.22         # below the trot's ~307: the fast gait falls early (mean length ~249 vs 500)
+  mean_eval_length: 249.1          # steps before a fall/horizon — the stability gap to the trot's full 500
+  scripted_trot_forward_dist: 2.1536  # m on the same held-out seeds (the ceiling on distance the policy passes)
+exercise_checks:
+  ex1:                     # ex1_predict_gait.py — trains walk.py on seeds 0-2 (each seed bit-reproducible on CPU)
+    provenance: "__PENDING__ cpu, seeds 0-2, total_steps 30000; measured __DATE__: forward_dist [__, __, __] m"
+    emerges_mean_dist_min: null      # __MEASURED__ — mean forward distance, clearly positive (>> stand)
+    emerges_per_seed_dist_min: null  # __MEASURED__ — every seed walks clearly forward
+  ex2:                     # ex2_investigate_obs.py — full obs vs velocity-blinded, seeds 0-2
+    provenance: "__PENDING__ cpu, seeds 0-2, total_steps 30000; measured __DATE__: full mean __ m vs blind mean __ m"
+    full_obs_emerges_mean_dist_min: null  # __MEASURED__ — full obs reliably produces a gait
+    blind_help_tolerance: 0.15       # blinding torso velocity must not clearly OUTPERFORM full obs (observational effect, learner interprets)
+
+# region_hashes: LEFT FOR THE AUTHOR / site build. check_prose_code_drift only
+# gates chapters that HAVE region_hashes recorded; a fresh draft has none, so it
+# passes until the site build renders the page and records them (matches ch2.1's
+# convention). Do not hand-write hashes here.
+
+# notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill when
+# the Colab variant is generated. Not gated by `make check`.
+
+notebook_hash: 930b99b8861265d0ca5ef2bf83066f95f16de71845d4ee87cf00605d50554ecf        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: c8bee2d49b2cad0a7f3f5198e16861d0317a652f21cdec9d111b728b594628b1   # sha256 of the generated notebook bytes; mismatch => hand-edited

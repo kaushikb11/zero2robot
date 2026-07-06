@@ -1,0 +1,50 @@
+# Demo embed stub — ch1.7 "vla_dataset_browser".
+# Playground integration point: playground/ owns the WASM runtime and embed
+# components; this file declares WHAT the embed shows. Coordinate at the
+# contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): this chapter trains NO policy and
+# exports NO onnx. There is nothing to run in MuJoCo-WASM here — the artifact is a
+# DATASET. So this embed is a pure DATA-INSPECTION panel over vla_data.rrd (and/or
+# the .npz + manifest.json), NOT a policy rollout. It needs neither tensor contract
+# v1 nor v2; it needs a static rerun/data viewer. This is the cheapest embed in the
+# phase: no sim loop, no inference, no WASM. It is UNBLOCKED as soon as the site can
+# render an .rrd or read the manifest.
+#
+# The HERO is the example browser: scrub through sampled (image, instruction, frozen
+# features, state, action) tuples and watch the multi-task mix. Three panels:
+demo: vla_dataset_browser
+panels:
+  - id: example_browser
+    kind: rerun                    # renders the recorded vla_data.rrd; no MuJoCo/WASM
+    title: "One VLA example at a time"
+    shows: >
+      Scrub the `example` timeline to step through sampled dataset rows: the 96x96
+      camera frame (data/image), the instruction it was annotated with, the frozen
+      CNN's feature vector as a bar chart (data/image_features), and the state/action
+      (data/state, data/action). The point to feel: these three inputs — words,
+      pixels-as-features, numbers — are exactly what the ch1.8 policy will condition on.
+    source: vla_data.rrd           # entities data/image, data/image_features, data/state, data/action, data/task_id
+    timeline: example
+  - id: multitask_mix
+    kind: rerun                    # bar of examples-per-task
+    title: "The multi-task mix"
+    shows: >
+      How many examples came from each task (data/task_mix/pusht, data/task_mix/aloha).
+      At equal episode counts the frame counts differ because episode lengths differ —
+      309 pusht vs 170 aloha at the default config. Author: a static bar is fine.
+    source: vla_data.rrd
+  - id: leakage_probe
+    kind: static-figure            # the chapter's headline; author renders from meta.yaml reference_run
+    title: "Does the instruction leak the action?"
+    shows: >
+      Two bars: action_from_language_r2 for clean templates (~0.006) vs --break leak
+      (~0.71). This is a MEASURED data diagnostic, not a trained-policy result. Consider
+      pairing with a one-line caption: 'a policy trained on the right bar would ignore
+      its camera.' Author: render from meta.yaml reference_run, no live compute needed.
+notes: >
+  Recommendation: ship the example_browser + multitask_mix panels from the .rrd (both
+  unblocked, no WASM, no policy), and render the leakage_probe as a static figure from
+  meta.yaml. There is no policy rollout in this chapter by design — do NOT wait on a
+  contract-v2 sampler runtime; that is ch1.8. If the site prefers reading the .npz +
+  manifest.json directly over the .rrd, either source carries the same example tuples.

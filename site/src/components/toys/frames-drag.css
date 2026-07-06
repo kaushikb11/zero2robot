@@ -1,0 +1,208 @@
+/* ========================================================================
+   frames-drag (.fd-*) — ch0.3 "Spatial Reasoning Without Tears" concept-toy.
+
+   The LINKED-REPRESENTATION skin: one square SVG stage (top-down, ±0.4 m) beside
+   the code panel, mounted in the same warm plate mat as every hero. Colour comes
+   from the shared design tokens (site/public/styles.css): the tee frame wears
+   --entity-block (magenta), the pusher point --entity-pusher (amber); the basis
+   arrows use the universal x=red / y=green / z=blue convention (the same RGB the
+   chapter logs to rerun); ONE --signal blue marks the live drag handle; --alert
+   red marks the wrong-convention state. The world frame + grid are neutral ink —
+   a reference map, neither an entity nor live, so they wear no entity hue.
+
+   Two co-located layers in ONE square figure so booting causes no layout shift:
+   the SSR poster (JS-off fallback + pre-boot) and the hydrated interactive SVG
+   are the SAME <svg>; only the handles, HUD overwrite and pointer wiring differ.
+   No MuJoCo-WASM — pure quaternion/frame math, so it hydrates with no dynamic
+   import. Redraw happens on interaction only (no rAF loop), so it is inherently
+   reduced-motion friendly; the sole ambient animation (the grab halo) is gated
+   behind prefers-reduced-motion.
+   ======================================================================== */
+.fd {
+  display: grid;
+  gap: 0;
+}
+
+/* stage: the square figure + the code panel, side by side on wide viewports */
+.fd-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+@media (max-width: 46rem) {
+  .fd-stage { grid-template-columns: 1fr; }
+}
+
+.fd-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;            /* pointer-drag the frame, never scroll the page */
+}
+.fd-figure:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.fd-figure[data-mode="translate"], .fd-figure[data-mode="rotate"] { cursor: grabbing; }
+.fd-figure--wrong { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--alert) 40%, transparent); }
+
+.fd-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; }
+.fd-figure[data-mode="translate"] .fd-svg, .fd-figure[data-mode="rotate"] .fd-svg { cursor: grabbing; }
+
+/* graph paper + arena — neutral reference */
+.fd-grid line { stroke: color-mix(in srgb, var(--rule-strong) 55%, transparent); stroke-width: 1; }
+.fd-arena { fill: none; stroke: var(--rule-strong); stroke-width: 1.5; }
+
+/* basis arrows — universal RGB. Kept as literal, WCAG-legible hues (matching the
+   chapter's rerun colours) because axis colour is a convention, not an entity. */
+.fd-ax line { stroke-width: 3; stroke-linecap: round; }
+.fd-ax polygon { stroke: none; }
+.fd-ax-x line { stroke: #d3382c; } .fd-ax-x polygon { fill: #d3382c; }
+.fd-ax-y line { stroke: #2f9e44; } .fd-ax-y polygon { fill: #2f9e44; }
+.fd-ax-z line { stroke: #1f56c8; } .fd-ax-z polygon { fill: #1f56c8; }
+
+/* the world frame (identity) — faint, thin, a fixed reference */
+.fd-ref line { stroke-width: 1.6; opacity: 0.42; }
+.fd-ref polygon { opacity: 0.42; }
+.fd-origin-ref { fill: var(--ink-mute); opacity: 0.55; }
+.fd-lbl { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; }
+.fd-lbl-ref { fill: var(--ink-mute); opacity: 0.7; }
+
+/* the tee frame origin — magenta, the block's identity */
+.fd-origin { fill: var(--entity-block); stroke: #fdfbf6; stroke-width: 1.5; }
+.fd-lbl-tee { fill: var(--entity-block); font-weight: 600; }
+
+/* the wrong-convention skin: the axes swing (geometry) and a red error vector
+   draws the exact gap between where x lands and where it should. */
+.fd-tee.fd--wrong .fd-origin { fill: var(--alert); }
+.fd-tee.fd--wrong .fd-lbl-tee { fill: var(--alert); }
+.fd-errvec { stroke: var(--alert); stroke-width: 2; stroke-dasharray: 4 3; }
+
+/* pusher — a fixed world point (amber) */
+.fd-pusher-ring { fill: none; stroke: var(--entity-pusher); stroke-width: 1.5; opacity: 0.5; }
+.fd-pusher-core { fill: var(--entity-pusher); }
+.fd-lbl-pusher { fill: var(--entity-pusher); }
+
+/* Break It #2 ghost — the reversed-order reconstruction, offset from the pusher */
+.fd-ghost-link { stroke: var(--alert); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: 0.7; }
+.fd-ghost-dot { fill: none; stroke: var(--alert); stroke-width: 2; }
+.fd-lbl-ghost { fill: var(--alert); font-size: 11px; }
+
+/* the one LIVE handle — signal blue. The dashed halo = "grab here to move";
+   the small knob at the x-axis tip = "grab here to rotate". */
+.fd-halo { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.85; }
+.fd-knob { fill: color-mix(in srgb, var(--signal) 18%, #fdfbf6); stroke: var(--signal); stroke-width: 1.5; }
+.fd-handles[data-mode="translate"] .fd-halo { opacity: 1; stroke-dasharray: none; }
+.fd-handles[data-mode="rotate"] .fd-knob { fill: var(--signal); }
+@media (prefers-reduced-motion: no-preference) {
+  .fd-halo { animation: fd-halo-spin 14s linear infinite; transform-box: fill-box; transform-origin: center; }
+}
+@keyframes fd-halo-spin { to { transform: rotate(360deg); } }
+
+/* JS-off poster hint */
+.fd-drag-hint { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; fill: var(--signal); text-anchor: middle; }
+
+/* HUD — the live linked numbers (poster ships the nominal readout) */
+.fd-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem; right: 0.7rem;
+  display: grid; gap: 0.28rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+.fd-hud-row { display: flex; gap: 0.7rem; justify-content: space-between; align-items: baseline; }
+.fd-hud .fd-k { color: var(--ink-mute); letter-spacing: 0.01em; }
+.fd-hud .fd-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.fd-hud .fd-v.fd-bad { color: var(--alert); }
+
+.fd-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono); font-size: 0.66rem;
+  color: var(--ink-mute);
+  pointer-events: none;
+}
+.fd-status[data-wrong="true"] { color: var(--alert); }
+
+/* code panel — the third linked representation */
+.fd-code {
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--signal) 2.5%, #fdfbf6);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  overflow-x: auto;
+  white-space: pre;
+}
+.fd-code .fd-c-tok {
+  border-radius: 3px;
+  padding: 0 0.15em;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.fd-code .fd-c-tok[data-active="true"] {
+  background: var(--signal-soft);
+  color: var(--signal);
+  box-shadow: inset 0 0 0 1px var(--signal-line);
+}
+.fd-code .fd-c-tok[data-wrong="true"] {
+  background: color-mix(in srgb, var(--alert) 12%, transparent);
+  color: var(--alert);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert) 40%, transparent);
+}
+.fd-code .fd-c-annot { color: var(--alert); font-style: italic; }
+
+/* controls — JS-only affordances */
+.fd-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.fd-btn {
+  font-family: var(--font-mono);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.fd-btn:hover { border-color: var(--signal); color: var(--ink); }
+.fd-btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.fd-btn--primary {
+  background: var(--signal); color: var(--signal-ink); border-color: var(--signal);
+  box-shadow: 0 1px 4px -1px var(--signal-line);
+}
+.fd-btn--primary:hover { color: #fff; background: color-mix(in srgb, var(--signal) 90%, #000); }
+.fd-btn--alert {
+  background: var(--alert); color: #fff; border-color: var(--alert);
+  box-shadow: 0 1px 4px -1px color-mix(in srgb, var(--alert) 50%, transparent);
+}
+.fd-btn--alert:hover { color: #fff; background: color-mix(in srgb, var(--alert) 90%, #000); }
+.fd-btn[disabled] { opacity: 0.5; cursor: default; }
+.fd-control-note {
+  font-family: var(--font-mono); font-size: 0.66rem;
+  color: var(--ink-mute); margin-left: auto;
+}
+
+/* visually-hidden live region for screen readers */
+.fd-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 34rem) {
+  .fd-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; right: 0.5rem; }
+  .fd-control-note { display: none; }
+}

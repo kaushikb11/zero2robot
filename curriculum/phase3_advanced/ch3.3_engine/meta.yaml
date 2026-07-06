@@ -1,0 +1,95 @@
+id: ch3.3-engine
+title: "Build a Physics Engine I: Unconstrained Dynamics"
+artifact: engine.py          # 269 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
+task: falling-bodies         # conservative test systems: an orbit, a spring, a freefall — all from-scratch numpy
+objectives:
+  - Represent unconstrained rigid-body state as (position q, velocity v, mass m) plus a force law force(q, v), and step it forward yourself — the update mj_step has done for you since chapter 0.1
+  - Implement three integrators from scratch — explicit Euler, semi-implicit (symplectic) Euler, and RK4 — and see that they differ only in WHICH state the force and velocity are evaluated at
+  - Measure ENERGY DRIFT on a conservative system as the honest error metric — explicit Euler injects energy and the orbit spirals out, semi-implicit keeps energy BOUNDED, RK4 is far more accurate per step but is not symplectic
+  - Understand why an oscillatory/bounded system is what exposes the symplectic advantage (freefall drifts under every integrator) — the measured reason MuJoCo integrates the way it does
+
+scale_lab: false
+# ch3.3 is the free-tier core of the from-scratch physics arc (map: 3.3-3.6 need only
+# Phase 0). The whole run is microseconds of pure-numpy integration on any CPU — there
+# is nothing to scale onto a GPU. The scale knobs (--dt, --steps) are the LESSON, not a
+# tier ramp: shrink --dt and every integrator's drift shrinks at its own order (Euler
+# ~O(dt), RK4 ~O(dt^4)); grow --steps and Euler's secular growth pulls away while the
+# symplectic energy band stays put. No Scale Lab.
+
+# READ-THE-REAL-THING: the map pairs this arc with a real integrator/engine reference.
+# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# sha and must never invent one. Good candidates: MuJoCo's documentation on its
+# semi-implicit/implicit integrators (Euler / implicitfast / RK4 — the docs literally
+# discuss the same trade this chapter measures), or a numerical-methods text on symplectic
+# integrators (Hairer, Geometric Numerical Integration). site RTRT renders nothing until
+# repo + commit both exist.
+read_the_real_thing: true
+# rtrt:
+#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
+#   commit: <author pins a real sha>
+#   focus:
+#     - mjModel.opt.integrator (Euler / implicit / implicitfast / RK4): which one is the default and why
+#     - the engine_forward / mj_Euler / mj_RungeKutta source: the same "evaluate the force at which state" choice we make by hand
+#     - the docs' note on stability vs accuracy — MuJoCo's semi-implicit default is exactly this chapter's headline
+
+demo: engine_energy_drift    # 2D energy-vs-time panel (3 overlaid curves) + the orbit paths; pure numpy, no WASM/MuJoCo
+
+# Reference run: the FULL default orbit (--system orbit --seed 0, dt 0.01, 2000 steps).
+# All numbers seed 0 on cpu, numpy 2.4.6, measured 2026-07-06. These are the drift
+# HEADLINE — the honesty metric, stated so the ordering is unmissable.
+reference_run:
+  provenance: "seed 0 on cpu, numpy 2.4.6; --system orbit (default), dt 0.01, 2000 steps (20 s sim time); measured 2026-07-06"
+  system: orbit
+  e0: -0.486210038749      # initial total energy (kinetic + gravitational potential), conserved by a perfect integrator
+  # --- explicit EULER: energy RUNS AWAY, the orbit spirals outward ---
+  euler_rel_final: 0.221252393919  # +22% energy gained over ~3 orbits; grows without bound as steps increase
+  euler_rel_max: 0.221252393919    # worst excursion == final (monotone growth) — the runaway signature
+  # --- SEMI-IMPLICIT (symplectic) Euler: energy BOUNDED, no secular growth ---
+  semi_rel_final: 0.000098263658   # ~1e-4: wobbles around the true energy forever, never runs away
+  semi_rel_max: 0.000320278117     # the whole excursion stays inside a tiny band (independent of run length)
+  # --- RK4: far more ACCURATE per step, but NOT symplectic ---
+  rk4_rel_final: -4.5e-11          # ~1e-11: essentially exact here, but the sign is one-directional (creeps, doesn't bound)
+  rk4_rel_max: 5.1e-11
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The ORDERING is the rock and is seed-robust (checked seeds 0/1/2): Euler drift >>
+  #    semi-implicit's bounded band > RK4's tiny drift. Lead with it.
+  #  * Do NOT sell RK4 as "the best": it is the most ACCURATE per step but it is not
+  #    symplectic — over a very long run its small error accumulates one direction, while
+  #    semi-implicit's error stays bounded. That distinction is the chapter's payoff and
+  #    the reason a physics engine picks a symplectic integrator over a "more accurate" one.
+  #  * FREEFALL is the honest counter-example (run --system freefall): energy drifts under
+  #    BOTH Euler (+) and semi-implicit (-) because the motion never returns — the symplectic
+  #    advantage needs a BOUNDED/oscillatory system. Keep that caveat; it prevents the
+  #    over-claim "semi-implicit always conserves energy."
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
+# provenance, not a bare magic number). checks.py reads these instead of inlining
+# tolerances. All checks are pure-numpy and bitwise deterministic, so the bands are TIGHT.
+exercise_checks:
+  smoke_orbit:                     # engine.py --smoke --seed 0 (system orbit, 600 steps) — the signature the checks reproduce
+    provenance: "seed 0 on cpu, numpy 2.4.6, --smoke (600 steps, dt 0.01); measured 2026-07-06"
+    euler_rel_final: 0.08964559174
+    semi_rel_final: -0.000138088326
+    semi_rel_max: 0.000320275781
+    rk4_negligible: 1.0e-6         # rk4's drift (~2e-11) is astronomically below this — "essentially exact"
+    reproduce_abs: 1.0e-6          # engine.py's own smoke run reproduces these to well within this band
+  ex1:                             # ex1_predict_conservation.py (predict-then-run)
+    answer: "B"                    # explicit Euler is the one whose orbit energy grows without bound
+  ex2:                             # ex2_completion_integrators.py (code-completion, RK4 + semi-implicit)
+    reproduce_abs: 1.0e-12         # completed steppers must match the reference rk4/semi update to within this
+  ex3:                             # ex3_dt_order_investigation.py (predict-then-run: drift vs timestep)
+    answer: "C"                    # halving dt ~halves Euler drift (1st order) but shrinks RK4 drift far more steeply (4th order)
+    euler_ratio_lo: 1.6           # euler_rel_final(dt) / euler_rel_final(dt/2) lands near 2 (first-order); measured 1.906
+    euler_ratio_hi: 2.4
+    rk4_negligible: 1.0e-6        # rk4 drift stays below this at BOTH timesteps and shrinks with dt — 4th-order accuracy
+
+# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
+# is not built yet (ch3.3 is an agent draft pending the teaching-pass); notebook-tier-test
+# writes both on generation, and the gate skips a chapter that carries neither key.
+
+# region_hashes intentionally omitted until the site build renders this chapter
+# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
+# on first render; do not hand-write them.
+
+notebook_hash: 1aa192fb760c5f2b9f995c3d20ac65a3ba889b9e33a2118bb1d609aadbd1e9fb        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: fae9f22a7b8a4c07b5d83aa1bd17e7fb36bd3ff4123c62a8c6cbb068d02cd9fc   # sha256 of the generated notebook bytes; mismatch => hand-edited

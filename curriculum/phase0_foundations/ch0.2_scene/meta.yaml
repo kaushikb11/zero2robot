@@ -1,0 +1,43 @@
+id: ch0.2-scene
+title: "Bodies, Joints, and MJCF"
+artifact: scene.py          # target ~150 LOC, CPU-only
+task: pusht                 # the learner authors the PushT reference scene from scratch (curriculum/common/envs/pusht)
+objectives:
+  - Author a MuJoCo scene in MJCF as a kinematic tree of bodies, each carrying geoms and joints
+  - Understand why the T-block's two geoms live in ONE body — the weld — so they move as a single rigid object
+  - Give a body exactly the degrees of freedom a task needs: a planar (slide-slide-hinge) joint set for the block, slide joints for the pusher
+  - Drive a body with position/velocity actuators, and mark a goal with a collision-free visual site
+  - Read back the compiled scene — kinematic tree, joint types, nq/nv — and prove it behaves with a short deterministic push
+scale_lab: false
+read_the_real_thing: false
+demo: pusht-scene-build
+
+# Reference values + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not bare magic numbers). checks.py reads
+# these instead of hardcoding tolerances.
+exercise_checks:
+  provenance: "seed 0 on cpu, mujoco 3.10.0 / numpy 2.4.6; --smoke (settle 40 + nudge 120 steps); measured 2026-07-04"
+  ex1:                        # ex1_predict_dof.py — predict-then-run (planar 3 DOF vs freejoint 6 DOF)
+    answer: "B"               # kept out of the exercise file to avoid spoilers
+    planar_nq: 5              # slide + slide + hinge (+ pusher's 2 slides) = 5
+    planar_max_stem_z: 0.0152 # planar block CANNOT leave the plane: z is pinned at rest height
+    free_nq: 9               # a freejoint is 7 qpos (+ pusher's 2) = 9
+    free_max_stem_z_min: 0.02 # freejoint block DOES rise off the plane (measured ~0.033)
+  ex2:                        # ex2_bughunt_pusher_axis.py, run with --smoke --seed 0
+    buggy_tee_final_y: 0.042889  # both pusher slides on the x axis => block barely advances north (vs ~0.376 correct)
+    buggy_band: 0.05             # |tee_final_y - buggy| < band => bug still present, SKIP
+    ref_tee_final_pose_abs: 0.01 # a correct fix reproduces scene.py's tee_final_pose within this band
+  ex3:                        # ex3_gain_investigation.py — velocity-actuator gain kv sweep
+    travel_by_kv: {5: 0.401, 20: 0.810, 80: 0.983}  # block final y; monotonically increasing in kv
+    travel_abs: 0.02          # reproduction tolerance on each measured travel
+
+notebook_hash: b0937e03c1330d625ac40d10c1645c8a1d1d227efd1eaf2b52fe7e280afeedb3        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 54aa0a160f07cd232a8a557d77d1b080163e1a3629dfa70817f3b3801709f529   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: a6635c7dc37525cb003f006d04f0c697864fa44dc0fb4cc4cd617346eae1ae27
+  ground: 23a621a1300335770b445fe3a1cd3cf059c32fc5000f46a700e16864d3c8912b
+  tee: 8699813e143b9b29eee4a049ec0acd11691acae407abf17e25fb6f102ebc5cc6
+  pusher: 2803fa8c9a66c5cbca2052617950fc6879359e37e4f501aecbb1fc3f8e5d16fc
+  target: ee929ad9dfb2d5ad5d477fabe91c28c812d33917f16ec1de2fe4df0ed823941b
+  build: 3829f878e94aea8678ce70dc87c4d8243f7791f05ccc6a17c11e0966bb6631ef

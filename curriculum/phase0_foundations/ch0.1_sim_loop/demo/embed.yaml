@@ -1,0 +1,19 @@
+# Demo embed stub — ch0.1 "sim-loop-perturb".
+# Playground integration point: playground/ owns the WASM runtime and the embed
+# component; this file declares WHAT the embed shows. Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: sim-loop-perturb
+scene: inline               # SCENE_XML from sim_loop.py verbatim; ch0.2 replaces this with the learner-authored MJCF
+camera:
+  lookat: [0.35, 0.0, 0.05]
+  distance: 1.4
+  azimuth: 135
+  elevation: -25
+interaction: drag-box       # visitor drags the red box mid-run; the sim responds live — the chapter's whole point in one gesture
+hud:
+  - sim_time
+  - box_qpos               # the 7 free-joint numbers, live — mirrors the "inspect" region
+notes: >
+  The hero behavior is the shove: the embed should replay the seeded xfrc_applied
+  push on load, then hand the mouse to the visitor. No policy, no goal —
+  this demo is physics responding, nothing else.

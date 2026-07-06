@@ -1,0 +1,30 @@
+# Demo embed stub — ch2.2 "pusher_sac_reach".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: sac.py saves a torch
+# state_dict for the ACTOR (sac_actor.pt), not an ONNX policy — the ONNX export
+# (tensor contract v1: observation float32[1,8] -> action float32[1,2]) is a
+# follow-up the author wires when this chapter graduates from draft to drop.
+# The squashed-Gaussian actor exports as: obs -> mean -> tanh(mean) (deterministic
+# eval action); the sampling/log-std branch is training-only and not exported.
+demo: pusher_sac_reach
+scene: pusher_reach         # curriculum/common/envs/pusher_reach/pusher_reach.xml, verbatim
+policy: sac_actor.onnx      # PENDING export; contract v1: obs float32[1,8] -> action float32[1,2]
+camera:
+  lookat: [0.0, 0.0, 0.0]
+  distance: 0.6
+  azimuth: 90
+  elevation: -90            # top-down: the planar arm reads cleanest from directly above
+interaction: move-target    # visitor drags the green target; the trained arm re-reaches to it
+hud:
+  - sim_time
+  - fingertip_to_target     # the distance the dense reward penalizes — watch it collapse toward 0
+  - episode_return          # climbs toward 0 (return = -integrated distance) as the arm holds on target
+notes: >
+  The hero behavior is competence AND generalization: SAC trained on a replay
+  buffer full of targets all over the reachable annulus, so a visitor dragging
+  the target to a NEW spot is still in-distribution — the arm re-reaches without
+  hesitation. This is the off-policy payoff made visible: the policy learned from
+  reused experience across the whole workspace, not one on-policy trajectory.
+  Contrast with ch2.1's cartpole-balance hero (recovery from a shove); here the
+  hero is precise, continuous reaching to an arbitrary goal.

@@ -1,0 +1,187 @@
+---
+// about.astro — the "start here / how to use this site" page.
+//
+// Wrapped in ChapterLayout so it reads as one book with the rest of the site
+// (warm ivory column, sidebar, skip-link, progress bar). It is fully
+// SERVER-RENDERED and reads completely with JavaScript disabled: every word
+// here is static HTML. The only <script> is a progressive-enhancement wire for
+// the "?" help hint (dispatches the same z2r:help-open event the HelpOverlay
+// island listens for); strip it and the hint is still legible text.
+//
+// COPY OWNERSHIP. Marketing / voice copy is DevRel + author owned (site/CLAUDE.md
+// "treat like prose/"). So the aspirational pitch sits inside the honest .ab-draft
+// band — a galley-proof enclosure mirroring the landing draft band + the chapter
+// draft ribbon. The rest is STRUCTURAL / INSTRUCTIONAL text (how the features
+// work), which is safe for an agent to author and is kept outside the band.
+//
+// Links are DERIVED from the real curriculum (discoverChapters), never
+// hand-typed, so they can never point at a chapter that does not exist.
+import ChapterLayout from "../layouts/ChapterLayout.astro";
+import { discoverChapters } from "../lib/curriculum.ts";
+import "../components/about.css";
+
+const chapters = discoverChapters();
+const first = chapters[0] ?? null;
+const flagship = chapters.find((c) => c.demo === "pusht_bc_recovery") ?? null;
+
+const startHref = first ? `/${first.slug}/` : "#how";
+const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
+---
+
+<ChapterLayout title="Start here — zero2robot">
+  <div class="bk-titleblock ab-wrap">
+    <p class="bk-kicker">Start here</p>
+    <h1 class="bk-title">
+      How to use zero2robot
+      <span class="bk-title-sub">read like a book, run like a lab</span>
+    </h1>
+  </div>
+
+  {/* --- voice/marketing copy: honestly behind a draft band ---------------- */}
+  <div class="ab-wrap">
+    <div class="ab-draft" role="note" aria-label="Draft copy — pending DevRel and author voice pass">
+      <b>draft</b>
+      <span class="ab-draft__src">
+        pitch copy — pending DevRel/author pass
+        <span class="ab-draft__tail"> · wording is a placeholder, not final voice</span>
+      </span>
+    </div>
+    <section class="ab-intro" aria-label="What zero2robot is (draft copy)">
+      <p>
+        zero2robot is an embodied-AI course where <strong>the code is the
+        product</strong>. Every chapter is one small, real, readable file you can
+        run — from a bare simulation loop to a policy you train, export, and drive
+        in your browser. No black boxes, no framework to excavate.
+      </p>
+      <p>
+        You read a chapter like a textbook, then run exactly what you read. The
+        browser demos are the same code you train locally; the numbers carry their
+        own provenance; and everything on the learner path finishes on a free
+        Colab T4 or a CPU laptop.
+      </p>
+    </section>
+  </div>
+
+  <article class="bk-prose ab-wrap">
+    <h2 id="how">How to read a chapter</h2>
+    <p>
+      Each chapter page is laid out the same way, top to bottom, so you always
+      know where you are. Read it in order the first time through:
+    </p>
+    <ol>
+      <li>
+        <strong>See it work.</strong> A live concept-toy at the top shows the one
+        idea the chapter is about — running the real policy or simulation in your
+        browser. It is interactive when JavaScript is on and falls back to a
+        labelled still poster when it is off, so the point survives either way.
+      </li>
+      <li>
+        <strong>Objectives.</strong> A short "by the end you can…" plate states
+        exactly what you will be able to do. Come back and check yourself against
+        it.
+      </li>
+      <li>
+        <strong>The reading.</strong> The prose column, with the actual code shown
+        in dark panels beside it. Those panels are <em>included by region</em>
+        straight from the chapter's runnable file — never pasted — and each carries
+        the sha256 fingerprint CI re-checks, so what you read is provably what runs.
+      </li>
+      <li>
+        <strong>Run it.</strong> An honest wall-clock ledger tells you how long the
+        chapter takes on each compute tier. Every time shown is measured, never
+        estimated; tiers nobody has measured yet say so plainly.
+      </li>
+      <li>
+        <strong>Practice.</strong> Candidate exercises to work locally. Nothing is
+        auto-graded here and nothing phones home — each exercise gives you a local
+        run command to check yourself.
+      </li>
+    </ol>
+
+    <h2>Predict, then run</h2>
+    <p>
+      Some exercises are <em>predict-then-run</em>. Pick the outcome you expect and
+      commit your prediction first — the measured answer and the run command stay
+      hidden until you do, because predicting after you already know the answer
+      teaches nothing. Your committed prediction is the one signal the site
+      records toward progress.
+    </p>
+
+    <h2>Concept toys, by hand and by key</h2>
+    <p>
+      The "See it work" toy exposes exactly one control so you can build intuition
+      by poking at it. You can drive every toy from the keyboard, not just the
+      pointer: focus the toy (Tab to it, or click it) and use the arrow keys.
+      In the flagship covariate-shift toy, for example, the arrow keys nudge the
+      block, <span class="ab-kbd">R</span> resets it, and
+      <span class="ab-kbd">O</span> sends it out of the region the demonstrations
+      covered — the same "aha" you get by dragging. Screen-reader users get the
+      same in-distribution / out-of-distribution transition announced live.
+    </p>
+
+    <h2>Progress, search, and help</h2>
+    <p>
+      Your progress lives only in your browser — no account, ever. Reading a
+      chapter marks it read (a ✓ appears next to it in the sidebar), committing a
+      prediction counts toward completion, and the landing page shows an overall
+      and per-phase dashboard with a "continue where you left off" link. Clear your
+      browser storage and it resets; it is never sent anywhere.
+    </p>
+    <p>
+      Two keyboard shortcuts are worth learning now:
+    </p>
+    <table class="ab-keys">
+      <thead>
+        <tr><th scope="col">Key</th><th scope="col">Does</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="ab-kbd">/</span> or <span class="ab-kbd">⌘</span> <span class="ab-kbd">K</span></td>
+          <td>Open search — jump to any chapter, heading, objective, or code region.</td>
+        </tr>
+        <tr>
+          <td><span class="ab-kbd">?</span></td>
+          <td>Open the keyboard-shortcuts &amp; how-to overlay from anywhere.</td>
+        </tr>
+        <tr>
+          <td><span class="ab-kbd">Esc</span></td>
+          <td>Close whichever overlay is open.</td>
+        </tr>
+      </tbody>
+    </table>
+    <button type="button" class="ab-help-hint" data-help-open>
+      <span class="ab-kbd">?</span>
+      <span>Open the full shortcuts &amp; how-to overlay</span>
+    </button>
+
+    <h2>The honest constraints</h2>
+    <p>
+      Two things are true and stated plainly rather than hidden. First, chapter
+      prose is still <strong>draft</strong>: pages you read carry a visible
+      "pending author voice pass" ribbon because the numbers and code are final but
+      the writing voice is not yet. Second, everything on the learner path is built
+      to the <strong>free-tier floor</strong> — it completes on a free Colab T4 or a
+      CPU laptop. Anything that needs more is marked as an optional Scale Lab, never
+      slipped onto the required path.
+    </p>
+
+    <div class="ab-cta">
+      <a class="ab-btn ab-btn--primary" href={startHref}>
+        Start from the first page
+        {first && <span class="ab-btn__sub">{first.number} · {first.artifactBasename}</span>}
+      </a>
+      {flagship && (
+        <a class="ab-btn" href={flagshipHref}>Jump to the flagship chapter →</a>
+      )}
+    </div>
+  </article>
+
+  {/* Progressive enhancement ONLY: wire the "?" hint to open the HelpOverlay
+      island (dispatches the event it listens for, regardless of hydration
+      order). With JS off the hint is still legible documentation. */}
+  <script>
+    for (const b of document.querySelectorAll<HTMLElement>("[data-help-open]")) {
+      b.addEventListener("click", () => window.dispatchEvent(new Event("z2r:help-open")));
+    }
+  </script>
+</ChapterLayout>
