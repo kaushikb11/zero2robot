@@ -42,15 +42,15 @@ function PosterBot({ x, rear, label, sub }: { x: number; rear: boolean; label: s
   const tilt = rear ? -18 : 0;
   return (
     <g transform={`translate(${x} 0)`}>
-      <line class="rh-ground" x1={0} y1={groundY} x2={180} y2={groundY} />
+      <line class="rl-ground" x1={0} y1={groundY} x2={180} y2={groundY} />
       <g transform={`rotate(${tilt} 90 ${torsoY})`}>
-        <rect class="rh-torso" x={62} y={torsoY - 10} width={80} height={20} rx={4} />
-        <circle class="rh-head" cx={146} cy={torsoY} r={4} />
+        <rect class="rl-torso" x={62} y={torsoY - 10} width={80} height={20} rx={4} />
+        <circle class="rl-head" cx={146} cy={torsoY} r={4} />
       </g>
-      <polyline class="rh-leg" points={`120,${torsoY + 6} 128,${groundY - 22} 122,${groundY}`} />
-      <polyline class="rh-leg" points={`72,${torsoY + 6} 64,${groundY - 22} 70,${groundY}`} />
-      <text class="rh-poster-lbl" x={90} y={groundY + 22} text-anchor="middle">{label}</text>
-      <text class="rh-poster-sub" x={90} y={groundY + 38} text-anchor="middle">{sub}</text>
+      <polyline class="rl-leg" points={`120,${torsoY + 6} 128,${groundY - 22} 122,${groundY}`} />
+      <polyline class="rl-leg" points={`72,${torsoY + 6} 64,${groundY - 22} 70,${groundY}`} />
+      <text class="rl-poster-lbl" x={90} y={groundY + 22} text-anchor="middle">{label}</text>
+      <text class="rl-poster-sub" x={90} y={groundY + 38} text-anchor="middle">{sub}</text>
     </g>
   );
 }
@@ -58,7 +58,7 @@ function PosterBot({ x, rear, label, sub }: { x: number; rear: boolean; label: s
 function Poster() {
   return (
     <svg
-      class="rh-poster-svg"
+      class="rl-poster-svg"
       viewBox="0 0 400 300"
       role="img"
       aria-label="Two four-legged robots side by side. The left one, trained on a shaped reward, walks forward. The right one, trained to just be tall, rears up and stays put while its reward climbs. With JavaScript on, both are driven live by their trained policies from the same start."
@@ -69,7 +69,7 @@ function Poster() {
         height-hack rears up and stalls, scoring a large reward while going nowhere —
         specification gaming made physical.
       </desc>
-      <rect class="rh-arena" x={1} y={1} width={398} height={298} rx={6} />
+      <rect class="rl-arena" x={1} y={1} width={398} height={298} rx={6} />
       <PosterBot x={10} rear={false} label="shaped reward" sub="walks forward" />
       <PosterBot x={210} rear={true} label="height-hack" sub="rears · reward climbs, goes nowhere" />
     </svg>
@@ -108,6 +108,10 @@ function RewardToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         const [simMod, sceneMod, envMod, obsMod, inferMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
           import("../../../../playground/src/sim/scene"),
@@ -204,6 +208,9 @@ function RewardToy() {
         };
 
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
+        // Reduced motion: both panels have their representative still frame painted and
+        // the "restart" control + __toy hooks stay live; don't spin the auto-driving rAF loop.
+        if (prefersReducedMotion) return;
         while (!disposed) {
           await nextFrame();
           const now = performance.now();
@@ -258,29 +265,29 @@ function RewardToy() {
     <div class="rh">
       <figure
         ref={figureRef}
-        class="rh-figure"
+        class="rl-figure"
         tabIndex={0}
         role="application"
         aria-label="Interactive reward-hacking toy. Two four-legged robots, same algorithm, different reward. The left walks forward; the right rears up and stalls while its own reward climbs. Focus here and press R, or use the reset button, to restart both from the same pose."
         onKeyDown={onKeyDown}
       >
-        <div class="rh-poster" hidden={booted}><Poster /></div>
-        <div class="rh-panels" hidden={!booted} aria-hidden="true">
-          <div class="rh-panel">
-            <canvas ref={shapedCanvas} class="rh-canvas" />
+        <div class="rl-poster" hidden={booted}><Poster /></div>
+        <div class="rl-panels" hidden={!booted} aria-hidden="true">
+          <div class="rl-panel">
+            <canvas ref={shapedCanvas} class="rl-canvas" />
             {booted && !failed && (
-              <div class="rh-cap rh-cap--shaped">
-                <span class="rh-cap-title">shaped reward → walks</span>
-                <span class="rh-cap-num">forward {hud.shaped.dist.toFixed(2)} m</span>
+              <div class="rl-cap rl-cap--shaped">
+                <span class="rl-cap-title">shaped reward → walks</span>
+                <span class="rl-cap-num">forward {hud.shaped.dist.toFixed(2)} m</span>
               </div>
             )}
           </div>
-          <div class="rh-panel">
-            <canvas ref={hackCanvas} class="rh-canvas" />
+          <div class="rl-panel">
+            <canvas ref={hackCanvas} class="rl-canvas" />
             {booted && !failed && (
-              <div class="rh-cap rh-cap--hack">
-                <span class="rh-cap-title">“be tall” hack → games it</span>
-                <span class="rh-cap-num">forward {hud.hack.dist.toFixed(2)} m · reward {hud.hack.hackReturn.toFixed(0)} ▲</span>
+              <div class="rl-cap rl-cap--hack">
+                <span class="rl-cap-title">“be tall” hack → games it</span>
+                <span class="rl-cap-num">forward {hud.hack.dist.toFixed(2)} m · reward {hud.hack.hackReturn.toFixed(0)} ▲</span>
               </div>
             )}
           </div>
@@ -297,7 +304,7 @@ function RewardToy() {
             : ""}
         </div>
 
-        <div class="rh-status" data-failed={failed} aria-hidden="true">
+        <div class="rl-status" data-failed={failed} aria-hidden="true">
           {failed ? (
             <span>sim failed — the Colab path covers this without WASM</span>
           ) : booted ? (
@@ -311,11 +318,11 @@ function RewardToy() {
         </div>
       </figure>
 
-      <div class="rh-controls">
-        <button type="button" class="rh-btn rh-btn--primary" onClick={() => apiRef.current?.reset()} disabled={!booted || failed}>
+      <div class="rl-controls">
+        <button type="button" class="rl-btn rl-btn--primary" onClick={() => apiRef.current?.reset()} disabled={!booted || failed}>
           restart both from a fresh pose →
         </button>
-        <span class="rh-control-note">
+        <span class="rl-control-note">
           same robot, same PPO — the only difference is the reward · poster reads with JS off
         </span>
       </div>

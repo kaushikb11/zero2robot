@@ -48,7 +48,7 @@ parser.add_argument("--break", dest="bug", default="none",
                     help="inject a classic bug and measure the error it introduces")
 args = parser.parse_args()
 
-banner("ch0.3-transforms")  # startup contract: tier + measured wall-clock to stdout, not metrics.json
+banner("ch0.3-transforms", device="cpu")  # pure-numpy/mujoco-CPU: honest cpu tier, never the host's mps/cuda. startup contract: tier + measured wall-clock to stdout, not metrics.json
 num_samples = 512 if args.smoke else args.samples  # smoke count is FIXED so CI can diff runs exactly
 args.out.mkdir(parents=True, exist_ok=True)
 rng = np.random.default_rng(args.seed)  # PCG64 — the only source of randomness in this file

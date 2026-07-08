@@ -61,6 +61,9 @@ const SWEEP = viz.dt_sweep as {
 };
 const N_FRAMES = DROP.t.length; // 201
 const REPLAY_MS = 28; // ~= the 8 ms recorded frame spacing, slowed a touch for the eye
+// First frame the recorded penalty ball touches the table — where an unstable dt
+// stops falling calmly and the explicit-spring integration begins to diverge.
+const IMPACT_IDX = Math.max(0, DROP.penalty.pen_frac.findIndex((p) => p > 0)); // 54
 
 // ------------------------------------------------------------- drop-lane geometry
 // Two side-by-side lanes: the ball falls from ~1.05 m onto the table at world y = 0.
@@ -109,7 +112,14 @@ const fmtDt = (d: number) => (d < 0.01 ? d.toFixed(3) : d.toFixed(3)).replace(/0
 const fmtX = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : n >= 10 ? Math.round(n).toString() : n.toFixed(2));
 
 // =============================================================== Panel 1: the drop
-function DropLanes({ frame }: { frame: number }) {
+// `dtPoint` is the currently-selected timestep's penalty result. When it is unstable
+// (dt past dt_crit) the LEFT lane stops replaying the calm recorded fall and instead
+// DETONATES: the explicit spring flings the ball above the table one step and slams it
+// deep below the next, the signature of the explicit-Euler blow-up. The swing shape is
+// schematic, but the DEPTH (radii) and ENERGY multiplier printed on it are the real,
+// measured sweep values for that dt — so pushing dt over the cliff shows a visible
+// detonation in the ball view, not only a number in Panel 3.
+function DropLanes({ frame, dtPoint, unstable }: { frame: number; dtPoint: SweepPoint; unstable: boolean }) {
   const lane = (key: "penalty" | "lcp") => {
     const tr = DROP[key];
     const wy = tr.height[frame];
@@ -133,20 +143,77 @@ function DropLanes({ frame }: { frame: number }) {
       </g>
     );
   };
+
+  // The penalty lane in its blown-up state, driven by the dt slider (not the record).
+  const blownPenaltyLane = () => {
+    const cx0 = LANE_CX.penalty;
+    // Before contact the ball still just falls (the shared recorded approach).
+    if (frame < IMPACT_IDX) {
+      const cy = worldToSvgY(DROP.penalty.height[frame]);
+      return (
+        <g class="ck-lane ck-penalty">
+          <line class="ck-fall" x1={cx0} y1={worldToSvgY(DROP.penalty.height[0])} x2={cx0} y2={FLOOR_Y} />
+          <circle class="ck-ball" cx={cx0} cy={cy.toFixed(1)} r={BALL_PX.toFixed(1)} />
+          <text class="ck-lane-lab" x={cx0} y={22} text-anchor="middle">penalty</text>
+        </g>
+      );
+    }
+    // From contact on: a diverging oscillation whose amplitude ramps up fast.
+    const swing = (k: number) => {
+      const gr = Math.min(1, Math.pow(Math.max(0, k) / 11, 1.35)); // 0 → full swing within ~11 frames
+      const wob = Math.sin(k * 1.9);
+      const cy = FLOOR_Y - gr * wob * (FLOOR_Y + 46);              // wob>0 launches above, wob<0 slams below
+      const cx = cx0 + gr * 13 * Math.sin(k * 3.3);               // violent lateral jitter
+      return { cx, cy: Math.max(-BALL_PX - 6, Math.min(LANE.h - 4, cy)) };
+    };
+    const g = frame - IMPACT_IDX;
+    const now = swing(g);
+    const echoes = [g - 1, g - 2, g - 3].filter((k) => k >= 0).map(swing); // vibration smear
+    const penetrating = now.cy > FLOOR_Y + 2;
+    const depth = dtPoint.max_pen_frac;     // real radii of penetration for this dt
+    const energy = dtPoint.energy_excess;   // real phantom-energy multiplier for this dt
+    return (
+      <g class="ck-lane ck-penalty ck-blown">
+        {echoes.map((e, i) => (
+          <circle class="ck-ball ck-ball-echo" cx={e.cx.toFixed(1)} cy={e.cy.toFixed(1)} r={BALL_PX.toFixed(1)} opacity={0.24 - i * 0.06} />
+        ))}
+        {/* launch trail when the spring flings the ball up off the table */}
+        {now.cy < FLOOR_Y - 34 && <line class="ck-launch" x1={now.cx.toFixed(1)} y1={now.cy.toFixed(1)} x2={now.cx.toFixed(1)} y2={Math.min(FLOOR_Y, now.cy + 72).toFixed(1)} />}
+        <circle class="ck-ball ck-ball-blown" cx={now.cx.toFixed(1)} cy={now.cy.toFixed(1)} r={BALL_PX.toFixed(1)} />
+        {penetrating && depth != null && (
+          <text class="ck-pen-tag" x={now.cx.toFixed(1)} y={FLOOR_Y + 20} text-anchor="middle">−{depth.toFixed(1)}r</text>
+        )}
+        <text class="ck-lane-lab" x={cx0} y={22} text-anchor="middle">penalty</text>
+        {/* the unmissable state badge — real measured depth + energy for this dt */}
+        <g class="ck-blown-badge">
+          <rect class="ck-blown-bg" x={cx0 - 58} y={104} width={116} height={34} rx={5} />
+          <text class="ck-blown-title" x={cx0} y={121} text-anchor="middle">BLEW UP</text>
+          <text class="ck-blown-sub" x={cx0} y={132} text-anchor="middle">
+            {energy == null ? "energy off the chart" : `energy +${Math.round(energy).toLocaleString()}×`}
+          </text>
+        </g>
+      </g>
+    );
+  };
+
   return (
     <svg
-      class="ck-drop-svg"
+      class={`ck-drop-svg${unstable ? " is-blown" : ""}`}
       viewBox={`0 0 ${LANE.w} ${LANE.h}`}
       role="img"
       aria-label={
-        "Two side-by-side lanes: a ball dropping onto a table under the PENALTY spring (left) and the LCP impulse " +
-        "solve (right). On impact the penalty ball drives about a quarter of its radius into the table and settles " +
-        "sunk below the surface, while the LCP ball catches on the surface in about one step and rests exactly on it."
+        unstable
+          ? "Two side-by-side lanes. With the timestep past dt_crit the PENALTY lane (left) has blown up: the explicit " +
+            "spring flings the ball above the table and slams it many radii below the surface, diverging, while the LCP " +
+            "solve (right) still catches the ball and holds it exactly on the surface."
+          : "Two side-by-side lanes: a ball dropping onto a table under the PENALTY spring (left) and the LCP impulse " +
+            "solve (right). On impact the penalty ball drives about a quarter of its radius into the table and settles " +
+            "sunk below the surface, while the LCP ball catches on the surface in about one step and rests exactly on it."
       }
     >
       {/* mid divider */}
       <line class="ck-divider" x1={LANE.w / 2} y1={30} x2={LANE.w / 2} y2={FLOOR_Y} />
-      {lane("penalty")}
+      {unstable ? blownPenaltyLane() : lane("penalty")}
       {lane("lcp")}
       {/* the table: an opaque-ish band the sunk ball shows through, + a crisp surface line */}
       <rect class="ck-table" x={0} y={FLOOR_Y} width={LANE.w} height={LANE.h - FLOOR_Y} />
@@ -295,7 +362,15 @@ function Toy() {
     return () => clearInterval(id);
   }, [playing]);
 
-  const replay = () => { setFrame(0); setPlaying(true); };
+  const prefersReduced = () =>
+    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const replay = () => {
+    if (prefersReduced()) { setPlaying(false); setFrame(N_FRAMES - 1); return; } // static settled/blown frame
+    setFrame(0);
+    setPlaying(true);
+  };
+  // push dt over the cliff AND replay the drop, so the detonation plays out in the ball view
+  const pushOverCliff = () => { setDtSel(PAST_CLIFF_IDX); replay(); };
   const onScrub = (e: Event) => {
     setPlaying(false);
     setFrame(parseInt((e.currentTarget as HTMLInputElement).value, 10));
@@ -318,6 +393,12 @@ function Toy() {
         : penFrac > 0.15
           ? `Impact: the penalty ball is ${penFrac.toFixed(2)} of a radius into the table; the LCP ball ${lcpFrac.toFixed(2)}.`
           : "Settling: the penalty spring rings while the LCP solve already holds.";
+  // when the selected dt is unstable, the ball view detonates — say so
+  const blownSay = !pen.stable
+    ? ` At the selected timestep dt ${fmtDt(dtVal)}, past dt_crit, the penalty ball in the drop view BLOWS UP: the spring ` +
+      `flings it off the table and slams it ${pen.max_pen_frac == null ? "many" : pen.max_pen_frac.toFixed(1)} radii deep, ` +
+      `phantom energy ${pen.energy_excess == null ? "off the chart" : `${Math.round(pen.energy_excess).toLocaleString()} times`} the drop energy.`
+    : "";
 
   // aria-live: the dt cliff selection (the stability readout)
   const cliffSay =
@@ -337,9 +418,14 @@ function Toy() {
       </p>
 
       {/* ---- Panel 1: the drop, penalty vs lcp ------------------------------ */}
-      <figure class="ck-panel ck-panel-drop">
-        <figcaption class="ck-cap">the drop · a ball onto the table · <span class="ck-e-pen">penalty</span> vs <span class="ck-e-lcp">lcp</span></figcaption>
-        <DropLanes frame={frame} />
+      <figure class={`ck-panel ck-panel-drop${pen.stable ? "" : " is-blown"}`}>
+        <figcaption class="ck-cap">
+          the drop · a ball onto the table · <span class="ck-e-pen">penalty</span> vs <span class="ck-e-lcp">lcp</span>
+          {pen.stable
+            ? <span class="ck-cap-hint"> · drag the dt slider below past dt_crit to detonate the penalty ball</span>
+            : <span class="ck-cap-hint ck-e-pen"> · dt {fmtDt(dtVal)}s past dt_crit — penalty BLEW UP</span>}
+        </figcaption>
+        <DropLanes frame={frame} dtPoint={pen} unstable={!pen.stable} />
         <div class="ck-scrub-row">
           <button type="button" class="ck-btn ck-btn--primary" onClick={replay}>
             {playing ? "playing…" : "▶ replay the drop"}
@@ -357,6 +443,10 @@ function Toy() {
           />
           <span class="ck-scrub-val">{DROP.t[frame].toFixed(2)}s</span>
         </div>
+        <p class="ck-drop-note">
+          the calm drop is the recorded dt=0.002s run; past dt_crit the penalty lane shows the blow-up — the swing is
+          schematic, the depth and energy printed on it are the real measured sweep values
+        </p>
       </figure>
 
       {/* ---- Panel 2: penetration over time (linked to the same replay frame) */}
@@ -405,7 +495,7 @@ function Toy() {
           </div>
           <div class="ck-btn-row">
             {PAST_CLIFF_IDX >= 0 && (
-              <button type="button" class="ck-btn" onClick={() => setDtSel(PAST_CLIFF_IDX)}>
+              <button type="button" class="ck-btn" onClick={pushOverCliff}>
                 push dt over the cliff →
               </button>
             )}
@@ -428,7 +518,7 @@ function Toy() {
       </p>
 
       {/* non-visual paths to the two ahas (the drop, and the stability cliff) */}
-      <div class="bk-sr" aria-live="polite">{dropSay}</div>
+      <div class="bk-sr" aria-live="polite">{dropSay}{blownSay}</div>
       <div class="bk-sr" aria-live="polite">{cliffSay}</div>
     </div>
   );

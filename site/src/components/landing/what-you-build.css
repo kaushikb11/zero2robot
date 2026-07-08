@@ -1,0 +1,208 @@
+/* ============================================================================
+   what-you-build.css — the "What you'll build" showcase strip.
+
+   Scoped `.wyb-*`. Renders inside `.book`, so every colour, radius, and font
+   token is inherited from the shared design system (public/styles.css); this
+   file only arranges them. Six different demos are made to read as ONE system:
+   uniform corner radius, figure treatment, caption position, and gutters.
+
+   Motion is poster-first: the SSR SVG poster is the resting state; a canvas
+   replay fades in only while .is-playing (set by the client on hover /
+   :focus-visible, one card at a time). Under prefers-reduced-motion the client
+   never sets .is-playing, so the poster stands alone.
+   ========================================================================== */
+
+.wyb {
+  max-width: var(--page);
+  margin: 3.5rem auto 0;
+  padding-top: 3rem;
+  border-top: 1px solid var(--rule);
+}
+
+.wyb__head { margin: 0 0 2rem; }
+.wyb__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--step-3);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 0.6rem;
+  text-wrap: balance;
+}
+.wyb__lede {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* --- the grid ------------------------------------------------------------- *
+   Mobile: 1 column. Tablet: 2 columns, hero a full-width banner. Desktop: 3
+   columns with the hero promoted to a 2x2 bento focal card. grid-auto-rows:1fr
+   keeps every base row the same height, so the 2x2 hero lands flush. */
+.wyb__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.wyb-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.wyb-card__link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--paper-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wyb-card__link { transition: none; }
+}
+.wyb-card__link:hover {
+  transform: translateY(-6px);
+  border-color: var(--rule-strong);
+  box-shadow: 0 12px 28px -14px rgba(30, 22, 12, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+:root[data-theme="dark"] .wyb-card__link:hover,
+.wyb-card__link:hover { box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.wyb-card__link:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+/* --- the figure: poster (SVG) with a canvas replay layered on top ---------- */
+.wyb-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  background:
+    radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--paper) 70%, transparent), transparent 70%),
+    var(--paper-3);
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+.wyb-card--hero .wyb-figure { aspect-ratio: auto; flex: 1 1 auto; min-height: 220px; }
+
+.wyb-poster,
+.wyb-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.wyb-poster {
+  transition: opacity 0.2s ease-out;
+  padding: 8%;
+  box-sizing: border-box;
+}
+.wyb-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.wyb-canvas {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+.wyb-card.is-playing .wyb-poster { opacity: 0; }
+.wyb-card.is-playing .wyb-canvas { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .wyb-poster, .wyb-canvas { transition: none; }
+}
+
+/* the "replay" hint: quiet until the card is hovered/focused, never shouts */
+.wyb-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--signal);
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  border: 1px solid var(--signal-line);
+  border-radius: 100px;
+  padding: 0.12rem 0.5rem;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  pointer-events: none;
+}
+.wyb-card__link:hover .wyb-badge,
+.wyb-card__link:focus-visible .wyb-badge { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .wyb-badge { display: none; }
+}
+
+/* --- caption -------------------------------------------------------------- */
+.wyb-meta { padding: 0.9rem 1rem 1rem; }
+.wyb-meta__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.3rem;
+}
+.wyb-card__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wyb-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--book);
+  background: color-mix(in srgb, var(--book) 9%, transparent);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.wyb-card__outcome {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink-mute);
+}
+.wyb-card--hero .wyb-card__title { font-size: 1.32rem; }
+.wyb-card--hero .wyb-card__outcome { font-size: 0.98rem; }
+
+/* --- tablet: 2 columns, hero a full-width banner -------------------------- */
+@media (min-width: 40rem) {
+  .wyb__grid { grid-template-columns: repeat(2, 1fr); gap: 1.1rem; }
+  .wyb-card--hero { grid-column: span 2; }
+  .wyb-card--hero .wyb-figure { aspect-ratio: 21 / 9; min-height: 0; flex: none; }
+}
+
+/* --- desktop: 3 columns, hero promoted to a 2x2 bento focal card ---------- */
+@media (min-width: 60rem) {
+  .wyb__grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 1.15rem;
+  }
+  .wyb-card--hero {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .wyb-card--hero .wyb-figure { aspect-ratio: auto; }
+  .wyb-card .wyb-figure { aspect-ratio: auto; flex: 1 1 auto; min-height: 130px; }
+}

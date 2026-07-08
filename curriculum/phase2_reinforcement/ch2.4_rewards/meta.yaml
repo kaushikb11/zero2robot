@@ -1,12 +1,12 @@
 id: ch2.4-rewards
 title: "Reward Design Is Programming"
-artifact: rewards.py       # 386 LOC (measured); under the 450 hard cap — from-scratch PPO + 4 reward designs + eval
-task: quadruped            # curriculum/common/envs/quadruped — stand -> walk; reward = 5 shapeable terms
+artifact: rewards.py       # 389 LOC (measured); under the 450 hard cap: from-scratch PPO + 4 reward designs + eval
+task: quadruped            # curriculum/common/envs/quadruped: stand -> walk; reward = 5 shapeable terms
 dataset:
   reference: null          # RL generates its own data by acting; no demo dataset
   learner_path: false
 objectives:
-  - Treat the reward function as the PROGRAM you write for the robot — one reward_fn(info, action, frac) per design, everything else held fixed
+  - Treat the reward function as the PROGRAM you write for the robot, one reward_fn(info, action, frac) per design, everything else held fixed
   - Show SHAPING: a sparse "did it move" reward barely trains; the env's dense shaped reward learns a walk (measure forward distance)
   - Deliberately induce and MEASURE a REWARD HACK: reward raw height, the policy rears/stalls, its reward climbs while forward distance stays ~0 (specification gaming)
   - Stage a reward as a CURRICULUM (stand first, then add forward) and report the comparison honestly
@@ -33,31 +33,31 @@ demo: quadruped_reward_hack   # hero: side-by-side rollouts of the shaped walk v
 # assert are ORDERINGS (shaped forward > sparse forward; hack design_return
 # rises while hack forward stays near 0), never absolute magnitudes.
 exercise_checks:
-  ex1:                     # ex1_predict_hack.py — trains the hack design, seeded => reproducible
-    provenance: "cpu, seed 0, reduced 150k budget (ex1's affordable config); hack forward_m +0.41 — a small fraction of the shaped +4.61 m walk — while height rises (tallest design) and design_return rose 128 -> 910 (7x): tall, not walking. The default 400k config walks nowhere (forward_m -0.181, see reference_run); either budget shows the hack. The check asserts |forward| small + reward-rise, both seed-robust."
+  ex1:                     # ex1_predict_hack.py: trains the hack design, seeded => reproducible
+    provenance: "cpu, seed 0, reduced 150k budget (ex1's affordable config); hack forward_m +0.41 (a small fraction of the shaped +4.61 m walk) while height rises (tallest design) and design_return rose 128 -> 910 (7x): tall, not walking. The default 400k config walks nowhere (forward_m -0.181, see reference_run); either budget shows the hack. The check asserts |forward| small + reward-rise, both seed-robust."
     hack_forward_abs_max: 1.0      # the hack's |forward distance| stays small (measured 0.18 m); it does NOT walk
     hack_return_rise_min: 2.0      # the hack's own return rises by >=2x over training (measured ~10x); the reward IS optimized
-  ex2:                     # ex2_completion_fix_hack.py — add the missing term that fixes the hack
+  ex2:                     # ex2_completion_fix_hack.py: add the missing term that fixes the hack
     provenance: "DETERMINISTIC pure-function property (no training, no RL variance). On two hand-built states differing only in forward_vel (0.0 vs 0.9), a correct fix that adds the env's forward term (W_FORWARD * clip(vx) = 1.0 * 0.9) makes the faster state score >= 0.9 higher. Threshold set below that measured gap."
     fixed_forward_min: 0.5         # walking-forward state must beat standing-still by >= this (measured gap 0.9)
-  ex3:                     # ex3_bughunt_gae_truncation.py — the truncation-vs-termination GAE bug
-    provenance: "DETERMINISTIC closed-form GAE (torch 2.10.0; gamma 0.99, gae_lambda 0.95) on a fixed 2-step, 2-env trajectory: env0 truncated at t=1, env1 terminated at t=1, identical otherwise (rewards=1, values=0.5, bootstrap=2.0). Measured 2026-07-08. BUGGY (delta masks the bootstrap with `1-done` instead of `1-terminated`): both envs collapse to advantages [[1.4653,1.4653],[0.5,0.5]] — the truncated episode is scored as a real terminal, discarding V(next). FIXED: env0 [3.3274, 2.4800], env1 [1.4653, 0.5000] — the truncated last step credits the future, the terminated one does not. The gate SKIPS while env0==env1 (bug present) and asserts the fixed closed-form; it also pins the terminated path unchanged so 'fixing' it by masking nothing is caught."
+  ex3:                     # ex3_bughunt_gae_truncation.py: the truncation-vs-termination GAE bug
+    provenance: "DETERMINISTIC closed-form GAE (torch 2.10.0; gamma 0.99, gae_lambda 0.95) on a fixed 2-step, 2-env trajectory: env0 truncated at t=1, env1 terminated at t=1, identical otherwise (rewards=1, values=0.5, bootstrap=2.0). Measured 2026-07-08. BUGGY (delta masks the bootstrap with `1-done` instead of `1-terminated`): both envs collapse to advantages [[1.4653,1.4653],[0.5,0.5]]. The truncated episode is scored as a real terminal, discarding V(next). FIXED: env0 [3.3274, 2.4800], env1 [1.4653, 0.5000]. The truncated last step credits the future, the terminated one does not. The gate SKIPS while env0==env1 (bug present) and asserts the fixed closed-form; it also pins the terminated path unchanged so 'fixing' it by masking nothing is caught."
     equal_atol: 0.01               # env0==env1 within this => bug still present (skip)
     trunc_last_adv: 2.48           # env0 (truncated) last-step advantage once fixed (bootstraps V(next)=2.0)
     trunc_first_adv: 3.3274        # env0 (truncated) t=0 advantage once fixed
-    term_last_adv: 0.5             # env1 (terminated) last-step advantage — unchanged by the fix (no bootstrap)
-    term_first_adv: 1.4653         # env1 (terminated) t=0 advantage — unchanged by the fix
+    term_last_adv: 0.5             # env1 (terminated) last-step advantage, unchanged by the fix (no bootstrap)
+    term_first_adv: 1.4653         # env1 (terminated) t=0 advantage, unchanged by the fix
     abs: 0.001                     # tolerance on the closed-form values
 
 # region_hashes: recorded by the site build (check_prose_code_drift recomputes
 # each region's sha256 and gates on drift). Omitted until this chapter is first
-# rendered — a chapter without region_hashes passes the drift gate by design.
+# rendered. A chapter without region_hashes passes the drift gate by design.
 
 # notebook_hash / notebook_file_hash: added by the notebook-tier-test skill when
 # the Colab variant is generated.
 
 notebook_hash: f2f8082a327ea36068b38fa1693b7213315e604d5b35c0786034677c9b12da60        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 5d4c263dde90432e412c0cf6b507ee787b0d5574ef6cbad42486b8bf99d70e3f   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 5d48f588a6a7e773effffcb8a462921f669fd770fd73a9a063e280a9dcdc0b15   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: ae0ecf7ecb12845d45f299b5cc976afa75cf1fe917f9310b0260ad969c765f1d

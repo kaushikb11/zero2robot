@@ -9,6 +9,7 @@
 // reading-progress bar (+ localStorage "read" marks) and the code-panel copy
 // buttons. Strip both and every page still reads completely.
 import SidebarNav from "../components/SidebarNav.astro";
+import OnThisPage from "../components/OnThisPage.astro";
 import SearchOverlay from "../components/search/SearchOverlay.tsx";
 import HelpOverlay from "../components/HelpOverlay.tsx";
 import { discoverChapters } from "../lib/curriculum.ts";
@@ -44,6 +45,7 @@ const chapters = discoverChapters();
       })();
     </script>
     <title>{title}</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="book" data-slug={currentSlug}>
@@ -64,6 +66,12 @@ const chapters = discoverChapters();
         </main>
         <slot name="prevnext" />
       </div>
+
+      {/* On-this-page section TOC — a sticky right rail on wide screens, built by
+          JS from the current page's heading ids. Renders hidden; the enhancer in
+          OnThisPage.astro reveals it (and flips .shell to .shell--has-toc) only
+          when the page has real sections. JS-off → stays hidden, two-column. */}
+      <OnThisPage />
     </div>
 
     <SearchOverlay client:only="preact" />
@@ -94,8 +102,22 @@ const chapters = discoverChapters();
         });
       }
 
+      // On deep chapters (5.x) the [aria-current] link sits below the fold of the
+      // independently-scrollable sidebar; center it on load so a reader can see
+      // where they are. `block:"center"` scrolls the sidebar, not the page (the
+      // sidebar is the nearest scroll container). Guarded to the sidebar so it
+      // never hijacks the page's own scroll position.
+      function revealCurrentInSidebar() {
+        const sidebar = document.querySelector(".sidebar");
+        const current = sidebar?.querySelector<HTMLElement>('.sidebar__link[aria-current="page"]');
+        if (current && sidebar && sidebar.scrollHeight > sidebar.clientHeight) {
+          current.scrollIntoView({ block: "center" });
+        }
+      }
+
       subscribe(decorateSidebar);
       decorateSidebar();
+      revealCurrentInSidebar();
       updateBar();
       window.addEventListener("scroll", updateBar, { passive: true });
       window.addEventListener("resize", updateBar, { passive: true });

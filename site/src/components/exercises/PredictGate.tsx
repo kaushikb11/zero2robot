@@ -5,13 +5,18 @@
  * ============================================================================
  * WHAT MAKES THIS HONEST (read before you touch it)
  * ----------------------------------------------------------------------------
- * 1. NO SPOILER PRE-COMMIT.  The answer, the reference metrics, and the run cell
- *    are NEVER rendered into the DOM until the learner commits a prediction.
- *    They arrive as props (so they live in the island's hydration payload, the
- *    Astro-endorsed channel — not as visible/readable text or in the a11y tree),
- *    and the reveal <div> is conditionally mounted only once `committed` is set.
- *    Grep this file: `answer`, `runCmd`, `refs` appear ONLY inside the
- *    `committed && (...)` reveal branch.
+ * 1. NO PRE-COMMIT SPOILER — HONOR SYSTEM, NOT A VAULT.  The answer, reference
+ *    metrics, and run cell are never rendered into the DOM (or the a11y tree)
+ *    until the learner commits a prediction: the reveal <div> mounts only once
+ *    `committed` is set. Grep this file — `answerText`, `runCmd`, `refs` appear
+ *    ONLY inside the `committed && (...)` reveal branch. But be honest about the
+ *    threat model: island props are serialized into the page's hydration payload,
+ *    which IS readable via View-Source. So the `answer` prop arrives
+ *    base64-encoded (see the bridge's _encode_answer) and is decoded client-side
+ *    ONLY here, inside the committed branch — casual View-Source before
+ *    committing shows `answer:"Qg=="`, not the letter. That is light obfuscation
+ *    to keep an honest learner honest, NOT integrity against a determined one
+ *    (runCmd/refs are still plaintext props; the local checks.py is the real key).
  * 2. SSR-SAFE.  No window/document/localStorage at module scope or in the
  *    initial render. The server renders the choices INERT (disabled radios +
  *    disabled commit button) — that is also the JS-off experience. All browser
@@ -42,6 +47,19 @@ interface Props {
 /** The exact key sibling feature F2 (completion tracking) reads. Do not change. */
 function storageKey(chapterSlug: string, exId: string): string {
   return `z2r:ex:${chapterSlug}:${exId}`;
+}
+
+/** Decode the base64-obfuscated `answer` prop (see the bridge's _encode_answer).
+ *  `atob` exists in the browser and in the Node SSR runtime; a payload that
+ *  isn't valid base64 (forward-compat / a legacy plaintext letter) falls back to
+ *  verbatim. The decoded letter only ever enters the DOM inside the committed
+ *  reveal branch, so this never leaks into the pre-commit / SSR output. */
+function decodeAnswer(encoded: string): string {
+  try {
+    return atob(encoded);
+  } catch {
+    return encoded;
+  }
 }
 
 /** Human labels for the reference metric keys we surface in the reveal. Anything
@@ -116,14 +134,17 @@ export default function PredictGate({
     }
   };
 
-  const isCorrect = committed === answer;
+  // Decoded once; used ONLY inside the committed reveal branch below (never
+  // rendered pre-commit, so the plaintext letter stays out of the SSR HTML).
+  const answerText = decodeAnswer(answer);
+  const isCorrect = committed === answerText;
 
   return (
     <div class="ex-gate" data-committed={committed ? "true" : "false"}>
       {/* visually-hidden announcement of the commit outcome (post-commit only) */}
       <div class="bk-sr" role="status" aria-live="polite">
         {committed
-          ? `Prediction committed: ${committed}. The measured answer is ${answer}. ` +
+          ? `Prediction committed: ${committed}. The measured answer is ${answerText}. ` +
             (isCorrect
               ? "That matches the measurement."
               : "That differs from the measurement — worth re-running to see why.")
@@ -174,7 +195,7 @@ export default function PredictGate({
             <span class="ex-reveal-mark" aria-hidden="true">
               {isCorrect ? "✓" : "→"}
             </span>
-            You predicted <b>{committed}</b>. The measured answer is <b>{answer}</b>
+            You predicted <b>{committed}</b>. The measured answer is <b>{answerText}</b>
             {isCorrect ? " — that matches." : " — worth re-running to see why."}
           </p>
 

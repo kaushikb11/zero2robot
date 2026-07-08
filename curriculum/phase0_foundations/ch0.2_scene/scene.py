@@ -45,7 +45,7 @@ parser.add_argument("--break", dest="break_it", choices=["none", "split-tee"], d
                     help="split-tee: author the T as TWO bodies instead of one welded body — watch it settle already split")
 args = parser.parse_args()
 
-banner("ch0.2-scene")  # startup contract: every artifact prints tier + measured wall-clock (to stdout, not metrics.json)
+banner("ch0.2-scene", device="cpu")  # pure-numpy/mujoco-CPU: honest cpu tier, never the host's mps/cuda. startup contract prints tier + measured wall-clock (to stdout, not metrics.json)
 settle_steps = 40  # let the seeded start pose come to rest before we push
 nudge_steps = 120 if args.smoke else args.steps  # smoke length is FIXED so CI can diff runs exactly
 args.out.mkdir(parents=True, exist_ok=True)

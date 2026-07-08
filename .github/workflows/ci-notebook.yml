@@ -6,6 +6,12 @@ jobs:
   execute:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # Job-level so the triage step's `if` can gate on it: secrets cannot be
+    # referenced directly in `if`, so we surface the key as an env var. When the
+    # secret is unset this is empty and the triage step is SKIPPED (not failed),
+    # so a missing key no longer masks the real notebook pass/fail signal.
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,9 +22,10 @@ jobs:
       - name: Execute all notebooks headless (CPU-sim smoke profile)
         run: python infra/ci/run_notebooks.py --profile cpu-smoke --fail-fast false --report infra/ci/reports/notebooks.json
       - name: File issues for failures (headless Claude)
-        if: failure()
+        # Only when notebooks failed AND the key exists; skipped (green) otherwise,
+        # so an unset key does not add a spurious red on top of the real signal.
+        if: ${{ failure() && env.ANTHROPIC_API_KEY != '' }}
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm install -g @anthropic-ai/claude-code

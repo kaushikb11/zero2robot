@@ -1,17 +1,17 @@
 id: ch4.2-corrections
 title: "Corrections: Human-in-the-Loop Data"
 artifact: dagger.py        # 337 LOC (measured); target ~250, hard cap 450
-task: pusht                # curriculum/common/envs/pusht — the ch1.1 env + its scripted expert (the corrector)
+task: pusht                # curriculum/common/envs/pusht, the ch1.1 env + its scripted expert (the corrector)
 dataset:
   reference: null          # DAgger generates its own data on-policy; the scripted expert labels it
   learner_path: false      # the browser-teleop follow-up is where the learner's own corrections enter
 phase_requires: [ch1.8, ch2.1, ch2.2, ch1.6]   # Phase 4 gate (curriculum map): VLA, PPO, SAC, eval harness
 objectives:
-  - Close the ch1.1 covariate-shift loop — FIX behavior cloning by correcting the policy on its own mistakes
+  - Close the ch1.1 covariate-shift loop: FIX behavior cloning by correcting the policy on its own mistakes
   - Implement the DAgger loop from scratch (rollout -> collect visited states -> expert-label -> aggregate -> retrain)
   - Explain why on-policy corrections cover the deployment states that more off-policy demos structurally cannot
-  - Grade the recovery honestly with Wilson intervals (ch1.6) — the BC-vs-DAgger gap is only real if the CIs separate
-  - See why the recovery is best-round-selected (on the held-out eval — a mild winner's curse that survives Bonferroni correction; see HONESTY), not monotonic — over-iterating a reactive clone regresses (Ross et al.)
+  - Grade the recovery honestly with Wilson intervals (ch1.6): the BC-vs-DAgger gap is only real if the CIs separate
+  - See why the recovery is best-round-selected (on the held-out eval, a mild winner's curse that survives Bonferroni correction; see HONESTY), not monotonic: over-iterating a reactive clone regresses (Ross et al.)
 scale_lab: false
 read_the_real_thing: true
 # read_the_real_thing block LEFT FOR THE AUTHOR. Anchor is the DAgger paper
@@ -24,14 +24,14 @@ demo: pusht_dagger_recovery   # hero: the success-vs-round recovery curve; follo
 
 # The honest framing (do not lose this in the voice pass): the scripted PushT
 # expert is the OFFLINE STAND-IN for a human teleoperator correcting via the
-# browser. The mechanism is identical — label the state the policy visits with a
-# good action — which is exactly why the stand-in is faithful. The browser-teleop
+# browser. The mechanism is identical: label the state the policy visits with a
+# good action, which is exactly why the stand-in is faithful. The browser-teleop
 # version (demo/embed.yaml follow-up) swaps the scripted labeler for the learner's
 # hand; nothing else in the loop changes.
 
 # Covariate shift is manufactured HONESTLY so it is measurable on the free tier
 # (the ch1.6 held-out device): BC demos come from a narrow start region (block
-# starts <= r_max from the goal — the demonstrator's limited practice set), but we
+# starts <= r_max from the goal, the demonstrator's limited practice set), but we
 # DEPLOY on the full annulus. BC never saw the far starts and covariate-shifts;
 # DAgger's on-policy corrections cover exactly those far starts.
 
@@ -48,32 +48,32 @@ reference_run:
   seed2_round_rates: [0.055, 0.160, 0.105, 0.185, 0.210]   # peak round 4; non-monotonic (dip at round 2)
   bc_rate_band: [0.055, 0.065]          # BC covariate-shift floor across seeds 0-2
   best_rate_band: [0.185, 0.215]        # best DAgger round across seeds 0-2 (peak round VARIES: 3,4,4)
-  recovery_diff_ci_seed0: [0.083, 0.217]  # best(DAgger3) - BC, Newcombe diff CI — EXCLUDES 0
-  recovery_diff_ci_seed1: [0.067, 0.194]  # best(DAgger4) - BC — EXCLUDES 0
-  recovery_diff_ci_seed2: [0.090, 0.221]  # best(DAgger4) - BC — EXCLUDES 0
-  note: "recovery SIGNIFICANT every seed 0-2 (best-round Wilson CI clears BC's, diff CI excludes 0); the peak round is NOT always the last — select the best round (Ross et al.)"
+  recovery_diff_ci_seed0: [0.083, 0.217]  # best(DAgger3) - BC, Newcombe diff CI, EXCLUDES 0
+  recovery_diff_ci_seed1: [0.067, 0.194]  # best(DAgger4) - BC, EXCLUDES 0
+  recovery_diff_ci_seed2: [0.090, 0.221]  # best(DAgger4) - BC, EXCLUDES 0
+  note: "recovery SIGNIFICANT every seed 0-2 (best-round Wilson CI clears BC's, diff CI excludes 0); the peak round is NOT always the last: select the best round (Ross et al.)"
   # HONESTY (winner's-curse caveat, added after adversarial review): the best round is
   # selected on the SAME held-out eval used for the diff CI (no separate validation split),
   # so the reported significance carries a mild selection bias. It is NOT an artifact: a
   # NON-selected round (round 2) already clears BC on its own, and the recovery survives
   # Bonferroni multiplicity correction over the rounds (round 3 [+0.064,+0.237], round 2
   # [+0.011,+0.171], both exclude 0). Author teaching-pass: either add a separate
-  # validation split for round selection, or keep this caveat explicit in the prose — do
+  # validation split for round selection, or keep this caveat explicit in the prose, do
   # NOT drop it, since honest CIs are this chapter's whole thesis.
 
 exercise_checks:
-  ex1:                     # ex1_predict_recovery.py — predict-then-run; trains BC+DAgger (slow, seeded)
+  ex1:                     # ex1_predict_recovery.py: predict-then-run; trains BC+DAgger (slow, seeded)
     provenance: "cpu, default config, seed 0 (deterministic); seeds 0-2 measured 2026-07-07: BC 0.055-0.065, best DAgger round 0.185-0.215, diff CI excludes 0 every seed"
     bc_rate_max: 0.12                    # BC covariate-shift floor (seed0 0.065) stays well under this
     best_rate_min: 0.14                  # the best DAgger round (seed0 0.215) reliably clears this
-  ex2:                     # ex2_investigate_rounds.py — investigation; success-vs-round curve
-    provenance: "cpu, default config, seed 0 (deterministic); measured 2026-07-07: round_rates [0.065,0.085,0.155,0.215,0.085] — peak round 3, regresses at 4"
-    peak_beats_last_min: 0.05            # seed0: peak (0.215) exceeds the LAST round (0.085) — the last is not the best
+  ex2:                     # ex2_investigate_rounds.py: investigation; success-vs-round curve
+    provenance: "cpu, default config, seed 0 (deterministic); measured 2026-07-07: round_rates [0.065,0.085,0.155,0.215,0.085]: peak round 3, regresses at 4"
+    peak_beats_last_min: 0.05            # seed0: peak (0.215) exceeds the LAST round (0.085): the last is not the best
 
 # region_hashes: sha256 of each region body (infra/ci/lib/regions.py); the
 # prose-code drift gate recomputes these from dagger.py and fails on mismatch.
 notebook_hash: 8eb2199ad13128aa980531c965592160da64187f9dde211f55c387e077aa1c2b        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 2518eb30d2335a849664a93c5c0bd00a1872142629154f6c317bbd375682d4ac   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 3180837125d772c9308cec60142e5323f6ce4cd4c92b3baaed89e8fbec0db276   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 329ddeb922c3699d94b12e2f36046ed3a8f8f45ea7354ef366a9c57da7a88517

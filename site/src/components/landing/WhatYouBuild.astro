@@ -1,0 +1,213 @@
+---
+// WhatYouBuild.astro — the "What you'll build" showcase strip (below the arc).
+//
+// SCOPE, honestly. The hero toy above sells the ONE covariate-shift "aha"; this
+// strip sells RANGE: six curated things a learner actually builds, read as one
+// system. A promoted 2x2 bento-hero (the quadruped) anchors a grid of five unit
+// cards spanning locomotion, manipulation, planning, a from-scratch physics
+// engine, a language-conditioned policy, and a real-arm deploy loop.
+//
+// HONESTY CONTRACT:
+//  · Every card links to a chapter that EXISTS (slug + number are derived from
+//    discoverChapters(), matched by the chapter's own `demo` key — never typed).
+//  · Every poster + replay is drawn from that chapter's real recorded
+//    curriculum/**/demo/vizdata.json (a real seeded run), through wyb-render.ts.
+//    Nothing is scripted or faked; the labels describe only what the run shows.
+//
+// POSTER-FIRST / JS-OFF / REDUCED-MOTION:
+//  · Each figure server-renders a complete static SVG poster (the run's honest
+//    end-state) + labels + a real link. With JS off, THAT is the card.
+//  · A light 2D-canvas replay of the recorded trajectory plays on hover
+//    (desktop) and keyboard :focus-visible, ONE card at a time, never autoplay.
+//  · Under prefers-reduced-motion: reduce, no motion ever starts; the poster
+//    stands alone.
+import { discoverChapters, REPO_ROOT } from "../../lib/curriculum.ts";
+import { normalize, shapesAt, shapesToSvg } from "./wyb-render.ts";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import "./what-you-build.css";
+
+// Card spec. `demo` matches a chapter's meta.yaml `demo:` (so the link can
+// never point at a chapter that isn't built). `kind` selects the renderer.
+// Titles are 2-4 words (the behaviour); outcomes are one concrete line, 6-12
+// words; both are honest to the recorded run. No em-dashes (author preference).
+const SPEC: {
+  demo: string; kind: string; hero?: boolean; title: string; outcome: string;
+}[] = [
+  { demo: "quadruped_walk", kind: "quad", hero: true,
+    title: "A quadruped walks",
+    outcome: "SAC finds a forward gait nobody scripted, and the torso travels." },
+  { demo: "pusher_sac_reach", kind: "arm",
+    title: "An arm reaches",
+    outcome: "Off-policy SAC solves the reach in far fewer samples than PPO." },
+  { demo: "mpc_fanout", kind: "cartpole",
+    title: "Plan through your engine",
+    outcome: "Sample action plans, roll each through your model, swing the pole up." },
+  { demo: "contact_quality", kind: "contact",
+    title: "Build a physics engine",
+    outcome: "From-scratch numpy contact: one solver holds, the naive one sinks." },
+  { demo: "vla_rollout", kind: "pusht",
+    title: "A language-driven policy",
+    outcome: "A language-conditioned policy pushes the T-block onto its target." },
+  { demo: "so101_reach_replay", kind: "reach",
+    title: "Deploy on a real arm",
+    outcome: "Teleoperate, record, train, deploy: the graduation loop, on the SO-101 body." },
+];
+
+const chapters = discoverChapters();
+const byDemo = new Map(chapters.filter((c) => c.demo).map((c) => [c.demo as string, c]));
+
+type Card = {
+  kind: string; hero: boolean; title: string; outcome: string;
+  href: string; tag: string; poster: string; payload: any;
+};
+
+const cards: Card[] = [];
+for (const s of SPEC) {
+  const ch = byDemo.get(s.demo);
+  if (!ch) continue; // defensive: skip a card whose chapter isn't built
+  let raw: any;
+  try {
+    raw = JSON.parse(readFileSync(resolve(REPO_ROOT, ch.chapterDir, "demo", "vizdata.json"), "utf-8"));
+  } catch {
+    continue; // no vizdata → skip rather than ship a broken tile
+  }
+  const payload = normalize(s.kind, raw);
+  cards.push({
+    kind: s.kind,
+    hero: !!s.hero,
+    title: s.title,
+    outcome: s.outcome,
+    href: `/${ch.slug}/`,
+    tag: `ch${ch.number}`,
+    poster: shapesToSvg(shapesAt(payload, 1)),
+    payload,
+  });
+}
+---
+
+<section class="wyb" aria-labelledby="wyb-title">
+  <header class="wyb__head">
+    <p class="ln-kicker">What you'll build</p>
+    <h2 class="wyb__title" id="wyb-title">Six things you build, not six demos you watch.</h2>
+    <p class="wyb__lede">
+      One runnable file per chapter, and this is the range: a learned gait, a
+      reaching arm, a planner, a physics engine written from scratch, a
+      language-conditioned policy, and the deploy loop for a real arm. Every tile
+      replays a real recorded run. Hover one, or tab to it, to watch it move.
+    </p>
+  </header>
+
+  <ul class="wyb__grid">
+    {
+      cards.map((c) => (
+        <li class:list={["wyb-card", c.hero && "wyb-card--hero"]} data-kind={c.kind}>
+          <a class="wyb-card__link" href={c.href}>
+            <figure class="wyb-figure">
+              <div class="wyb-poster" set:html={c.poster} />
+              <canvas class="wyb-canvas" aria-hidden="true" />
+              <span class="wyb-badge" aria-hidden="true">replay</span>
+            </figure>
+            <div class="wyb-meta">
+              <div class="wyb-meta__row">
+                <h3 class="wyb-card__title">{c.title}</h3>
+                <span class="wyb-tag">{c.tag}</span>
+              </div>
+              <p class="wyb-card__outcome">{c.outcome}</p>
+            </div>
+          </a>
+          <script type="application/json" class="wyb-data" is:inline set:html={JSON.stringify(c.payload)} />
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<script>
+  import { shapesAt, drawShapes, COLOR_VARS } from "./wyb-render.ts";
+  import type { ColorTok } from "./wyb-render.ts";
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const DUR = 3000; // ms per replay cycle
+  let activeStop: (() => void) | null = null; // enforces one-at-a-time playback
+
+  document.querySelectorAll<HTMLLIElement>(".wyb-card").forEach((card) => {
+    const canvas = card.querySelector<HTMLCanvasElement>(".wyb-canvas");
+    const dataEl = card.querySelector<HTMLScriptElement>(".wyb-data");
+    const link = card.querySelector<HTMLAnchorElement>(".wyb-card__link");
+    if (!canvas || !dataEl || !link) return;
+
+    let payload: any = null;
+    const ensure = () => {
+      if (!payload) {
+        try { payload = JSON.parse(dataEl.textContent || "null"); } catch { payload = null; }
+      }
+      return payload;
+    };
+
+    const resolve = (tok: ColorTok) =>
+      getComputedStyle(canvas).getPropertyValue(COLOR_VARS[tok]).trim() || "#888";
+
+    let raf = 0;
+    let started = 0;
+    let dims: { ctx: CanvasRenderingContext2D; W: number; H: number } | null = null;
+
+    function fit() {
+      const rect = canvas!.getBoundingClientRect();
+      if (rect.width < 2) return null;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas!.width = Math.round(rect.width * dpr);
+      canvas!.height = Math.round(rect.height * dpr);
+      const ctx = canvas!.getContext("2d");
+      if (!ctx) return null;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, W: rect.width, H: rect.height };
+    }
+
+    function loop() {
+      if (!payload || !dims) return;
+      const el = performance.now() - started;
+      // play 0->1 over 82% of the cycle, then hold the end-state before looping
+      const t = Math.min(1, (el % DUR) / (DUR * 0.82));
+      drawShapes(dims.ctx, shapesAt(payload, t), dims.W, dims.H, resolve);
+      raf = requestAnimationFrame(loop);
+    }
+
+    function stop() {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      card.classList.remove("is-playing");
+      if (dims) dims.ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+      if (activeStop === stop) activeStop = null;
+    }
+
+    function play() {
+      if (reduce.matches) return;
+      if (!ensure()) return;
+      if (activeStop && activeStop !== stop) activeStop();
+      activeStop = stop;
+      dims = fit();
+      if (!dims) return;
+      card.classList.add("is-playing");
+      started = performance.now();
+      loop();
+    }
+
+    // Lazy: only wire interaction once the card is near the viewport.
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          io.disconnect();
+          ensure();
+          card.addEventListener("pointerenter", play);
+          card.addEventListener("pointerleave", stop);
+          // keyboard only: :focus-visible gates the reveal, matching the CSS ring
+          link.addEventListener("focus", () => { if (link.matches(":focus-visible")) play(); });
+          link.addEventListener("blur", stop);
+        }
+      }
+    }, { rootMargin: "250px" });
+    io.observe(card);
+
+    reduce.addEventListener?.("change", (e) => { if (e.matches) stop(); });
+  });
+</script>

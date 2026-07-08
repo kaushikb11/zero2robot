@@ -87,6 +87,11 @@ export default function OfflineReachLive() {
     { dist: 0.176, reached: false }, { dist: 0.176, reached: false },
   ]);
   const [fps, setFps] = useState(0);
+  // running tally across targets: one reach is a coin-flip, so the AWAC edge only
+  // reads once it accumulates over many targets. sumA/sumB feed the mean-final-distance
+  // readout; awac/bc/ties count who landed closer per target.
+  const ZERO_TALLY = { awac: 0, bc: 0, ties: 0, n: 0, sumA: 0, sumB: 0 };
+  const [tally, setTally] = useState(ZERO_TALLY);
 
   useEffect(() => {
     let disposed = false;
@@ -96,6 +101,11 @@ export default function OfflineReachLive() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
         const [simMod, sceneMod, envMod, obsMod, inferMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
           import("../../../../playground/src/sim/scene"),
@@ -169,9 +179,26 @@ export default function OfflineReachLive() {
         setBooted(true);
         lanes.forEach(renderLane);
 
+        // score the target we are LEAVING (both arms have chased it to a settled
+        // distance) before handing them the next one, so the marginal AWAC edge on
+        // identical mixed data accumulates instead of reading as a per-target coin-flip.
+        // lanes[0] is AWAC, lanes[1] is BC (LANES order).
+        const scoreCurrent = () => {
+          const dA = lanes[0].env.dist();
+          const dB = lanes[1].env.dist();
+          setTally((t) => ({
+            awac: t.awac + (dA < dB ? 1 : 0),
+            bc: t.bc + (dB < dA ? 1 : 0),
+            ties: t.ties + (dA === dB ? 1 : 0),
+            n: t.n + 1,
+            sumA: t.sumA + dA,
+            sumB: t.sumB + dB,
+          }));
+        };
+
         apiRef.current = {
-          newTarget,
-          reset: () => { seed += 1; lanes.forEach((l) => l.env.reset(seed)); },
+          newTarget: () => { scoreCurrent(); newTarget(); },
+          reset: () => { seed += 1; lanes.forEach((l) => l.env.reset(seed)); setTally(ZERO_TALLY); },
         };
 
         (window as any).__toy = {
@@ -195,6 +222,9 @@ export default function OfflineReachLive() {
         };
 
         let frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0, lastFps = 0;
+
+        if (prefersReducedMotion) return; // reduced motion: one still frame already painted; do not spin the auto-driving loop. Interaction/reset handlers + __toy stay live.
+
         while (!disposed) {
           await nextFrame();
           const now = performance.now(); frames++;
@@ -223,6 +253,8 @@ export default function OfflineReachLive() {
   }, []);
 
   const failed = !!error;
+  const meanA = tally.n ? tally.sumA / tally.n : 0;
+  const meanB = tally.n ? tally.sumB / tally.n : 0;
 
   return (
     <div class="or">
@@ -246,6 +278,49 @@ export default function OfflineReachLive() {
               </figcaption>
             </figure>
           ))}
+        </div>
+
+        {/* Running tally across targets: the marginal edge, made to read. A single
+            reach is a coin-flip (both arms often miss identically, and BC "wins" plenty
+            of individual targets); the AWAC advantage on identical mixed data only shows
+            up in the accumulated closer-count and the mean final distance. Visual figures
+            are aria-hidden (the sr path is the sentence below). */}
+        <div class="or-tally" aria-hidden="true" hidden={!booted || failed}>
+          {tally.n === 0 ? (
+            <span class="or-tally-hint">
+              press “new target” to build a running tally: on the same mixed data the AWAC edge shows up across many targets, not in any one reach.
+            </span>
+          ) : (
+            <>
+              <div class="or-tally-row">
+                <span class="or-tally-label">closer to target</span>
+                <span class="or-tally-counts">
+                  <span style="color:#1f56de">AWAC {tally.awac}</span>
+                  {" · "}
+                  <span style="color:#b0560f">BC {tally.bc}</span>
+                  {tally.ties > 0 ? <span>{" · "}ties {tally.ties}</span> : null}
+                  {" "}
+                  <span class="or-tally-n">({tally.n} target{tally.n === 1 ? "" : "s"})</span>
+                </span>
+              </div>
+              <div class="or-tally-row">
+                <span class="or-tally-label">mean final distance</span>
+                <span class="or-tally-counts">
+                  <span style="color:#1f56de">AWAC {meanA.toFixed(3)} m</span>
+                  {" · "}
+                  <span style="color:#b0560f">BC {meanB.toFixed(3)} m</span>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Tally read out for screen readers, announced only when it changes (on each
+            new target), never per-frame. */}
+        <div class="bk-sr" aria-live="polite">
+          {booted && !failed && tally.n > 0
+            ? `Running tally over ${tally.n} target${tally.n === 1 ? "" : "s"}: AWAC landed closer on ${tally.awac}, behaviour cloning on ${tally.bc}${tally.ties > 0 ? `, tied on ${tally.ties}` : ""}. Mean final distance: AWAC ${meanA.toFixed(3)} metres, behaviour cloning ${meanB.toFixed(3)} metres.`
+            : ""}
         </div>
 
         {/* Qualitative, STABLE announcement. The fingertip distances update every

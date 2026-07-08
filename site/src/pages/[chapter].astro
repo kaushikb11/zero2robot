@@ -20,11 +20,12 @@ import RTRT from "../components/RTRT.astro";
 import OpenInColab from "../components/OpenInColab.astro";
 import {
   discoverChapters,
+  discoverFurther,
   extractRegions,
-  regionHashes,
   wallclock,
   readProse,
   type ChapterInfo,
+  type FurtherModule,
 } from "../lib/curriculum.ts";
 import { renderChapterProse, wallclockTableHtml } from "../lib/prose.ts";
 
@@ -32,27 +33,57 @@ import { renderChapterProse, wallclockTableHtml } from "../lib/prose.ts";
 // render as "not yet measured" (honest, never an estimate).
 const TIERS = ["cpu-laptop", "mps", "t4", "4090"];
 
+// One journey, not a chapter list that dead-ends: after the last chapter (5.8)
+// the "Next" arrow carries into the practitioner reading track and then the
+// graduation bridge (p1→p2→p3→g1→g2→g3), rather than snapping to null right at
+// the reward. PrevNext takes generic {href,label,kicker} links so a chapter can
+// point at either a sibling chapter or a further-reading module.
+interface NavLink {
+  href: string;
+  label: string;
+  kicker?: string;
+}
+
 export async function getStaticPaths() {
+  // Helpers live INSIDE getStaticPaths: Astro hoists this function above the
+  // frontmatter consts, so referencing module-scope consts here would hit their
+  // temporal dead zone.
+  const chapterLink = (c: ChapterInfo): NavLink => ({
+    href: `/${c.slug}/`,
+    label: `${c.number} · ${c.title}`,
+    kicker: c.phaseLabel,
+  });
+  const moduleLink = (m: FurtherModule): NavLink => ({
+    href: `/further/${m.track}/${m.slug}/`,
+    label: m.badge ? `${m.badge} · ${m.title}` : m.title,
+    kicker: m.trackLabel,
+  });
+
   const chapters = discoverChapters();
-  return chapters.map((chapter, i) => ({
-    params: { chapter: chapter.slug },
-    props: {
-      chapter,
-      prev: i > 0 ? chapters[i - 1] : null,
-      next: i < chapters.length - 1 ? chapters[i + 1] : null,
-    },
-  }));
+  const further = discoverFurther(); // [p1,p2,p3,g1,g2,g3] — track then filename order
+  return chapters.map((chapter, i) => {
+    const prev: NavLink | null = i > 0 ? chapterLink(chapters[i - 1]) : null;
+    const next: NavLink | null =
+      i < chapters.length - 1
+        ? chapterLink(chapters[i + 1])
+        : further.length > 0
+          ? moduleLink(further[0]) // last chapter → first further module
+          : null;
+    return {
+      params: { chapter: chapter.slug },
+      props: { chapter, prev, next },
+    };
+  });
 }
 
 interface Props {
   chapter: ChapterInfo;
-  prev: ChapterInfo | null;
-  next: ChapterInfo | null;
+  prev: NavLink | null;
+  next: NavLink | null;
 }
 const { chapter, prev, next } = Astro.props;
 
 const regions = extractRegions(chapter.artifactPath);
-const hashes = regionHashes(regions);
 const wall = wallclock(chapter.id, TIERS);
 const proseMarkdown = readProse(`${chapter.chapterDir}/prose/chapter.md`);
 
@@ -118,27 +149,6 @@ const [titleMain, titleSub] = chapter.title.includes(":")
     )
   }
 
-  {
-    Object.keys(hashes).length > 0 && (
-      <footer class="bk-colophon">
-        <h2>Colophon · provenance</h2>
-        <p>
-          The code on this page is not pasted — each panel is included by region straight from
-          <code>{chapter.artifactBasename}</code>, and these fingerprints are its sha256, the same
-          ones <code>check_prose_code_drift</code> re-checks on every PR. Edit a shown region without
-          re-rendering and CI turns red.
-        </p>
-        <dl>
-          {Object.entries(hashes).map(([name, sha]) => (
-            <>
-              <dt>#{name}</dt>
-              <dd>{sha}</dd>
-            </>
-          ))}
-        </dl>
-      </footer>
-    )
-  }
 
   <PrevNext slot="prevnext" prev={prev} next={next} />
 </ChapterLayout>

@@ -44,13 +44,13 @@ function PosterBot({ x, label, sub }: { x: number; label: string; sub: string })
   const torsoY = groundY - 0.24 * 150;
   return (
     <g transform={`translate(${x} 0)`}>
-      <line class="dr-ground" x1={0} y1={groundY} x2={180} y2={groundY} />
-      <rect class="dr-torso" x={62} y={torsoY - 10} width={80} height={20} rx={4} />
-      <circle class="dr-head" cx={146} cy={torsoY} r={4} />
-      <polyline class="dr-leg" points={`120,${torsoY + 6} 128,${groundY - 22} 122,${groundY}`} />
-      <polyline class="dr-leg" points={`72,${torsoY + 6} 64,${groundY - 22} 70,${groundY}`} />
-      <text class="dr-poster-lbl" x={90} y={groundY + 22} text-anchor="middle">{label}</text>
-      <text class="dr-poster-sub" x={90} y={groundY + 38} text-anchor="middle">{sub}</text>
+      <line class="dl-ground" x1={0} y1={groundY} x2={180} y2={groundY} />
+      <rect class="dl-torso" x={62} y={torsoY - 10} width={80} height={20} rx={4} />
+      <circle class="dl-head" cx={146} cy={torsoY} r={4} />
+      <polyline class="dl-leg" points={`120,${torsoY + 6} 128,${groundY - 22} 122,${groundY}`} />
+      <polyline class="dl-leg" points={`72,${torsoY + 6} 64,${groundY - 22} 70,${groundY}`} />
+      <text class="dl-poster-lbl" x={90} y={groundY + 22} text-anchor="middle">{label}</text>
+      <text class="dl-poster-sub" x={90} y={groundY + 38} text-anchor="middle">{sub}</text>
     </g>
   );
 }
@@ -58,7 +58,7 @@ function PosterBot({ x, label, sub }: { x: number; label: string; sub: string })
 function Poster() {
   return (
     <svg
-      class="dr-poster-svg"
+      class="dl-poster-svg"
       viewBox="0 0 400 300"
       role="img"
       aria-label="Two four-legged robots side by side under the same shifted physics. One was trained on nominal dynamics only, the other across a band of mass, friction, and gravity. With JavaScript on, drag a mass slider: across most of the range both stand alike, and past about 1.2 times mass both fall — domain randomization buys robustness across a range, not a stronger robot."
@@ -69,7 +69,7 @@ function Poster() {
         break them: across most of the range they behave alike, and past ~1.2× mass
         both fall — the within-band honesty of what randomization can and cannot buy.
       </desc>
-      <rect class="dr-arena" x={1} y={1} width={398} height={298} rx={6} />
+      <rect class="dl-arena" x={1} y={1} width={398} height={298} rx={6} />
       <PosterBot x={10} label="narrow policy" sub="nominal dynamics only" />
       <PosterBot x={210} label="randomized policy" sub="trained across the band" />
     </svg>
@@ -97,6 +97,10 @@ function DrToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         const [simMod, sceneMod, envMod, obsMod, inferMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
           import("../../../../playground/src/sim/scene"),
@@ -204,6 +208,9 @@ function DrToy() {
         };
 
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
+        // Reduced motion: both panels show their standing still frame and the mass
+        // slider + __toy hooks stay live; don't spin the auto-driving rAF loop.
+        if (prefersReducedMotion) return;
         while (!disposed) {
           await nextFrame();
           const now = performance.now();
@@ -265,29 +272,29 @@ function DrToy() {
     <div class="dr">
       <figure
         ref={figureRef}
-        class="dr-figure"
+        class="dl-figure"
         tabIndex={0}
         role="application"
         aria-label="Interactive domain-randomization toy. Two four-legged robots under the same shifted physics — one trained narrow, one randomized. Focus here and use the arrow keys, or drag the slider below, to change the mass scale and watch where each holds and where it falls. Press R to re-run at the current mass."
         onKeyDown={onKeyDown}
       >
-        <div class="dr-poster" hidden={booted}><Poster /></div>
-        <div class="dr-panels" hidden={!booted} aria-hidden="true">
-          <div class="dr-panel">
-            <canvas ref={narrowCanvas} class="dr-canvas" />
+        <div class="dl-poster" hidden={booted}><Poster /></div>
+        <div class="dl-panels" hidden={!booted} aria-hidden="true">
+          <div class="dl-panel">
+            <canvas ref={narrowCanvas} class="dl-canvas" />
             {booted && !failed && (
-              <div class="dr-cap dr-cap--narrow">
-                <span class="dr-cap-title">narrow (nominal only)</span>
-                <span class="dr-cap-num" data-fell={hud.narrow.fell}>height {hud.narrow.height.toFixed(3)} m · {statusText(hud.narrow)}</span>
+              <div class="dl-cap dl-cap--narrow">
+                <span class="dl-cap-title">narrow (nominal only)</span>
+                <span class="dl-cap-num" data-fell={hud.narrow.fell}>height {hud.narrow.height.toFixed(3)} m · {statusText(hud.narrow)}</span>
               </div>
             )}
           </div>
-          <div class="dr-panel">
-            <canvas ref={randCanvas} class="dr-canvas" />
+          <div class="dl-panel">
+            <canvas ref={randCanvas} class="dl-canvas" />
             {booted && !failed && (
-              <div class="dr-cap dr-cap--rand">
-                <span class="dr-cap-title">randomized (across the band)</span>
-                <span class="dr-cap-num" data-fell={hud.rand.fell}>height {hud.rand.height.toFixed(3)} m · {statusText(hud.rand)}</span>
+              <div class="dl-cap dl-cap--rand">
+                <span class="dl-cap-title">randomized (across the band)</span>
+                <span class="dl-cap-num" data-fell={hud.rand.fell}>height {hud.rand.height.toFixed(3)} m · {statusText(hud.rand)}</span>
               </div>
             )}
           </div>
@@ -299,7 +306,7 @@ function DrToy() {
             : ""}
         </div>
 
-        <div class="dr-status" data-failed={failed} aria-hidden="true">
+        <div class="dl-status" data-failed={failed} aria-hidden="true">
           {failed ? (
             <span>sim failed — the Colab path covers this without WASM</span>
           ) : booted ? (
@@ -313,20 +320,20 @@ function DrToy() {
         </div>
       </figure>
 
-      <div class="dr-controls">
-        <label class="dr-slider-lbl">
+      <div class="dl-controls">
+        <label class="dl-slider-lbl">
           mass scale
           <input
-            type="range" class="dr-slider" min={MASS_MIN} max={MASS_MAX} step={0.05} value={mass}
+            type="range" class="dl-slider" min={MASS_MIN} max={MASS_MAX} step={0.05} value={mass}
             onInput={onMass} disabled={!booted || failed}
             aria-label="mass scale — the shifted dynamics both policies run under"
           />
-          <span class="dr-slider-val">{mass.toFixed(2)}×</span>
+          <span class="dl-slider-val">{mass.toFixed(2)}×</span>
         </label>
-        <button type="button" class="dr-btn" onClick={() => apiRef.current?.rerun()} disabled={!booted || failed}>
+        <button type="button" class="dl-btn" onClick={() => apiRef.current?.rerun()} disabled={!booted || failed}>
           re-run at this mass
         </button>
-        <span class="dr-control-note">
+        <span class="dl-control-note">
           within-band: DR buys a RANGE, not a stronger robot · poster reads with JS off
         </span>
       </div>

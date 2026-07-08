@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import json
 import re
 import sys
@@ -157,6 +158,11 @@ def cmd_meta(root: Path, chapter_rel: str) -> int:
     # gate; older callers ignore them.
     print(json.dumps({
         "id": chapter.id,
+        # `number` is an OPTIONAL display override: the site normally derives the
+        # chapter number from the id, but an id whose numeric prefix isn't the map
+        # number (e.g. `ch4-offline-primer` -> a bare "4") can set it explicitly.
+        # Verbatim, null when absent; additive, ignored by the gates.
+        "number": (str(m["number"]) if m.get("number") is not None else None),
         "title": m.get("title"),
         "artifact": m.get("artifact"),
         "objectives": [_objective_str(o) for o in (m.get("objectives") or [])],
@@ -282,6 +288,79 @@ def _answer_key_from_checks(suggested_dir: Path) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+# Every candidate's docstring opens with the same self-describing boilerplate
+# ("SUGGESTED exercise candidate (humans promote) — <type>, chX.") — identical
+# across cards and already echoing the type badge, so it makes a useless title.
+# The real per-exercise summary is the "Objective tested:" paragraph the authors
+# write next; promote its first sentence to the card title instead.
+_OBJECTIVE_LABEL = re.compile(r"^\s*objective tested:\s*(.*)$", re.IGNORECASE)
+_FIRST_SENTENCE = re.compile(r"^(.*?[.!?])(?:\s|$)", re.DOTALL)
+
+
+def _first_sentence(text: str, cap: int = 200) -> str:
+    """First sentence of `text` (whitespace-collapsed); else the text capped at a
+    word boundary. Distills a one-line card title from a prose paragraph."""
+    collapsed = " ".join(text.split())
+    m = _FIRST_SENTENCE.match(collapsed)
+    sentence = m.group(1).strip() if m else collapsed
+    if len(sentence) > cap:
+        sentence = sentence[:cap].rsplit(" ", 1)[0].rstrip() + "…"
+    if sentence and sentence[0].islower():
+        sentence = sentence[0].upper() + sentence[1:]
+    return sentence
+
+
+def _title_from_docstring(docstring: str, fallback: str) -> str:
+    """The card title: the first sentence of the "Objective tested:" paragraph,
+    or — when a candidate has none — the first sentence of the first body
+    paragraph after the boilerplate first line. Never the boilerplate line
+    itself (it is identical across cards and duplicates the type badge)."""
+    lines = docstring.splitlines()
+    i = 0
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    if i < len(lines):
+        i += 1  # skip the self-describing boilerplate first line
+    body = lines[i:]
+
+    # Prefer the "Objective tested:" paragraph, wherever it sits in the body.
+    for idx, line in enumerate(body):
+        m = _OBJECTIVE_LABEL.match(line)
+        if m:
+            para = [m.group(1)]
+            for nxt in body[idx + 1:]:
+                if not nxt.strip():
+                    break
+                para.append(nxt)
+            title = _first_sentence(" ".join(para))
+            if title:
+                return title
+            break
+
+    # Fallback: the first non-empty body paragraph.
+    para: list[str] = []
+    for line in body:
+        if line.strip():
+            para.append(line)
+        elif para:
+            break
+    if para:
+        title = _first_sentence(" ".join(para))
+        if title:
+            return title
+    return fallback
+
+
+def _encode_answer(letter: str) -> str:
+    """Base64 the recorded answer so it is not human-readable in the island's
+    serialized hydration payload (visible via View-Source). This is light
+    obfuscation — an honor-system gate, NOT cryptographic integrity: a determined
+    reader can trivially decode it. PredictGate decodes it client-side, and only
+    inside the post-commit reveal branch, so a learner who hasn't predicted yet
+    does not find a plaintext answer letter in the page source."""
+    return base64.b64encode(letter.encode("utf-8")).decode("ascii")
+
+
 def _refs_for(ex_id: str, exercise_checks: dict) -> dict | None:
     """Per-exercise reference metrics + provenance from meta.yaml's
     `exercise_checks:` block. The `answer` sub-key is surfaced separately, so it
@@ -310,7 +389,7 @@ def _parse_exercise(path: Path, chapter_rel: str, answer_key: dict,
     ex_id = id_match.group(1)
 
     docstring = ast.get_docstring(tree) or ""
-    title = next((ln.strip() for ln in docstring.splitlines() if ln.strip()), path.stem)
+    title = _title_from_docstring(docstring, fallback=path.stem)
     metadata = _literal_assign(tree, "METADATA")
     metadata = metadata if isinstance(metadata, dict) else None
 
@@ -324,7 +403,9 @@ def _parse_exercise(path: Path, chapter_rel: str, answer_key: dict,
         gate_before_run = bool(metadata.get("gate_before_run", False))
 
     # Answer only makes sense for the predict-then-run archetype; pull it from
-    # checks.py's ANSWER_KEY first, then meta.yaml's per-exercise `answer:`.
+    # checks.py's ANSWER_KEY first, then meta.yaml's per-exercise `answer:`. It is
+    # base64-encoded before it leaves the bridge so the letter is not readable in
+    # the island's serialized props before the learner commits (see _encode_answer).
     answer = None
     if ex_type == "predict-then-run":
         candidate = answer_key.get(ex_id)
@@ -333,7 +414,7 @@ def _parse_exercise(path: Path, chapter_rel: str, answer_key: dict,
             if isinstance(block, dict):
                 candidate = block.get("answer")
         if isinstance(candidate, str):
-            answer = candidate
+            answer = _encode_answer(candidate)
 
     return {
         "id": ex_id,

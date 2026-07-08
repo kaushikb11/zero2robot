@@ -11,7 +11,7 @@ below exists, to protect that.
 | `curriculum/` | Chapter code + prose. **THE PRODUCT.** One runnable file per chapter, plus its prose, exercises, tests, demo config, and `meta.yaml`. Strictest rules apply. |
 | `site/` | The interactive textbook (Astro). Renders each chapter from `curriculum/**/prose/chapter.md` + `meta.yaml` — it never holds prose of its own. Live sim embeds + code panels + exercise blocks. |
 | `playground/` | MuJoCo-WASM browser playground, teleop UI, ONNX inference (TypeScript). |
-| `grader/` | The exercise auto-checker (`python -m grader.check`) and the hidden-seed leaderboard grading server (Python/FastAPI). |
+| `grader/` | The exercise auto-checker (`python -m grader.check`): runs a chapter's public exercise checks locally, offline. |
 | `infra/` | CI gates, deploy/publish tooling, telemetry, the decision log, agentic metrics. |
 | `notebooks/` | Generated Colab variants of chapter code. **Never hand-edited** — regenerated via the `notebook-tier-test` skill and hash-checked in CI. |
 | `datasets/`, `checkpoints/` | Pointers/manifests only (`datasets.yaml`, `models.yaml`). Artifacts live on the Hugging Face Hub. Never commit binaries. |
@@ -101,4 +101,4 @@ Three lanes (see `.github/workflows/`):
 
 Ownership boundaries baked into the gates: `curriculum/**/prose/` and `curriculum/**/tests/`
 are **human-owned** — agents may fix factual/code-sync issues in prose only via `prose-sync`
-PRs, and never modify tests or `grader/hidden_seeds/`.
+PRs, and never modify tests.

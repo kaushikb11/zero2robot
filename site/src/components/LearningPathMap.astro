@@ -13,9 +13,8 @@
 //    phase_requires / policy_reused) via lib/curriculum-graph.ts. An edge is
 //    drawn only when both endpoints resolve to a built chapter. We never invent
 //    a thread the data does not declare.
-//  · Phase 4's leaderboard capstone is graded on hidden seeds, so its remaining
-//    chapters are not built/linkable — shown as ONE honest "gated" marker (no
-//    invented titles), mirroring the landing arc.
+//  · Every Phase 4 (Post-Training) chapter is built and links to a real page,
+//    just like the rest of the map.
 //
 // LAYOUT: a hand-rolled layered layout (no d3/cytoscape, no new deps). Every
 // coordinate is computed at build time in a fixed px space; nodes are absolutely
@@ -30,7 +29,7 @@
 // JavaScript off (or a screen reader) the map reads as a plain list. The only
 // <script> is progressive enhancement: focus/hover highlights a chapter's
 // prerequisite and unblocked threads. Reduced-motion is honoured in CSS.
-import { discoverChapters, chaptersByPhase, type ChapterInfo } from "../lib/curriculum.ts";
+import { discoverChapters, discoverFurther, chaptersByPhase, type ChapterInfo } from "../lib/curriculum.ts";
 import { buildGraph, REL_LABEL, type GraphEdge } from "../lib/curriculum-graph.ts";
 import "./learning-path.css";
 
@@ -39,6 +38,36 @@ const groups = chaptersByPhase(chapters);
 const { edges, prereqOf, unblockOf } = buildGraph(chapters);
 
 const byId = new Map(chapters.map((c) => [c.id, c]));
+
+// --- "Start here" entry points (DERIVED, never hard-coded) ------------------
+// The map is a graph, so a newcomer needs a path-chooser before the "how it
+// connects" reference. Three honest doors, each resolved from the real
+// curriculum: read from the top (first chapter, 0.0), skip the on-ramp (first
+// Phase-1 chapter), or jump straight to the payoff (first graduation module). A
+// door renders only when its target exists — we never invent one.
+const startChapter = chapters[0] ?? null;
+const phase1First = chapters.find((c) => /^phase1/.test(c.phaseKey)) ?? null;
+const graduationFirst = discoverFurther().find((m) => m.track === "graduation") ?? null;
+const starts = [
+  startChapter && {
+    href: `/${startChapter.slug}/`,
+    lead: "New here",
+    rest: `read ${startChapter.number} and go in order`,
+    note: "the whole path, front to back — no prerequisites",
+  },
+  phase1First && {
+    href: `/${phase1First.slug}/`,
+    lead: "Know ML already",
+    rest: `skip to Phase 1 (${phase1First.number})`,
+    note: "start where the robot learning does",
+  },
+  graduationFirst && {
+    href: `/further/${graduationFirst.track}/${graduationFirst.slug}/`,
+    lead: "Just want a real arm",
+    rest: "jump to Graduation",
+    note: "the go-build bridge to hardware",
+  },
+].filter((x): x is NonNullable<typeof x> => Boolean(x));
 
 // --- main line vs optional Depth (DERIVED from meta.yaml `track:`) ----------
 // A chapter is off the main line when its meta declares `track: elective`; a
@@ -82,18 +111,7 @@ groups.forEach((g, phaseIndex) => {
   });
 });
 
-// Phase 4 gets one honest "gated capstone" marker below its built chapters.
-const PHASE4_KEY = "phase4_capstone";
-const phase4Index = groups.findIndex((g) => g.phaseKey === PHASE4_KEY);
-const gatedRow = phase4Index >= 0 ? groups[phase4Index].chapters.length : 0;
-const gated =
-  phase4Index >= 0
-    ? { x: colX(phase4Index), y: rowY(gatedRow) }
-    : null;
-
-const maxRows = Math.max(
-  ...groups.map((g, i) => g.chapters.length + (i === phase4Index ? 1 : 0)),
-);
+const maxRows = Math.max(...groups.map((g) => g.chapters.length));
 const boardW = PADX * 2 + groups.length * NW + (groups.length - 1) * CG;
 const boardH = PADY * 2 + HEADER + maxRows * NH + (maxRows - 1) * RG;
 
@@ -131,7 +149,7 @@ function ariaFor(ch: ChapterInfo): string {
   const pre = prereqOf.get(ch.id) ?? [];
   const unb = unblockOf.get(ch.id) ?? [];
   const parts = [`Chapter ${ch.number}, ${ch.title}`];
-  if (isElective(ch)) parts.push("optional Depth — off the main line, not required by the capstone");
+  if (isElective(ch)) parts.push("optional Depth — off the main line, not required downstream");
   if (pre.length) parts.push(`prerequisites: ${pre.map((id) => num(id)).join(", ")}`);
   if (unb.length) parts.push(`unblocks: ${unb.map((id) => num(id)).join(", ")}`);
   return parts.join(". ") + ".";
@@ -140,12 +158,30 @@ function ariaFor(ch: ChapterInfo): string {
 const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
   { rel: "builds_on", hint: "direct sequel — reuses the prior chapter's code" },
   { rel: "requires", hint: "hard map prerequisite" },
-  { rel: "phase_requires", hint: "Phase-4 gate — the capstone assumes it" },
+  { rel: "phase_requires", hint: "Phase-4 prerequisite — Post-Training assumes it" },
   { rel: "policy_reused", hint: "optionally runs an earlier chapter's trained policy" },
 ];
 ---
 
 <section class="lp" aria-labelledby="lp-title" id="learning-path">
+  {starts.length > 0 && (
+    <nav class="lp-start" aria-label="Start here — pick where to begin">
+      <p class="lp-start__label">Start here</p>
+      <ul class="lp-start__opts">
+        {starts.map((s) => (
+          <li class="lp-start__opt">
+            <a class="lp-start__link" href={s.href}>
+              <span class="lp-start__lead">{s.lead}</span>
+              <span class="lp-start__rest">{s.rest} <span class="lp-start__arrow" aria-hidden="true">→</span></span>
+              <span class="lp-start__note">{s.note}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="lp-start__ref">Not sure how it all fits? The map below is the reference — every chapter and what it unlocks.</p>
+    </nav>
+  )}
+
   <header class="lp__head">
     <p class="lp-kicker">The dependency map</p>
     <h2 class="lp__title" id="lp-title">How the chapters actually connect.</h2>
@@ -161,7 +197,7 @@ const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
         The <strong>main line runs {mainLine}</strong> — a complete “empty file →
         real robot” journey on its own. Columns marked
         <span class="lp-opt-chip">optional · Depth</span> sit off it: self-contained
-        electives you take when the itch strikes. The capstone requires none of them.
+        electives you take when the itch strikes. The main line requires none of them.
       </p>
     )}
 
@@ -281,21 +317,6 @@ const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
         }),
       )}
 
-      {/* honest gated-capstone marker (not a chapter, not a link) */}
-      {gated && (
-        <div
-          class="lp-node lp-node--gated"
-          role="note"
-          aria-label="Phase 4 leaderboard capstone — gated on the hidden-seed grading server; not linkable yet"
-          style={`left:${gated.x}px;top:${gated.y}px;width:${NW}px;height:${NH}px;`}
-        >
-          <span class="lp-node__num">4·▸</span>
-          <span class="lp-node__title">Leaderboard capstone</span>
-          <span class="lp-node__wires" aria-hidden="true">
-            <span class="lp-node__wire lp-node__wire--gated">coming · gated</span>
-          </span>
-        </div>
-      )}
     </div>
   </div>
 
@@ -319,7 +340,7 @@ const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
           </h4>
           {phaseIsOptional(g) && (
             <p class="lp-outline__optnote">
-              Off the main line ({mainLine}) — self-contained electives; the capstone requires none of them.
+              Off the main line ({mainLine}) — self-contained electives; the main line requires none of them.
             </p>
           )}
           <ul class="lp-outline__list">
@@ -354,16 +375,6 @@ const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
           </ul>
         </li>
       ))}
-      {gated && (
-        <li class="lp-outline__phase lp-outline__phase--gated">
-          <p class="lp-outline__gate">
-            <span class="lp-outline__gatetag">coming · gated</span>
-            Phase 4's leaderboard capstone is graded against hidden seeds, so those
-            chapters open only once the grading server ships. They aren't linkable
-            yet, and we won't pretend they are.
-          </p>
-        </li>
-      )}
     </ol>
 
     <h3 class="lp-static__title">Every thread</h3>

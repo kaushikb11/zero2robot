@@ -108,15 +108,19 @@ async function main(): Promise<void> {
   const meters = new Meters(metersEl);
 
   // --- quality-tier auto-degrade ----------------------------------------------
-  // Pin the ON-SCREEN size to the base backing-store size so that when a slow
-  // device forces a lower render tier we shrink the pixel COUNT (cheaper fills)
-  // without shrinking the visible canvas. worldToPx uses canvas.width and
-  // eventToWorld normalizes by rect.width, so both render and pointer mapping
-  // stay correct at any backing-store resolution.
+  // The ON-SCREEN size is responsive: the base width on desktop, but never wider
+  // than the viewport on a phone (max-width:100%), with height:auto keeping it
+  // square. This is the CSS *display* size only — decoupled from the backing
+  // store. When a slow device forces a lower render tier we shrink the pixel
+  // COUNT (cheaper fills, canvas.width/height below) without changing the visible
+  // size. worldToPx uses canvas.width and eventToWorld normalizes by rect.width,
+  // so both render and pointer mapping stay correct at any backing-store
+  // resolution AND any display size.
   const BASE_W = canvas.width;
   const BASE_H = canvas.height;
   canvas.style.width = `${BASE_W}px`;
-  canvas.style.height = `${BASE_H}px`;
+  canvas.style.maxWidth = '100%';
+  canvas.style.height = 'auto';
   let renderFrameSkip = 0; // repaint every (renderFrameSkip + 1)th frame
   let renderSkipCounter = 0;
   const quality = new QualityController({
@@ -220,10 +224,21 @@ async function main(): Promise<void> {
       `pos_err ${posErr.toFixed(3)} m · ang_err ${angErr.toFixed(3)} rad · ${recTxt}${successTxt}`;
   }
 
+  function syncImageLock(): void {
+    // z2r-teleop-1 image recording is all-or-nothing across the WHOLE buffer
+    // (serializeInterchange throws if some episodes carry frames and others do
+    // not). Once the first episode is in the buffer, lock the "record 96×96
+    // frames" checkbox so a mid-buffer toggle can't produce a mixed buffer that
+    // fails at Download and loses every recorded episode. Unlocks only when the
+    // buffer is cleared (a successful download, below).
+    chkImages.disabled = recorder.episodeCount > 0;
+  }
+
   function startRecording(): void {
     env.reset(nextSeed());
     recorder.startEpisode();
     recording = true;
+    syncImageLock(); // episode is now in the buffer — lock the images toggle
     btnRecord.classList.add('active');
     btnRecord.textContent = '■ Stop recording';
   }
@@ -270,6 +285,7 @@ async function main(): Promise<void> {
       fail('interchange download', err);
     } finally {
       btnDownload.disabled = recorder.episodeCount === 0;
+      syncImageLock(); // buffer cleared on success -> re-enable the images toggle
     }
   });
 

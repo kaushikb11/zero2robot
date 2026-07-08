@@ -18,11 +18,14 @@
         padding: 16px;
       }
       h1 { font-size: 14px; font-weight: 600; margin: 0; }
-      #stage { position: relative; }
-      /* Fixed display size: the quality-tier auto-degrade may lower the canvas
-         backing-store resolution on slow devices; pinning the CSS size keeps the
-         visible canvas the same while only the pixel count drops. */
-      canvas#scene { width: 720px; height: 720px; background: #0d0e11; border: 1px solid #2a2d34; border-radius: 4px; touch-action: none; cursor: crosshair; }
+      #stage { position: relative; width: 720px; max-width: 100%; }
+      /* Responsive display size: 720px on desktop, but never wider than the
+         viewport on a phone (max-width:100%). height:auto + the 1:1 aspect-ratio
+         keeps it square at any width. This is the CSS *display* size only — the
+         quality-tier auto-degrade lowers the backing-store resolution
+         (canvas.width/height) independently, so on a slow device only the pixel
+         count drops, never the visible size. */
+      canvas#scene { display: block; width: 720px; max-width: 100%; height: auto; aspect-ratio: 1 / 1; background: #0d0e11; border: 1px solid #2a2d34; border-radius: 4px; touch-action: none; cursor: crosshair; }
       #loading {
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -84,7 +87,7 @@
   <body>
     <h1>zero2robot — teach a robot with your mouse (PushT teleop)</h1>
     <div id="stage">
-      <canvas id="scene" width="720" height="720"></canvas>
+      <canvas id="scene" width="720" height="720" aria-label="PushT simulation scene — drag the red pusher to shove the blue T-block onto the green target; arrow keys also drive the pusher"></canvas>
       <div id="meters">loading…</div>
       <div id="loading">
         <div class="spinner"></div>

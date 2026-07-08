@@ -90,7 +90,7 @@ torch.set_num_threads(1)  # single-threaded => bitwise-reproducible CPU reductio
 if args.smoke:  # smoke pins everything the CI byte-compare depends on
     args.model_dim, args.heads, args.hidden = 8, 2, 16
     args.train_examples, args.steps, args.probe_examples, args.device = 64, 20, 64, "cpu"
-banner("ch3.8-frontier", device=args.device)
+banner("ch3.8-frontier", device="cpu")  # pure-CPU chapter: honest cpu tier, never the host's mps/cuda (the reference metrics + the only measured wall-clock are the cpu tier)
 args.out.mkdir(parents=True, exist_ok=True)
 device = torch.device(args.device)
 CONFIG = {"model_dim": args.model_dim, "heads": args.heads, "hidden": args.hidden}  # identifies the checkpoint shape
@@ -148,7 +148,7 @@ def make_batch(gen: torch.Generator, n: int):
     return tokens, state, action, task, routed
 
 
-ckpt_path = args.out / "tiny_policy.pt"
+ckpt_path = args.out / f"tiny_policy_{args.device}.pt"   # device in the filename: a cpu cache and a gpu cache never collide. GPU/CPU kernels differ in the last bits, so silently reloading GPU-trained weights for a --device cpu run would break this chapter's byte-identical reload claim (the probe R^2 reads those bits to 6 decimals)
 data_gen = torch.Generator().manual_seed(args.seed)                 # one stream for the training pile
 tokens, state, action, _, _ = make_batch(data_gen, args.train_examples)
 

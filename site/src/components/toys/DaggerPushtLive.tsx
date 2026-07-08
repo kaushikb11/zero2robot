@@ -51,6 +51,11 @@ const DRAG_BOUND = 0.35; // keep the dragged block inside the walls (±0.41)
 const GRAB_RADIUS = 0.1; // m — pointer-to-block distance that starts a drag
 const NUDGE_STEP = 0.03; // m — arrow-key block nudge
 const METER_FULL = 0.30; // m of start-distance that fills the meter (past FAR_START)
+// Play the 30 s / 300-step episode ~3x faster than real time so a "recovered X / Y
+// far starts" tally accumulates in a watchable session. This changes ONLY wall-clock
+// playback speed: FRAME_SKIP, the dynamics, and the success criterion (SUCCESS_HOLD in
+// tolerance) are untouched, so the measured recovery rate stays the honest ~0.2 ceiling.
+const PLAYBACK_SPEEDUP = 3;
 
 /** block-to-goal distance (goal is the origin) — the covariate-shift axis. */
 const distFromGoal = (x: number, y: number) => Math.hypot(x, y);
@@ -140,9 +145,17 @@ interface Hud {
   posErr: number;
   far: boolean; // block started/sits past the BC-practice region
   reached: boolean;
+  frozen: boolean; // an attempt just concluded; the loop is paused on its final frame
+  outcome: "recovered" | "missed" | null; // the last concluded attempt's result
+  outcomeFar: boolean; // was that concluded attempt a far start (a counted recovery test)?
   fps: number;
   latMs: number;
   error?: string;
+}
+
+interface Tally {
+  recovered: number; // far starts where the policy pushed the block home (success held)
+  far: number; // far starts attempted (the honest denominator; ceiling ~1 in 4-5)
 }
 
 type Tok =
@@ -168,8 +181,12 @@ function DaggerToy() {
   } | null>(null);
   const [booted, setBooted] = useState(false);
   const [hud, setHud] = useState<Hud>({
-    startDist: 0, posErr: 0, far: false, reached: false, fps: 0, latMs: 0,
+    startDist: 0, posErr: 0, far: false, reached: false,
+    frozen: false, outcome: null, outcomeFar: false, fps: 0, latMs: 0,
   });
+  // running recovery tally across far starts: one attempt is a coin-flip at DAgger's
+  // honest ~20-25% ceiling, so the rate only reads once it accumulates.
+  const [tally, setTally] = useState<Tally>({ recovered: 0, far: 0 });
 
   useEffect(() => {
     let disposed = false;
@@ -179,6 +196,11 @@ function DaggerToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
         // --- lazy, hydration-gated: WASM + ONNX pulled only now (scrolled in) ----
         const [simMod, sceneMod, envMod, obsMod, inferMod, contractsMod, vpMod] =
           await Promise.all([
@@ -304,22 +326,40 @@ function DaggerToy() {
           ctx.beginPath(); ctx.arc(px, py, rPx, 0, Math.PI * 2); ctx.fill();
         };
 
-        setBooted(true);
-        render(false);
-
         // 2) load the REAL policy through the fail-closed contract gate
         const policy = await loadPolicy(MODEL_URL);
         assertDrivesPushT(policy.contract);
         if (disposed) return;
 
+        // fail-closed: reveal the canvas + paint the first frame ONLY after the policy
+        // loaded and its contract passed. A fetch/contract failure throws to catch with
+        // booted still false, so the captioned SSR poster stays up (not a frozen canvas).
+        setBooted(true);
+        render(false);
+
         // --- interaction state (refs, not React state — the loop must not re-render)
         let dragging = false;
+        // far-start attempt bookkeeping (mutable closure state; the loop must not re-render)
+        let frozen = false;                 // an attempt concluded; loop paused on its final frame
+        let attemptFar = false;             // did the CURRENT running episode begin past R_PRACTICE?
+        let outcome: "recovered" | "missed" | null = null; // last concluded attempt's result
+        let outcomeFar = false;             // was that concluded attempt a counted far start?
+        let recovered = 0, farAttempts = 0; // the running tally, mirrored into React state
         const clampB = (v: number) => Math.max(-DRAG_BOUND, Math.min(DRAG_BOUND, v));
         const setBlock = (x: number, y: number) => {
           env.perturbBlock(clampB(x), clampB(y), realSim.jointQpos("tee_yaw"));
         };
         const nearBlock = (wx: number, wy: number) =>
           Math.hypot(wx - realSim.jointQpos("tee_x"), wy - realSim.jointQpos("tee_y")) < GRAB_RADIUS;
+        // (Re)arm an attempt from the block's current pose: classify far vs in-distribution,
+        // clear any frozen conclusion, and let the driver resume. Called from every user
+        // placement (send-far, reset, nudge, drag-release) and once at boot.
+        const beginAttempt = () => {
+          attemptFar = distFromGoal(realSim.jointQpos("tee_x"), realSim.jointQpos("tee_y")) > R_PRACTICE;
+          outcome = null;
+          frozen = false;
+        };
+        beginAttempt(); // boot spawns at a FAR start, so the first attempt is a counted recovery test
 
         const onDown = (e: PointerEvent) => {
           const [wx, wy] = eventToWorld(canvas, e.clientX, e.clientY);
@@ -340,6 +380,7 @@ function DaggerToy() {
           dragging = false;
           canvas.dataset.dragging = "false";
           try { canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+          beginAttempt(); // released here: a fresh attempt from wherever the learner dropped it
         };
         canvas.addEventListener("pointerdown", onDown);
         canvas.addEventListener("pointermove", onMove);
@@ -347,9 +388,9 @@ function DaggerToy() {
         canvas.addEventListener("pointercancel", onUp);
 
         apiRef.current = {
-          reset: () => env.reset(++seed),
-          sendFar: () => setBlock(FAR_START * Math.cos(0.7), FAR_START * Math.sin(0.7)),
-          nudge: (dx, dy) => setBlock(realSim.jointQpos("tee_x") + dx, realSim.jointQpos("tee_y") + dy),
+          reset: () => { env.reset(++seed); beginAttempt(); },
+          sendFar: () => { setBlock(FAR_START * Math.cos(0.7), FAR_START * Math.sin(0.7)); beginAttempt(); },
+          nudge: (dx, dy) => { setBlock(realSim.jointQpos("tee_x") + dx, realSim.jointQpos("tee_y") + dy); beginAttempt(); },
         };
 
         // 3) headless-verification hooks (mirror playground's window.__policy) so a
@@ -376,6 +417,7 @@ function DaggerToy() {
             };
           },
           fps: () => lastFps,
+          tally: () => ({ recovered, far: farAttempts }),
         };
 
         // 4) DRIVE — real-time paced to CONTROL_HZ (mirrors dagger.py eval:
@@ -383,16 +425,22 @@ function DaggerToy() {
         //    tracks the pointer; on release it resumes and drives its recovery.
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
 
+        if (prefersReducedMotion) return; // reduced motion: one still frame already painted; do not spin the auto-driving loop. Interaction/reset handlers + __toy stay live.
+
         while (!disposed) {
           await nextFrame();
           const now = performance.now();
           frames++;
           if (now - fpsMark >= 500) { lastFps = (frames * 1000) / (now - fpsMark); frames = 0; fpsMark = now; }
 
-          if (dragging) {
+          if (dragging || frozen) {
+            // dragging: the block tracks the pointer. frozen: a far-start recovery just
+            // happened and we HOLD its final frame so the learner actually sees the win
+            // and the tally records it (this replaces the instant auto-reset that used to
+            // erase the rare recovery before it could be watched or counted).
             acc = 0; last = now;
           } else {
-            acc += Math.min(now - last, 100) / 1000;
+            acc += (Math.min(now - last, 100) / 1000) * PLAYBACK_SPEEDUP;
             last = now;
             let n = 0;
             while (acc >= CONTROL_DT && n < MAX_CONTROL_STEPS_PER_FRAME) {
@@ -400,7 +448,25 @@ function DaggerToy() {
               const action = await policy.act(obs);  // raw action[2]; denorm baked in
               const res = env.step(action);          // mirrors dagger.py eval: env.step(policy(obs))
               acc -= CONTROL_DT; n += 1;
-              if (res.done) { env.reset(++seed); }    // a fresh full-distribution start
+              if (res.done) {
+                // Count every far start this attempt began from; success is the honest env
+                // criterion (in-tolerance held SUCCESS_HOLD steps). Far misses accrue to the
+                // denominator so the true ~1-in-4-to-5 ceiling reads truthfully.
+                if (attemptFar) {
+                  farAttempts += 1;
+                  if (res.success) recovered += 1;
+                  setTally({ recovered, far: farAttempts });
+                }
+                if (attemptFar && res.success) {
+                  outcome = "recovered"; outcomeFar = true;
+                  frozen = true; // freeze on the rare recovery so it is watched, not erased
+                  break;
+                }
+                // a far miss, or an in-distribution start: auto-advance to a fresh
+                // full-distribution start (~79% land far) and keep the tally accruing.
+                env.reset(++seed);
+                beginAttempt();
+              }
               if (disposed) break;
             }
             if (n === MAX_CONTROL_STEPS_PER_FRAME) acc = 0;
@@ -417,6 +483,7 @@ function DaggerToy() {
               startDist, posErr,
               far: startDist > R_PRACTICE,
               reached: posErr < POS_TOL,
+              frozen, outcome, outcomeFar,
               fps: lastFps, latMs: policy.meanLatencyMs(),
             });
           }
@@ -472,10 +539,10 @@ function DaggerToy() {
             the episode is solved unless pos_err actually clears the tolerance. */}
         <div class="bk-sr" aria-live="polite">
           {booted && !failed
-            ? hud.reached
-              ? "The DAgger policy pushed the block onto the target from this start."
+            ? hud.frozen
+              ? `Recovered: the DAgger policy pushed the block onto the target from a far start. Recovered ${tally.recovered} of ${tally.far} far starts so far, near DAgger's honest ceiling of about one in four or five. Send it to another far start to keep testing.`
               : hud.far
-                ? "Far start: the block is past the narrow region the demonstrations practiced in — the covariate-shift territory that broke behavior cloning. The DAgger policy, trained on corrections from exactly these starts, drives back toward the target. It is a modest reactive clone, so it recovers but does not land every episode."
+                ? "Far start: the block is past the narrow region the demonstrations practiced in, the covariate-shift territory that broke behavior cloning. The DAgger policy, trained on corrections from exactly these starts, drives back toward the target. It is a modest reactive clone, so it recovers only about one in four or five far starts."
                 : "In the practiced region: the DAgger policy pushes the block toward the target."
             : ""}
         </div>
@@ -504,6 +571,20 @@ function DaggerToy() {
                 {hud.posErr.toFixed(3)} m {hud.reached ? "✓" : ""}
               </span>
             </div>
+            {/* the running recovery tally: one far start is a coin-flip at the honest
+                ~20-25% ceiling, so the rate only reads once it accumulates. */}
+            <div class="dg-hud-row">
+              <span class="dg-k">far-start recoveries</span>
+              <span class={`dg-v ${tally.recovered > 0 ? "dg-ok" : ""}`}>
+                {tally.recovered} / {tally.far}
+              </span>
+            </div>
+            {hud.frozen && (
+              <div class="dg-outcome">
+                <span class="dg-outcome-tag">recovered ✓</span>
+                <span class="dg-outcome-sub">send it to another far start to keep testing</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -530,7 +611,7 @@ function DaggerToy() {
           reset · new start
         </button>
         <span class="dg-control-note">
-          DAgger recovers the covariate-shift loss (~0.2 success, not a great policy) · best round, not the last · poster reads with JS off
+          DAgger recovers the covariate-shift loss (~0.2 success, not a great policy) · best round, not the last · sped up ~3x to accrue the tally · poster reads with JS off
         </span>
       </div>
     </div>

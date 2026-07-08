@@ -81,7 +81,9 @@
 /* token labels along the two gutters; suffix tokens read in the hero blue */
 .ps-lbl {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 6px;
+  /* 8 svg-units in a 13-unit cell pitch: comfortable at 1x (non-retina), still
+     clears its neighbour so rotated column labels never collide. */
+  font-size: 8px;
   fill: var(--ink-mute, #6d6252);
 }
 .ps-lbl[data-suffix="true"] { fill: color-mix(in srgb, var(--signal, #1f56de) 78%, var(--ink, #23201b)); font-weight: 700; }
@@ -113,7 +115,7 @@
 
 /* the recorded avg action-token attention strip */
 .ps-strip-bar { fill: color-mix(in srgb, var(--signal, #1f56de) 42%, transparent); }
-.ps-strip-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 6px; fill: var(--ink-mute, #6d6252); }
+.ps-strip-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 7px; fill: var(--ink-mute, #6d6252); }
 
 .ps-cap {
   font-family: var(--font-mono, ui-monospace, monospace);

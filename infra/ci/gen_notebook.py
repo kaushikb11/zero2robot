@@ -74,7 +74,7 @@ MJX_EXTRA_DEPS = [
 
 # GitHub repo the Colab setup cell clones when it is not already inside a
 # checkout. Placeholder org matches datasets/checkpoints (HF `zero2robot/`).
-REPO_URL = "https://github.com/zero2robot/zero2robot"
+REPO_URL = "https://github.com/kaushikb11/zero2robot"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -297,12 +297,6 @@ def notebook_bytes(nb: dict) -> bytes:
     return (
         json.dumps(nb, indent=1, ensure_ascii=False, sort_keys=False) + "\n"
     ).encode("utf-8")
-
-
-# Single-line top-level keys we manage in meta.yaml. Stripped (with any inline
-# comment) before re-appending, so re-running is idempotent and comment-safe
-# (mirrors site/scripts/write_region_hashes.py discipline: touch only our keys).
-_NOTEBOOK_KEY_RE = re.compile(r"(?m)^(?:notebook_hash|notebook_file_hash):.*\n?")
 
 
 def update_meta_text(existing: str, notebook_hash: str, file_hash: str) -> str:

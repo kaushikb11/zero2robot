@@ -1,11 +1,11 @@
 id: ch0.5-inspect
 title: "Seeing Like a Robot (rerun)"
-artifact: inspect.py        # target ~100 LOC (map); actual ~276 — load + reconstruct + rerun + 2 break modes. CPU-only.
+artifact: inspect.py        # target ~100 LOC (map); actual ~276: load + reconstruct + rerun + 2 break modes. CPU-only.
 task: pusht                 # inspects the learner's ch0.4 PushT dataset (LeRobot v3); provisions a scripted stand-in when none is given
 objectives:
-  - Load a LeRobot v3 dataset back and read its two structural facts — the SCHEMA (what every frame is) and the EPISODE INDEX (where one demonstration ends and the next begins)
-  - See like a robot — decode the observation the robot saw, especially the sin/cos-encoded yaw (obs[4:6]); atan2(sin, cos), arguments in that exact order, or every orientation you read is reflected
-  - Reconstruct the success rate HIDING in the data — the dataset stores no success/reward column, so recompute "reached the target" from the observations using the env's own POS_TOL / ANG_TOL
+  - Load a LeRobot v3 dataset back and read its two structural facts: the SCHEMA (what every frame is) and the EPISODE INDEX (where one demonstration ends and the next begins)
+  - See like a robot: decode the observation the robot saw, especially the sin/cos-encoded yaw (obs[4:6]); atan2(sin, cos), arguments in that exact order, or every orientation you read is reflected
+  - Reconstruct the success rate HIDING in the data: the dataset stores no success/reward column, so recompute "reached the target" from the observations using the env's own POS_TOL / ANG_TOL
   - Use rerun as the debugging tool for the whole book: replay an episode onto the canonical entity paths and scrub it on the sim_time timeline, reading a demonstration like a story
 scale_lab: false
 read_the_real_thing: false
@@ -42,11 +42,11 @@ exercise_checks:
 # check_prose_code_drift against the artifact. Populated at chapter-build time;
 # re-render (or re-run the drift gate) if the artifact's regions change.
 
-notebook_hash: 885a98cec20ffb94fada7637382f1746675851c4d77d49be487500e20a120677        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: b2b310c4f8ebdcd58d455e57e582ef69636fa793a4103f91ef7b2c15296da3de   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 1b636e67bcf03b98c5740fd8e2af445cee72dd014532593b6921db6b2dcde466        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 643dc25c50e347337245eb9056c519fed1a37cbd7dc78045345409f87a26dab0   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: ada462616687346dc771d711e01db7017ab77ff5ab203c6ec8b4199e2746bc38
+  setup: 685f70d45ec562d3d8fa30283b98f2e21d820e3c0e327fdfcb50ce7b7718854e
   provision: 4404ffc2e3d8537800976104df4b844d8be577616589cb1f81a539d7e16d06de
   load: a5bec7c19dadb5117382095b9d23daf14fd9defd0a677ac00c97fe4c845151d9
   success: 780cfd9e7bf2dd7af0557be9605ce13f284a0e59f9a09f92c5c34992e292e929

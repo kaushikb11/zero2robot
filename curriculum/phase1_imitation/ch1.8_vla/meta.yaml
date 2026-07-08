@@ -1,38 +1,38 @@
 id: ch1.8-vla
-title: "The Tiny VLA II: Train It"
+title: "Tokens Meet Torques: The Tiny VLA, Part II (train it)"
 artifact: vla.py             # target ~400 LOC (built to 449, hard cap 450: a from-scratch tiny-VLM fusion backbone + the ch1.5 flow-matching action head + multi-task masked training + ch1.6-style error-bar eval, one file)
 task: multi-task            # trains on ch1.7's pusht+aloha pile; evaluates on curriculum/common/envs/pusht AND aloha_cube
 
 # NOTE (doctrine): this is a "tiny VLA" chapter, but the VLM backbone (token embedding
 # + from-scratch multi-head self-attention) and the vision encoder (ch1.7's frozen conv
-# stack, rebuilt here) are ALL built from scratch — NO transformers import. So
+# stack, rebuilt here) are ALL built from scratch. NO transformers import. So
 # `allow_transformers` stays UNSET and the forbidden-imports gate runs at full
 # strictness. A REAL pretrained backbone + subword LM is the Scale Lab (SmolVLA), which
 # this chapter reaches for by REFERENCE, not by import.
 
 objectives:
-  - Fuse the three VLA inputs (instruction tokens, a frozen image feature, and state) into ONE conditioning vector with a tiny transformer built FROM SCRATCH — token embedding + a few multi-head self-attention blocks (attention is Q/K/V nn.Linear + a scaled-dot-product softmax; no transformers/einops) — and read the fusion off a CLS token.
-  - Condition the ch1.5 FLOW-MATCHING action head on that fused vector (velocity objective + forward-Euler ODE sampler, reused honestly) and train the whole policy on ch1.7's multi-task .npz, with a MASKED loss that weighs a 2-D PushT frame and a 6-D ALOHA frame equally (so the higher-DOF embodiment does not dominate the gradient — measured).
-  - Evaluate with ch1.6 rigor — a Wilson 95% interval on a noisy success rate, plus mean_return as the learning signal when success is 0 — on BOTH the PushT and ALOHA envs, rebuilding ch1.7's frozen encoder to featurize live frames.
-  - Measure, and frame honestly, what a tiny FROM-SCRATCH VLA can and cannot do: it learns the state-solvable PushT task well, essentially cannot do ALOHA's bimanual handoff, and — the Break-It — barely uses its RANDOM-init vision at all. That gap is exactly why real VLAs adapt a PRETRAINED backbone + LM (SmolVLA); from-scratch teaches the mechanism, adapt-pretrained is what performs.
+  - Fuse the three VLA inputs (instruction tokens, a frozen image feature, and state) into ONE conditioning vector with a tiny transformer built FROM SCRATCH: token embedding + a few multi-head self-attention blocks (attention is Q/K/V nn.Linear + a scaled-dot-product softmax; no transformers/einops), and read the fusion off a CLS token.
+  - Condition the ch1.5 FLOW-MATCHING action head on that fused vector (velocity objective + forward-Euler ODE sampler, reused honestly) and train the whole policy on ch1.7's multi-task .npz, with a MASKED loss that weighs a 2-D PushT frame and a 6-D ALOHA frame equally (so the higher-DOF embodiment does not dominate the gradient, measured).
+  - Evaluate with ch1.6 rigor (a Wilson 95% interval on a noisy success rate, plus mean_return as the learning signal when success is 0) on BOTH the PushT and ALOHA envs, rebuilding ch1.7's frozen encoder to featurize live frames.
+  - Measure, and frame honestly, what a tiny FROM-SCRATCH VLA can and cannot do: it learns the state-solvable PushT task well, essentially cannot do ALOHA's bimanual handoff, and (the Break-It) barely uses its RANDOM-init vision at all. That gap is exactly why real VLAs adapt a PRETRAINED backbone + LM (SmolVLA); from-scratch teaches the mechanism, adapt-pretrained is what performs.
 
 scale_lab: true
 # The map's ch1.8 SL is the APPROVED reinstatement: fine-tune SmolVLA (a real pretrained
-# VLA — SigLIP vision + a pretrained LM tokenizer + a flow-matching action expert) on a
+# VLA: SigLIP vision + a pretrained LM tokenizer + a flow-matching action expert) on a
 # consumer GPU, and compare to this from-scratch policy. This DRAFT ships the free-tier
 # from-scratch core only and REFERENCES the SL; it does not implement it (SmolVLA is a
 # heavy pretrained model, off the free-tier floor, and its from-scratch counterpoint is
 # the whole point of this chapter). Author: wire scale_lab_ref to the SmolVLA study once
-# it exists and have wallclock-bench MEASURE the GPU tier — do not assert a scaling claim.
+# it exists and have wallclock-bench MEASURE the GPU tier. Do not assert a scaling claim.
 # The lesson is the TRADEOFF (from-scratch vs adapt-pretrained), and this chapter's
 # measured from-scratch numbers below are one honest half of it.
 
 # READ-THE-REAL-THING: the map pairs this chapter with the SmolVLA source. The rtrt:
-# block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit sha and
+# block is LEFT FOR THE AUTHOR to pin. I did not have a verified offline commit sha and
 # must never invent one. Honest candidate for the author to choose and pin (repo + a REAL
 # commit):
-#   * huggingface/lerobot — SmolVLA: the pretrained VLM backbone (SigLIP) + a subword
-#     tokenizer + a flow-matching action expert conditioned on the fused representation —
+#   * huggingface/lerobot, SmolVLA: the pretrained VLM backbone (SigLIP) + a subword
+#     tokenizer + a flow-matching action expert conditioned on the fused representation:
 #     the production analog of exactly what this chapter builds from scratch (our
 #     tok_embed + from-scratch attention -> CLS -> flow velocity head).
 # site RTRT.astro renders nothing until repo + commit both exist.
@@ -42,7 +42,7 @@ rtrt:
   commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (SmolVLA source present at src/lerobot/policies/smolvla/; matches the course-pinned lerobot); pinned 2026-07-07
   focus:
     - "the VLM backbone that fuses image + language (real: pretrained SigLIP + LM; ours: a frozen random CNN feature + a from-scratch token embedding, fused by from-scratch attention)"
-    - "how the action expert is conditioned on the fused representation (real + ours: a flow-matching velocity head — the ch1.5 mechanism)"
+    - "how the action expert is conditioned on the fused representation (real + ours: a flow-matching velocity head, the ch1.5 mechanism)"
     - "the tokenizer (real: a pretrained subword tokenizer; ours: ch1.7's 46-word fixed vocab)"
 
 demo: vla_rollout           # a PushT rollout of the language-conditioned policy + the CLS-attention bar; BLOCKED on the flow-sampler contract v2 (ch1.5), same as the flow policy panel
@@ -52,12 +52,12 @@ demo: vla_rollout           # a PushT rollout of the language-conditioned policy
 # seeded; TRAINING is statistically reproducible (CPU: the smoke metrics.json is
 # byte-identical twice-run; the full policy's success is a NOISY 12-episode rate, ch1.6).
 # THE HONEST HEADLINE is a TRADEOFF, not a triumph: the from-scratch VLA LEARNS PushT
-# (0.42-0.58 across seeds, vs an untrained 0.0), but that task is solvable from STATE —
+# (0.42-0.58 across seeds, vs an untrained 0.0), but that task is solvable from STATE,
 # and --break blind proves the policy uses its RANDOM vision for ~nothing (blind PushT ==
 # sighted PushT). ALOHA's bimanual handoff it cannot do (0.0 every seed). That is the
 # case for a PRETRAINED backbone (the SmolVLA Scale Lab).
 reference_run:
-  provenance: "seed 0 on cpu; default config (model_dim 64, layers 2, heads 4, hidden 128, flow_steps 6, epochs 200, episodes_per_task 60, eval_episodes 12); measured 2026-07-06. ARCHITECTURE-SENSITIVITY (unlike the state-based Phase-1 chapters): this VLA trains on rendered IMAGE features, and MuJoCo rasterization is NOT bitwise across CPU architectures, so over 200 epochs the exact PushT % can vary with the CPU rasterizer (measured ~0.58 on BOTH the reference x86 run and an Apple Silicon arm64 CPU run — treat the % as approximate, not the ~0.25 an earlier non-default setup produced). The ROBUST, reproducible claim the exercise gates assert is the DIRECTION — trained >> untrained 0.0 every seed/platform, ALOHA 0.0 — NOT the exact 0.58. Same-machine runs are byte-deterministic."
+  provenance: "seed 0 on cpu; default config (model_dim 64, layers 2, heads 4, hidden 128, flow_steps 6, epochs 200, episodes_per_task 60, eval_episodes 12); measured 2026-07-06. ARCHITECTURE-SENSITIVITY (unlike the state-based Phase-1 chapters): this VLA trains on rendered IMAGE features, and MuJoCo rasterization is NOT bitwise across CPU architectures, so over 200 epochs the exact PushT % can vary with the CPU rasterizer (measured ~0.58 on BOTH the reference x86 run and an Apple Silicon arm64 CPU run: treat the % as approximate, not the ~0.25 an earlier non-default setup produced). The ROBUST, reproducible claim the exercise gates assert is the DIRECTION (trained >> untrained 0.0 every seed/platform, ALOHA 0.0), NOT the exact 0.58. Same-machine runs are byte-deterministic."
   num_examples: 2984                 # ch1.7 pipeline re-run at 60 episodes/task (the VLA needs more than ch1.7's 12-episode inspection default)
   vocab_size: 46                     # ch1.7's from-scratch word-level vocab
   feature_dim: 64                    # ch1.7's frozen CNN width; rebuilt here to featurize live eval frames
@@ -67,23 +67,23 @@ reference_run:
   pusht_success_ci_lo: 0.319511      # Wilson 95%
   pusht_success_ci_hi: 0.80674
   pusht_mean_return: -48.342736
-  baseline_pusht_success_rate: 0.0   # untrained (random-init) VLA reference — the trained gap is real
+  baseline_pusht_success_rate: 0.0   # untrained (random-init) VLA reference: the trained gap is real
   baseline_pusht_mean_return: -104.166445
   # --- the honest limit: ALOHA's bimanual handoff fails ---
-  aloha_success_rate: 0.0            # trained, N=6 (half of pusht — it is far harder)
+  aloha_success_rate: 0.0            # trained, N=6 (half of pusht, it is far harder)
   aloha_success_ci_hi: 0.390334      # a Wilson interval on 0/6 is [0, 0.39]: 0 with this few episodes is "we can't distinguish it from very low"
-  aloha_mean_return: -264.717274     # WORSE than an untrained PushT drift — the shared tiny capacity + random vision can't coordinate a handoff
+  aloha_mean_return: -264.717274     # WORSE than an untrained PushT drift: the shared tiny capacity + random vision can't coordinate a handoff
   # Seed robustness (default config, cpu, measured 2026-07-06): PushT trained
-  # seed0 0.58, seed1 0.58, seed2 0.42 — ABOVE the untrained 0.0 on EVERY seed; ALOHA
+  # seed0 0.58, seed1 0.58, seed2 0.42, ABOVE the untrained 0.0 on EVERY seed; ALOHA
   # 0.0 on every seed. The direction (trained>>untrained on PushT; ALOHA fails) is the rock;
-  # the exact PushT % is a noisy 12-episode rate (ch1.6 — report the interval, not the point).
+  # the exact PushT % is a noisy 12-episode rate (ch1.6: report the interval, not the point).
   # --- the Break-It: the random-vision channel is not load-bearing ---
   break_blind_pusht_success_rate: 0.583333   # --break blind zeros the image feature (train+eval): PushT is UNCHANGED (0.58 == 0.58)
-  break_blind_pusht_mean_return: -41.906     # if anything marginally better — the from-scratch RANDOM vision added nothing; PushT is solved from STATE
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  break_blind_pusht_mean_return: -41.906     # if anything marginally better: the from-scratch RANDOM vision added nothing; PushT is solved from STATE
+  # HONESTY (author MUST keep this framing, it is the measured truth):
   #  * This is the TRADEOFF chapter (map: from-scratch vs adapt-pretrained). Lead with
   #    the tradeoff, NOT a headline %. The from-scratch VLA WORKS on PushT (0.42-0.58 >>
-  #    untrained 0.0, every seed) — real, but MODEST and over a noisy 12-episode metric.
+  #    untrained 0.0, every seed): real, but MODEST and over a noisy 12-episode metric.
   #  * DO NOT sell PushT 0.58 as strong VLA perception. PushT is solvable from the STATE
   #    alone (ch1.1 BC does it from state), and --break blind proves the policy ignores
   #    its vision (blind == sighted). The language + the random-init image feature are
@@ -93,7 +93,7 @@ reference_run:
   #    honest ceiling, not a bug to fix. Frame it as the motivation for a real backbone.
   #  * The vision encoder is ch1.7's FROZEN, RANDOM-INIT conv stack, rebuilt here. It is a
   #    fixed projection, NOT perception. A PRETRAINED SigLIP/DINOv2 backbone (SmolVLA,
-  #    OpenVLA) is what makes vision + language actually load-bearing — that is the Scale
+  #    OpenVLA) is what makes vision + language actually load-bearing: that is the Scale
   #    Lab and the whole reason to prefer adapt-pretrained when performance matters.
   #  * The multi-task loss is MASKED and PER-EXAMPLE averaged so a 2-D PushT frame and a
   #    6-D ALOHA frame weigh equally; summing lets ALOHA's 6 dims dominate and starve
@@ -103,7 +103,7 @@ reference_run:
 # provenance, not a bare magic number). checks.py reads these instead of inlining
 # tolerances. The two self-contained gates (ex3 masked-loss bug-hunt, ex4 attention
 # completion) are FAST + deterministic and run in `make check`. The two reproduce checks
-# (ex1 blind==sighted, ex2 pusht>>aloha) TRAIN the policy and are @pytest.mark.slow —
+# (ex1 blind==sighted, ex2 pusht>>aloha) TRAIN the policy and are @pytest.mark.slow,
 # excluded from `make check`, which runs only the fast gates.
 exercise_checks:
   exercise_config:                 # the FULL default config: the policy needs 60 demos/task to leave 0.0 (a reduced budget yields 0.0 for BOTH tasks, like ch1.5's reduced policy), so the SLOW reproduce checks train at defaults and assert the seed-0 DIRECTION, not the %.
@@ -114,10 +114,10 @@ exercise_checks:
     hidden: 128
     provenance: "measured 2026-07-06, vla.py at default config, seed 0, cpu: PushT trained 0.58 (untrained 0.0), blind PushT 0.58 (== sighted), ALOHA trained 0.0. CPU training is deterministic so seed-0 reproduces; the checks assert the DIRECTION (trained>>untrained; blind~=sighted; pusht>>aloha), which is seed-robust (PushT 0.42-0.58 across seeds 0/1/2, always >> 0.0)."
     min_trained_over_untrained: 0.15   # ex1/ex2: trained PushT rate must beat untrained by >= this (measured seed-0 margin 0.58; seed-robust >= 0.42)
-    max_blind_drop: 0.25               # ex1: blind PushT must NOT fall more than this below sighted (measured: 0.0 drop — blind == sighted)
+    max_blind_drop: 0.25               # ex1: blind PushT must NOT fall more than this below sighted (measured: 0.0 drop, blind == sighted)
     min_pusht_over_aloha: 0.15         # ex2: PushT trained rate must beat ALOHA trained rate by >= this (measured: 0.58 vs 0.0)
   ex1:                             # ex1_predict_blind.py (predict-then-run; SLOW)
-    answer: "B"                    # zeroing vision barely changes PushT — the from-scratch random-vision channel isn't load-bearing (PushT is state-solvable)
+    answer: "B"                    # zeroing vision barely changes PushT: the from-scratch random-vision channel isn't load-bearing (PushT is state-solvable)
   ex2:                             # ex2_predict_pusht_vs_aloha.py (predict-then-run; SLOW)
     answer: "A"                    # the tiny VLA learns the state-solvable PushT but fails ALOHA's bimanual handoff
   ex3:                             # ex3_bughunt_masked_loss.py (bug-hunt, fast)
@@ -130,7 +130,7 @@ exercise_checks:
 # re-render (or re-run the drift gate) if the artifact's regions change.
 
 notebook_hash: 19d1383183565de7db9871bd62860545a20b202ab63d6240538a12888b3856ea        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 2e17100968bb630181b96761a2a1fdae25f285f67aad9b1c09e346bb3d550b05   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 76184e03da75292f34a3f31fdf8c99a456635997fda64b10355f7ce24e49e9a4   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 43dec9d630d5d1b8a62abb6c7d0ab9a9f983fe22416ffe633633790b9e8f7012

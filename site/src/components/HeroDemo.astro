@@ -1,36 +1,43 @@
 ---
 // HeroDemo — the "See it work" hero (Variant C). A crisp lab instrument mounted
 // inside a warm letterpress plate mat: the plate heading + the ONE signal-blue
-// "live · P2" badge, the server-rendered PlateIsland (poster JS-off, interactive
-// with JS), the entity legend (PushT chapters only), and the "See it work" lede
-// rendered from the chapter draft.
+// "live" badge (the pulsing dot carries the meaning; no internal build-phase
+// label leaks to the learner), the server-rendered PlateIsland (poster JS-off,
+// interactive with JS), the entity legend (PushT chapters only), and the "See it
+// work" lede rendered from the chapter draft.
 //
 // JS-OFF: the island is server-rendered, so the poster + caption are in the
 // static HTML; only ch1.1's nominal/drift toggle needs JavaScript. The lede,
 // legend, heading and badge are all static.
 //
-// P2 SLOT CONTRACT: P2 replaces the BODY of PlateIsland with the real playground
-// embed keyed off `demo` (→ curriculum/**/demo/embed.yaml) + `task`. This
-// component is the stable frame around that island; P2 restyles nothing here.
+// SLOT CONTRACT: a later pass replaces the BODY of PlateIsland with the real
+// playground embed keyed off `demo` (→ curriculum/**/demo/embed.yaml) + `task`.
+// This component is the stable frame around that island; that pass restyles
+// nothing here.
 import PlateIsland from "./PlateIsland.tsx";
 
 interface Props {
   demo?: string | null;
   task?: string | null;
   ledeHtml: string;
+  // "hero" (landing) renders the stripped first-impression instrument; "chapter"
+  // (default) keeps the full teaching instrument. Threaded into PlateIsland, and
+  // it also trims the entity legend's role sub-captions on the landing.
+  variant?: "hero" | "chapter";
 }
-const { demo, task, ledeHtml } = Astro.props;
+const { demo, task, ledeHtml, variant = "chapter" } = Astro.props;
 const isPusht = task === "pusht";
+const isHero = variant === "hero";
 ---
 
 <section class="bk-hero" aria-labelledby="bk-see">
   <div class="bk-hero-head">
     <p class="bk-plate-heading" id="bk-see">See it work</p>
-    <span class="bk-live">live · P2</span>
+    <span class="bk-live">live</span>
   </div>
 
   <div class="bk-plate">
-    <PlateIsland client:visible demo={demo} task={task} />
+    <PlateIsland client:visible demo={demo} task={task} variant={variant} />
   </div>
 
   {
@@ -39,17 +46,17 @@ const isPusht = task === "pusht";
         <span class="bk-legend-item">
           <span class="bk-swatch" style="background: var(--entity-pusher)" />
           <b class="bk-e-pusher">pusher</b>
-          <span class="bk-role">the agent that pushes</span>
+          {!isHero && <span class="bk-role">the agent that pushes</span>}
         </span>
         <span class="bk-legend-item">
           <span class="bk-swatch" style="background: var(--entity-block)" />
           <b class="bk-e-block">T-block</b>
-          <span class="bk-role">the thing being pushed</span>
+          {!isHero && <span class="bk-role">the thing being pushed</span>}
         </span>
         <span class="bk-legend-item">
           <span class="bk-swatch bk-swatch-target" />
           <b class="bk-e-target">target</b>
-          <span class="bk-role">where it needs to end up</span>
+          {!isHero && <span class="bk-role">where it needs to end up</span>}
         </span>
       </div>
     )

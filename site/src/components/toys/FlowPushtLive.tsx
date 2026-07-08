@@ -27,7 +27,9 @@
  *   4. Make the invisible visible: pos_err -> target ticks down as the sampled
  *      strokes home the block; the flow_steps readout ties it to the toy's lesson.
  *   5. ONE control (flow_steps), immediate feedback, default-interesting (boots at
- *      the full step budget, homing). Keyboard + button path to the same aha.
+ *      the few-step budget (5) that still homes — flow's point, made the default
+ *      read; 2 under-resolves, 100 is the no-better baseline). Keyboard + button
+ *      path to the same aha.
  *   6. Colour discipline: --entity-* for entities, ONE --signal blue for the live
  *      flow_steps control, --alert red for the under-resolved (few-step) readout.
  */
@@ -38,8 +40,9 @@ const MODEL_URL = "/models/flow_velocity.onnx";
 const CANVAS_PX = 512;
 const WORLD_HALF = 0.45; // matches viewport.WORLD_HALF_EXTENT
 const MAX_CONTROL_STEPS_PER_FRAME = 2; // sampling is heavier than a v1 forward pass; cap catch-up low
-const STEP_CHOICES = [2, 5, 100] as const; // the flow_steps control: few-step -> the default budget
+const STEP_CHOICES = [2, 5, 100] as const; // the flow_steps control: 2 under-resolves · 5 the default (few-but-enough) · 100 the expensive baseline (no better)
 const FEW_STEPS = 2; // at/below this the curved marginal field is under-integrated (the Break-It)
+const DEFAULT_STEPS = 5; // boot here: flow's whole point is that ~5 Euler steps suffice, so "few steps land it" is the default read (not 100)
 
 // ---------------------------------------------------------- shared SSR poster
 // Pure static JSX (no window/document) — the JS-off experience + pre-boot frame.
@@ -132,7 +135,7 @@ function FlowToy() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const figureRef = useRef<HTMLElement>(null);
   const apiRef = useRef<{ setSteps: (n: number) => void; reset: () => void } | null>(null);
-  const stepsRef = useRef<number>(STEP_CHOICES[STEP_CHOICES.length - 1]); // start at the full budget
+  const stepsRef = useRef<number>(DEFAULT_STEPS); // start at the few-but-enough budget — 5 still lands the block
   const [booted, setBooted] = useState(false);
   const [activeSteps, setActiveSteps] = useState<number>(stepsRef.current);
   const [hud, setHud] = useState<Hud>({
@@ -147,6 +150,11 @@ function FlowToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
         // --- lazy, hydration-gated: WASM + ONNX pulled only now (scrolled in) ----
         const [simMod, sceneMod, envMod, obsMod, inferMod, contractsMod, vpMod] =
           await Promise.all([
@@ -242,9 +250,6 @@ function FlowToy() {
           void INK;
         };
 
-        setBooted(true);
-        render();
-
         // 2) load the REAL sampler policy through the fail-closed contract gate
         const policy = await loadSamplerPolicy(MODEL_URL, seed);
         assertSamplerDrivesPushT(policy.contract);
@@ -252,6 +257,12 @@ function FlowToy() {
 
         // seed the sampler from the episode seed (flow.py rollout does this at reset)
         policy.seedNoise(seed);
+
+        // fail-closed: reveal the canvas + paint the first frame ONLY after the sampler
+        // loaded and its contract passed. A fetch/contract failure throws to catch with
+        // booted still false, so the captioned SSR poster stays up (not a frozen canvas).
+        setBooted(true);
+        render();
 
         apiRef.current = {
           setSteps: (n: number) => { stepsRef.current = n; setActiveSteps(n); },
@@ -299,6 +310,8 @@ function FlowToy() {
         // 4) DRIVE — real-time paced to CONTROL_HZ (mirrors flow.py eval: at every
         //    control step SAMPLE an action by integrating the ODE from noise).
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
+
+        if (prefersReducedMotion) return; // reduced motion: one still frame already painted; do not spin the auto-driving loop. Interaction/reset handlers + __toy stay live.
 
         while (!disposed) {
           await nextFrame();

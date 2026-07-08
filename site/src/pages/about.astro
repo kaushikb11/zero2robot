@@ -15,6 +15,7 @@
 // Links are DERIVED from the real curriculum (discoverChapters), never
 // hand-typed, so they can never point at a chapter that does not exist.
 import ChapterLayout from "../layouts/ChapterLayout.astro";
+import Newsletter from "../components/landing/Newsletter.astro";
 import { discoverChapters } from "../lib/curriculum.ts";
 import "../components/about.css";
 
@@ -24,9 +25,18 @@ const flagship = chapters.find((c) => c.demo === "pusht_bc_recovery") ?? null;
 
 const startHref = first ? `/${first.slug}/` : "#how";
 const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
+
+// The clone URL is the public GitHub repo; the sample run command is DERIVED
+// from a real chapter's artifact (the flagship BC chapter, else the first
+// chapter) so the command shown can never drift from a file that exists.
+const CLONE_URL = "https://github.com/kaushikb11/zero2robot";
+const sampleChapter = flagship ?? first;
+const sampleCmd = sampleChapter
+  ? `python ${sampleChapter.artifactPath} --seed 0`
+  : "python curriculum/phase1_imitation/ch1.1_bc/bc.py --seed 0";
 ---
 
-<ChapterLayout title="Start here — zero2robot">
+<ChapterLayout title="Start here: zero2robot">
   <div class="bk-titleblock ab-wrap">
     <p class="bk-kicker">Start here</p>
     <h1 class="bk-title">
@@ -40,7 +50,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       <p>
         zero2robot is an embodied-AI course where <strong>the code is the
         product</strong>. Every chapter is one small, real, readable file you can
-        run — from a bare simulation loop to a policy you train, export, and drive
+        run, from a bare simulation loop to a policy you train, export, and drive
         in your browser. No black boxes, no framework to excavate.
       </p>
       <p>
@@ -48,16 +58,45 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
         browser demos are the same code you train locally; every number carries
         its own provenance; and everything on the learner path finishes on a free
         Colab T4 or a CPU laptop. Forty-three chapters are built and readable
-        today, from foundations through the imitation and RL spines to a
-        from-scratch practitioner's stack and a real-arm graduation — with a
-        from-scratch physics engine waiting off the main line as optional Depth.
-        The only pieces still gated are the leaderboard capstone chapters, which
-        stay closed until the hidden-seed grading server ships.
+        today, from foundations through the imitation and RL spines, then
+        post-training that makes a trained policy reliable, to a from-scratch
+        practitioner's stack and a real-arm graduation, with a from-scratch
+        physics engine waiting off the main line as optional Depth.
       </p>
     </section>
   </div>
 
   <article class="bk-prose ab-wrap">
+    <h2 id="run">Getting started: run the code</h2>
+    <p>
+      Everything here is a real file you run. There are two ways to do it, and
+      every chapter page links to both from its "run this chapter" block.
+    </p>
+    <p>
+      <strong>In your browser, zero install.</strong> Each chapter has an
+      <em>Open in Colab</em> button that opens that chapter's notebook on a free
+      Colab T4, no local setup, nothing beyond a Google login. It runs the exact
+      code the page shows you.
+    </p>
+    <p>
+      <strong>On your own machine.</strong> Clone the public repository once, sync
+      the pinned environment, and run any chapter's file directly:
+    </p>
+    <pre class="ab-setup"><code>git clone {CLONE_URL}.git
+cd zero2robot
+uv sync
+
+# then run any chapter — e.g. behavior cloning from ch1.1:
+{sampleCmd}</code></pre>
+    <p>
+      Every artifact accepts <span class="ab-kbd">--seed</span> (mandatory, so
+      runs are reproducible), <span class="ab-kbd">--smoke</span> (a fast smoke
+      run to prove the loop before you commit real time), and
+      <span class="ab-kbd">--out</span> for where artifacts land. Everything on the
+      learner path finishes on that free Colab T4 or a CPU laptop. Anything that
+      needs more is marked as an optional Scale Lab.
+    </p>
+
     <h2 id="how">How to read a chapter</h2>
     <p>
       Each chapter page is laid out the same way, top to bottom, so you always
@@ -66,7 +105,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
     <ol>
       <li>
         <strong>See it work.</strong> A live concept-toy at the top shows the one
-        idea the chapter is about — running the real policy or simulation in your
+        idea the chapter is about: running the real policy or simulation in your
         browser. It is interactive when JavaScript is on and falls back to a
         labelled still poster when it is off, so the point survives either way.
       </li>
@@ -78,7 +117,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       <li>
         <strong>The reading.</strong> The prose column, with the actual code shown
         in dark panels beside it. Those panels are <em>included by region</em>
-        straight from the chapter's runnable file — never pasted — and each carries
+        straight from the chapter's runnable file, never pasted, and each carries
         the sha256 fingerprint CI re-checks, so what you read is provably what runs.
       </li>
       <li>
@@ -88,7 +127,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       </li>
       <li>
         <strong>Practice.</strong> Candidate exercises to work locally. Nothing is
-        auto-graded here and nothing phones home — each exercise gives you a local
+        auto-graded here and nothing phones home. Each exercise gives you a local
         run command to check yourself.
       </li>
     </ol>
@@ -96,7 +135,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
     <h2>Predict, then run</h2>
     <p>
       Some exercises are <em>predict-then-run</em>. Pick the outcome you expect and
-      commit your prediction first — the measured answer and the run command stay
+      commit your prediction first. The measured answer and the run command stay
       hidden until you do, because predicting after you already know the answer
       teaches nothing. Your committed prediction is the one signal the site
       records toward progress.
@@ -110,13 +149,13 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       In the flagship covariate-shift toy, for example, the arrow keys nudge the
       block, <span class="ab-kbd">R</span> resets it, and
       <span class="ab-kbd">O</span> sends it out of the region the demonstrations
-      covered — the same "aha" you get by dragging. Screen-reader users get the
+      covered, the same "aha" you get by dragging. Screen-reader users get the
       same in-distribution / out-of-distribution transition announced live.
     </p>
 
     <h2>Progress, search, and help</h2>
     <p>
-      Your progress lives only in your browser — no account, ever. Reading a
+      Your progress lives only in your browser, no account, ever. Reading a
       chapter marks it read (a ✓ appears next to it in the sidebar), committing a
       prediction counts toward completion, and the landing page shows an overall
       and per-phase dashboard with a "continue where you left off" link. Clear your
@@ -132,7 +171,7 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       <tbody>
         <tr>
           <td><span class="ab-kbd">/</span> or <span class="ab-kbd">⌘</span> <span class="ab-kbd">K</span></td>
-          <td>Open search — jump to any chapter, heading, objective, or code region.</td>
+          <td>Open search: jump to any chapter, heading, objective, or code region.</td>
         </tr>
         <tr>
           <td><span class="ab-kbd">?</span></td>
@@ -152,10 +191,10 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
     <h2>The honest constraints</h2>
     <p>
       Two things are true and stated plainly rather than hidden. First, every number
-      you read is <strong>measured, not estimated</strong> — each figure traces to a
+      you read is <strong>measured, not estimated</strong>: each figure traces to a
       recorded run, and where a measurement is still pending (some laptop wall-clock
       times) the page says so rather than guessing. Second, everything on the learner path is built
-      to the <strong>free-tier floor</strong> — it completes on a free Colab T4 or a
+      to the <strong>free-tier floor</strong>: it completes on a free Colab T4 or a
       CPU laptop. Anything that needs more is marked as an optional Scale Lab, never
       slipped onto the required path.
     </p>
@@ -169,6 +208,12 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
         <a class="ab-btn" href={flagshipHref}>Jump to the flagship chapter →</a>
       )}
     </div>
+
+    <section class="ab-support" aria-label="About the author and support">
+      <p>Built by <strong>Kaushik Bokka</strong>, AI Research Engineer (<a href="https://x.com/kaushik_bokka" target="_blank" rel="noopener">X</a>, <a href="https://github.com/kaushikb11" target="_blank" rel="noopener">GitHub</a>, <a href="https://www.linkedin.com/in/kaushikbokka/" target="_blank" rel="noopener">LinkedIn</a>, <a href="https://huggingface.co/kaushikb11" target="_blank" rel="noopener">Hugging Face</a>, <a href="https://kaushikbokka.medium.com/" target="_blank" rel="noopener">Blog</a>). zero2robot is free and open, and always will be. If it helped you, you can <a href="https://www.buymeacoffee.com/kaushikb11" target="_blank" rel="noopener">buy me a coffee</a>.</p>
+      <p>Want the ideas as they land? Follow along by email (a weekly note on how Physical AI gets built):</p>
+      <Newsletter variant="inline" idPrefix="about" />
+    </section>
   </article>
 
   {/* Progressive enhancement ONLY: wire the "?" hint to open the HelpOverlay
@@ -179,4 +224,39 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       b.addEventListener("click", () => window.dispatchEvent(new Event("z2r:help-open")));
     }
   </script>
+
+  <style>
+    /* The setup block on #run — a dark code panel matching the chapter code
+       panels, using the shared design tokens (no palette of its own). Its
+       contents scroll horizontally rather than forcing the page to. */
+    .ab-setup {
+      max-width: var(--measure);
+      margin: 0.4rem 0 1.4rem;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      background: var(--panel, var(--paper-2));
+      border: 1px solid var(--rule-strong);
+      border-left: 3px solid var(--book-soft);
+      border-radius: 3px;
+    }
+    .ab-setup code {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--ink);
+      white-space: pre;
+    }
+    /* A quiet support note, set off by a hairline rule. Unobtrusive by design. */
+    /* A quiet one-line author byline and support note, set off by a hairline rule. */
+    .ab-support {
+      max-width: var(--measure);
+      margin-top: 2.2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--rule);
+      font-size: 0.95rem;
+      color: var(--ink-soft, var(--ink));
+    }
+    .ab-support a { white-space: nowrap; }
+  </style>
 </ChapterLayout>

@@ -245,11 +245,11 @@ export default function QuickstartWinToy() {
   return (
     <div class="qw">
       <header class="qw-head">
-        <h3 class="qw-title">You trained this — and it works</h3>
+        <h3 class="qw-title">You'll train this, and it works</h3>
         <p class="qw-sub">
-          The tiny <b>behavior-cloning</b> policy you trained in one sitting, replayed on a{" "}
+          The tiny <b>behavior-cloning</b> policy you train in this chapter, replayed on a{" "}
           <b>held-out start</b>: the amber pusher gets behind the block and walks it home. The block starts{" "}
-          <b>{m3(START_ERR)}</b> from the target and lands at <b>{m3(FINAL_ERR)}</b> — inside the{" "}
+          <b>{m3(START_ERR)}</b> from the target and lands at <b>{m3(FINAL_ERR)}</b>, inside the{" "}
           <b>{POS_TOL} m</b> ring. One <b>real</b> success, recorded from <code>quickstart.py --seed 0</code>.
         </p>
       </header>

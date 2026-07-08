@@ -95,9 +95,14 @@ export interface ChapterMeta {
   task?: string | null;
   // Curriculum track marker, verbatim from meta.yaml's `track:` (null when the
   // key is absent). "elective" means OFF the main line (0→1→2→4→5) — optional
-  // Depth the capstone never requires (Phase 3 declares it). The map keys its
+  // Depth the main line never requires (Phase 3 declares it). The map keys its
   // "optional · Depth" treatment off this; it never hard-codes a phase number.
   track?: string | null;
+  // Optional DISPLAY number override, verbatim from meta.yaml's `number:` (null
+  // when absent). Normally the site derives the number from the id; a chapter
+  // whose id prefix isn't its map number (e.g. `ch4-offline-primer` -> "4") sets
+  // this so it reads "4.1" everywhere. Additive; never affects the id/slug/URL.
+  number?: string | null;
   readTheRealThing?: boolean | null; // the gate signal in meta.yaml
   rtrt?: RTRT | null; // the pinned pointer, non-null only when declared
 }
@@ -132,11 +137,20 @@ function titleCase(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-/** "phase1_imitation" -> "Phase 1 · Imitation". */
+/** "phase1_imitation" -> "Phase 1 · Imitation".
+ *  DISPLAY OVERRIDE: the on-disk directory `phase4_capstone` is curriculum-owned
+ *  (renaming it is out of scope for the site), but its learner-facing label is
+ *  "Post-Training": the three built chapters (offline-RL primer, DAgger
+ *  corrections, HIL-SERL) improve an already-trained policy. This single map is
+ *  the one source for the sidebar, the dependency map, and any nav. */
+const PHASE_LABEL_OVERRIDE: Record<string, string> = {
+  phase4_capstone: "Post-Training",
+};
 function phaseLabelFor(phaseKey: string): string {
   const m = phaseKey.match(/^phase(\d+)_(.+)$/);
   if (!m) return phaseKey;
-  return `Phase ${m[1]} · ${titleCase(m[2])}`;
+  const suffix = PHASE_LABEL_OVERRIDE[phaseKey] ?? titleCase(m[2]);
+  return `Phase ${m[1]} · ${suffix}`;
 }
 
 /** "ch1.1-bc" -> "1.1". */
@@ -173,7 +187,10 @@ export function discoverChapters(): ChapterInfo[] {
         chapterDir,
         artifactBasename,
         artifactPath: `${chapterDir}/${artifactBasename}`,
-        number: chapterNumberFor(meta.id),
+        // Explicit meta.yaml `number:` wins (see ChapterMeta.number); otherwise
+        // derive it from the id. Keeps a chapter whose id prefix isn't its map
+        // number (ch4-offline-primer -> "4") from rendering a bare, typo-looking "4".
+        number: meta.number != null ? String(meta.number) : chapterNumberFor(meta.id),
         phaseKey,
         phaseLabel: phaseLabelFor(phaseKey),
       });

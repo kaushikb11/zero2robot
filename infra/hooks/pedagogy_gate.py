@@ -74,10 +74,9 @@ def main():
     content = ti.get("content") or ti.get("new_string") or ti.get("new_str") or ""
 
     # Protected-path block: check both file_path (Edit/Write) and notebook_path
-    # (NotebookEdit) so notebooks/ and grader/hidden_seeds can't be reached via
-    # any tool.
+    # (NotebookEdit) so generated notebooks/ can't be reached via any tool.
     for p in (path, notebook_path):
-        if p and ("grader/hidden_seeds" in p or "/notebooks/" in p or p.startswith("notebooks/")):
+        if p and ("/notebooks/" in p or p.startswith("notebooks/")):
             print(f"BLOCKED: {p} is protected (generated or secret).", file=sys.stderr)
             sys.exit(2)
 

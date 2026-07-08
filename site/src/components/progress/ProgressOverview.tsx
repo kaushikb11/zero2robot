@@ -114,8 +114,15 @@ export default function ProgressOverview({ chapters }: Props) {
 
   const pct = Math.round(view.overall * 100);
 
+  // Self-hide until there is REAL progress. The first render (SSR + first client
+  // paint) is the live=false shell, so anyProgress is false and this returns null
+  // on both server and client-first-paint (no hydration mismatch). A newcomer
+  // therefore never sees an empty 0% widget on the landing; the moment they read
+  // a chapter or commit a prediction, the effect re-renders this with content.
+  if (!view.anyProgress) return null;
+
   return (
-    <section class="pg-overview" aria-label="Your progress">
+    <section class="pg-overview pg-overview--landing" aria-label="Your progress">
       <div class="pg-top">
         <div class="pg-overall">
           <span class="pg-overall-label">overall</span>
@@ -141,13 +148,6 @@ export default function ProgressOverview({ chapters }: Props) {
       >
         <div class="pg-bar-fill" style={`width:${pct}%`} />
       </div>
-
-      {!view.anyProgress && (
-        <p class="pg-empty">
-          Nothing completed yet — read a chapter, or commit a prediction in an exercise,
-          and it shows up here. No account needed; this lives only in your browser.
-        </p>
-      )}
 
       <ul class="pg-phases">
         {view.phases.map((p) => {

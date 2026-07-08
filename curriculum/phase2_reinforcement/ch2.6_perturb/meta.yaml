@@ -3,20 +3,20 @@ title: "Sim-to-Real Intuition Lab I: Latency & Noise"
 artifact: perturb.py       # 376 LOC (measured); target ~250, hard cap 450 (two-task lab: cartpole PPO + pusher SAC)
 task: cartpole + pusher_reach   # reuses ch2.1 PPO (cartpole) and ch2.2 SAC (pusher_reach); no new env
 dataset:
-  reference: null          # no dataset — this chapter re-EVALUATES trained policies, it does not train
+  reference: null          # no dataset: this chapter re-EVALUATES trained policies, it does not train
   learner_path: false
 objectives:
-  - Name the three dominant sim-to-real perturbations — sensor noise, observation LATENCY, and model mismatch (mass/damping/gravity) — and inject each into a trained policy's eval loop
-  - Build the mechanisms from scratch — gaussian obs noise, a ring-buffer latency delay, and in-place MjModel physics scaling — with nothing hidden behind a wrapper
-  - MEASURE the degradation curve (success rate falling as each perturbation grows) and read off WHICH perturbation a clean-trained policy is most brittle to — for the ch2.1 PPO balancer, that is latency, not noise or gravity
+  - Name the three dominant sim-to-real perturbations (sensor noise, observation LATENCY, and model mismatch across mass/damping/gravity), and inject each into a trained policy's eval loop
+  - Build the mechanisms from scratch (gaussian obs noise, a ring-buffer latency delay, and in-place MjModel physics scaling) with nothing hidden behind a wrapper
+  - MEASURE the degradation curve (success rate falling as each perturbation grows) and read off WHICH perturbation a clean-trained policy is most brittle to: for the ch2.1 PPO balancer, that is latency, not noise or gravity
   - Carry the ch1.6 honesty over: perturbed eval is noisy, so the graded signal is a seed-robust structural fact (baseline holds, extreme latency breaks), never one dramatic run
-  - Motivate ch2.7 — a policy trained in ONE clean world has no defense it was never asked to learn; domain randomization trains ACROSS the gap
+  - Motivate ch2.7: a policy trained in ONE clean world has no defense it was never asked to learn; domain randomization trains ACROSS the gap
 
 # The policies perturbed here are TRAINED by ch2.1 (ppo_agent.pt) and ch2.2
 # (sac_actor.pt). NO policy binary ships (.pt is gitignored, root invariant 5):
 # the artifact loads a checkpoint the learner trained, and falls back to the
 # chapter's scripted baseline controller (rebuilt to read the OBSERVATION, so it
-# degrades under the same noise/latency) when no checkpoint is present — always
+# degrades under the same noise/latency) when no checkpoint is present. Always
 # under --smoke, for hermetic CI.
 policies:
   cartpole: outputs/ch2.1-ppo/ppo_agent.pt    # ch2.1 PPO actor; scripted fallback = common/envs/cartpole.balance_action, rebuilt from obs
@@ -29,7 +29,7 @@ read_the_real_thing: true
 # sim-to-real transfer, and the observation-delay handling in real robot stacks.
 # Do NOT invent a commit sha or DOI here; the read-the-real-thing skill pins the
 # real upstream source when the study segment is authored.
-demo: cartpole_latency_degrade   # hero: the same trained balancer, clean vs +4-step observation latency, side by side — it falls
+demo: cartpole_latency_degrade   # hero: the same trained balancer, clean vs +4-step observation latency, side by side. It falls
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
 # "seeded-run band with provenance", not a bare magic number). checks.py reads
@@ -39,7 +39,7 @@ demo: cartpole_latency_degrade   # hero: the same trained balancer, clean vs +4-
 # bit-reproducible on CPU) and then sweep perturbations, so the per-seed numbers do
 # not flake run-to-run; the variance the chapter teaches is ACROSS perturbation
 # magnitude, and the graded fact is a seed-robust STRUCTURAL claim (ch2.1 spike H1/H2:
-# no single-run break-it — the degradation is asserted as clean-holds / extreme-breaks).
+# no single-run break-it: the degradation is asserted as clean-holds / extreme-breaks).
 reference_run:
   # Learned PPO (cartpole), sweep at eval_episodes 20, seeds 0-2:
   #   baseline success 1.00 (all seeds) | sensor_noise@0.2 success [1.00, 0.75, 1.00]
@@ -54,28 +54,28 @@ reference_run:
   #   latency@8 success 0.50 | model_mismatch mass@[0.5..3.0] success 0.70 everywhere
   #   worst_perturbation = sensor_noise
   # Reading (the payoff of running BOTH policies): the reach/settling task is the
-  # MIRROR of cartpole — it tolerates latency (a slow reacher can arrive late) but
+  # MIRROR of cartpole: it tolerates latency (a slow reacher can arrive late) but
   # is brittle to sensor noise, and gravity is a genuine NO-OP on the planar arm
   # (mass is its sharp knob, and even that the learned controller absorbs). WHICH
   # perturbation bites depends on the task's dynamics, not the algorithm.
   pusher_sac: "measured 2026-07-06, cpu, seed 0: baseline 0.70 | sensor_noise@0.2 0.35 | latency@8 0.50 | mass@[0.5..3.0] 0.70 | worst=sensor_noise"
 exercise_checks:
-  ex1:                     # ex1_predict_worst.py — trains PPO, sweeps 3 perturbations, seeds 0-2
+  ex1:                     # ex1_predict_worst.py: trains PPO, sweeps 3 perturbations, seeds 0-2
     provenance: "cpu, learned PPO (200k), seeds 0-2; measured 2026-07-06: worst=latency all seeds; baseline success [1.0,1.0,1.0]; latency@8 success [0.0,0.0,0.0]"
     worst_perturbation: latency        # the predict-then-run answer, robust across seeds
     baseline_success_min: 0.9          # clean policy solves (measured 1.0 every seed)
     latency_extreme_success_max: 0.1   # 8-step latency breaks it (measured 0.0 every seed)
-  ex2:                     # ex2_investigate_latency.py — finer latency sweep, seeds 0-2
+  ex2:                     # ex2_investigate_latency.py: finer latency sweep, seeds 0-2
     provenance: "cpu, learned PPO (200k), seeds 0-2; measured 2026-07-06: latency<=2 success 1.0 all seeds; latency>=8 success 0.0 all seeds; breaking point 2-4 steps"
     lowlat_success_min: 0.9            # <=2 steps (<=40 ms) still solved (measured 1.0)
     highlat_success_max: 0.1           # >=8 steps (>=160 ms) broken (measured 0.0)
 
-# region_hashes: NOT recorded yet — the site build records them when it first
+# region_hashes: NOT recorded yet. The site build records them when it first
 # renders this chapter (check_prose_code_drift only gates once they are present).
 # notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill.
 
 notebook_hash: 0028e57b9353a626cbc2685fe54576ee50f7293c1c443ce251e8590e9c42625a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: d796ac4861d55dfd69854d325bf71780ca42de69b6a83007f2efbf0a681bd5f8   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: aabe1e65314400219a446e8664cf462747540de5c942a39d53d6b073a14e5004   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 587e91893fd24a305b226fb22795bc8035c81f6b49d6d1bf665b4e5ae09d6d50

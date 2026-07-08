@@ -4,35 +4,36 @@ builds_on:  # for the /map/ dependency graph (documented in the curriculum map; 
   - ch1.1   # the BC train/eval loop
   - ch1.8   # the --break blind payoff
 title: "Control From Pixels: Visuomotor Behavior Cloning"
-artifact: pixels.py          # 448 LOC (measured; hard cap 450): a tiny ViT with BACKGROUND SUBTRACTION, a COMPACT contrastive alignment (the ch5.2 recipe re-contained), a CONTROL-USEFULNESS PROBE (frozen-feature action regression, held-out val MSE — the reproducible headline), ch1.1's BC loop over frozen pixel features, a pixels-only rollout eval with ch1.6 Wilson intervals, and an ONNX contract-v1 export — one file.
+artifact: pixels.py          # 450 LOC (measured; hard cap 450): a tiny ViT with BACKGROUND SUBTRACTION, a COMPACT contrastive alignment (the ch5.2 recipe re-contained), a CONTROL-USEFULNESS PROBE (frozen-feature action regression, held-out val MSE, the reproducible headline), ch1.1's BC loop over frozen pixel features, a pixels-only rollout eval with ch1.6 Wilson intervals, and an ONNX contract-v1 export, one file.
 task: pusht                 # curriculum/common/envs/pusht, rendered to 64x64 frames; PIXELS-ONLY (no state fed to the policy)
 
 # NOTE (doctrine): the ViT backbone (patch-embed conv + from-scratch multi-head
-# self-attention blocks) and the contrastive alignment are ALL built from scratch — NO
+# self-attention blocks) and the contrastive alignment are ALL built from scratch: NO
 # transformers, NO timm. `allow_transformers` stays UNSET; the forbidden-imports gate runs
 # at full strictness. A REAL pretrained aligned backbone (OpenVLA's SigLIP+DINOv2) is the
 # read-the-real-thing, reached for by REFERENCE, not by import.
 
 # TIGHTEST COUPLING (author: reconcile with ch5.2 in the teaching pass). ch5.2 builds "the
 # aligned encoder" in full (contrastive image<->text, the shared text tower). This chapter
-# RE-CONTAINS a compact variant — contrastive image<->STATE — because on single-instruction
+# RE-CONTAINS a compact variant, contrastive image<->STATE, because on single-instruction
 # PushT the geometry, not the words, is the alignment signal that makes pixel features
 # control-relevant, and it keeps this file self-contained (LOC pressure). The MECHANISM is
 # identical to ch5.2 (a tiny ViT + a partner tower + symmetric InfoNCE); only the partner
 # differs. The encoder is rebuilt DETERMINISTICALLY by re-running the CPU alignment from the
-# seed (like ch1.8 rebuilds its frozen encoder) — NO checkpoint binary in git.
+# seed (like ch1.8 rebuilds its frozen encoder): NO checkpoint binary in git.
 
 objectives:
-  - Clone PushT from PIXELS alone — ch1.1's BC train->eval->export loop with the observation swapped from the 10-D state vector to the frozen CLS feature of a live 64x64 frame, no state, no escape hatch.
-  - Re-contain the ch5.2 aligned encoder COMPACTLY (a tiny ViT + symmetric InfoNCE against the scene geometry) and rebuild it deterministically from the seed — no checkpoint in git — then FREEZE it and train only a thin adapter + policy head.
-  - Measure the DIRECTION honestly with a CONTROL-USEFULNESS PROBE — an action-regression probe on the FROZEN features has lower held-out val MSE on aligned than random features (seed-robust, seeds 0/1/2) — and report the closed-loop rollout with ch1.6 Wilson intervals as the higher, harder bar (which floors at free-tier: a Scale Lab, never an oversold %).
+  - Clone PushT from PIXELS alone: ch1.1's BC train->eval->export loop with the observation swapped from the 10-D state vector to the frozen CLS feature of a live 64x64 frame, no state, no escape hatch.
+  - Re-contain the ch5.2 aligned encoder COMPACTLY (a tiny ViT + symmetric InfoNCE against the scene geometry) and rebuild it deterministically from the seed, no checkpoint in git, then FREEZE it and train only a thin adapter + policy head.
+  - Measure the DIRECTION honestly with a CONTROL-USEFULNESS PROBE, an action-regression probe on the FROZEN features has lower held-out val MSE on aligned than random features (seed-robust, seeds 0/1/2), and report the closed-loop rollout with ch1.6 Wilson intervals as the higher, harder bar (which floors at free-tier: a Scale Lab, never an oversold %).
   - Pay off ch1.8's `--break blind` cliffhanger: once the state is gone, the encoder's quality is the whole ballgame, and the aligned-vs-random CONTROL-USEFULNESS gap is the MEASURED answer ch1.8 could only assert.
   - Name and refute the misconception that "pixels->action is just BC with more inputs": from pixels with no state, a random encoder's features can't be read for control the way a state vector could.
 
 scale_lab: false
+scale_lab_ref: "infra/scale_labs/ch5.3_pixels_scale.py (optional Modal runner; needs a Modal account and may cost; the free CPU/Colab default is the required path)."
 # Honest ceiling: toy-scale image<->state alignment gives features MODESTLY better than
 # random, NOT SigLIP-quality. Absolute PushT-from-pixels success is modest and
-# platform-sensitive (MuJoCo raster differs across CPU arches — ch1.8 documents this). The
+# platform-sensitive (MuJoCo raster differs across CPU arches, as ch1.8 documents). The
 # robust, reproducible claim the exercise gate asserts is the CONTROL-USEFULNESS PROBE
 # DIRECTION (aligned < random val MSE), never an absolute %. A real pretrained aligned
 # backbone is the read-the-real-thing.
@@ -42,56 +43,56 @@ scale_lab: false
 # BACKGROUND-SUBTRACT. A raw 64x64 PushT frame is ~98% constant table, which collapses the tiny
 # from-scratch ViT (ch5.2 measured exactly this: a linear probe sits at chance until you subtract
 # the mean frame, then goes chance -> ~1.0). Adopting ch5.2's mean-frame subtraction fixes BOTH
-# symptoms — this artifact now background-subtracts in ViTEncoder.forward:
+# symptoms. This artifact now background-subtracts in ViTEncoder.forward:
 #   * the contrastive InfoNCE alignment now CONVERGES (final loss ~0.07-0.43; it was stuck ~2.6-4.8
-#     unsubtracted — the ViT could not see the block, so nothing aligned).
+#     unsubtracted, the ViT could not see the block, so nothing aligned).
 #   * the CONTROL-USEFULNESS PROBE direction now REPRODUCES seed-robustly: an action-regression MLP
 #     on FROZEN features has LOWER held-out val_mse on aligned than random features, EVERY seed:
 #         seed 0: aligned 0.1297 < random 0.1578  (gap +0.028)
 #         seed 1: aligned 0.1205 < random 0.1604  (gap +0.040)
 #         seed 2: aligned 0.1100 < random 0.1635  (gap +0.054)
 #     (exercise_config: episodes 70, dim 96, depth 3, align 30, probe 150, bc 250, eval 12, cpu.)
-# THIS IS NOW THE CHAPTER HEADLINE: aligned features are more CONTROL-USEFUL than random — the
+# THIS IS NOW THE CHAPTER HEADLINE: aligned features are more CONTROL-USEFUL than random, the
 # honest, reproducible, lower bar (can a controller read the action off the features at all?).
-# THE HIGHER BAR — closed-loop pixel rollout — STILL floors at free-tier: 0/12 for BOTH encoders,
+# THE HIGHER BAR, closed-loop pixel rollout, STILL floors at free-tier: 0/12 for BOTH encoders,
 # mean_return ~ -105..-113, every seed. Single-frame BC of the non-Markovian waypoint expert from a
 # tiny-ViT feature is genuinely too hard at 64x64 (ch1.1 needed 500 ep / 600 epochs from STATE for
 # ~0.5). That ceiling is REAL and IS the lesson: closing it needs a pretrained aligned backbone
 # (OpenVLA's SigLIP) = the read-the-real-thing / a GPU Scale Lab.
 # GATING: the PROBE direction (ex1) and the MEMORIZATION direction (ex2) BOTH reproduce and ARE gated
 # (checks.py ex1 asserts probe_mse_gap >= min_probe_advantage; ex2 asserts frozen - trap bc_final_loss
-# >= min_train_loss_drop — unfreezing the encoder memorizes the tiny demo set -> LOWER BC train loss).
+# >= min_train_loss_drop: unfreezing the encoder memorizes the tiny demo set -> LOWER BC train loss).
 # The ROLLOUT direction does NOT reproduce and is NOT gated: rollout bands stay PENDING (both floor 0/12).
 # AUTHOR OPTIONS to also recover the ROLLOUT bar (optional, all off the pure free-tier floor):
 #   (1) Relax the 64x64 floor for THIS chapter (e.g. 96x96 + a slightly larger ViT) as a documented
 #       exception; most likely to lift rollout off zero.  (2) Action chunking + short history (ch1.3
 #       ACT shape) instead of single-frame single-action BC.  (3) A SMALL PRETRAINED aligned backbone
-#       as a downloadable manifest — closest to the real OpenVLA lesson, but a policy shift.
+#       as a downloadable manifest, closest to the real OpenVLA lesson, but a policy shift.
 # WALL-CLOCK: exercise_config ~90-95 s/seed (BOTH encoders) on an M-series CPU; the DEFAULT config
 # (episodes 90, align 40, probe 150, bc 300, eval 20) is heavier. wallclock-bench MUST measure before
 # any drop, and the default config may still need to shrink to hold the free-tier "minutes" budget.
 
 read_the_real_thing: true
 # READ-THE-REAL-THING: the definitive "a pretrained ALIGNED vision backbone feeds the action
-# decoder". The rtrt commit is LEFT FOR THE AUTHOR to pin — I must never invent a SHA. Honest
+# decoder". The rtrt commit is LEFT FOR THE AUTHOR to pin. I must never invent a SHA. Honest
 # candidates (repo + focus; author pins the verified offline commit):
 rtrt:
   repo: openvla/openvla
-  commit: PENDING            # AMBIGUOUS repo (openvla vs the alt_repo openpi) — LEFT FOR THE AUTHOR, not forced. Verified-ready candidates (2026-07-08): openvla @ c8f03f48af692657d3060c19588038c7220e9af9 (default-branch HEAD; README confirms fused SigLIP+DINOv2 -> action head) OR openpi @ 15a9616a00943ada6c20a0f158e3adb39df2ccac (matches ch3.8/5.4/5.5). NEVER invent a sha.
+  commit: PENDING            # AMBIGUOUS repo (openvla vs the alt_repo openpi). LEFT FOR THE AUTHOR, not forced. Verified-ready candidates (2026-07-08): openvla @ c8f03f48af692657d3060c19588038c7220e9af9 (default-branch HEAD; README confirms fused SigLIP+DINOv2 -> action head) OR openpi @ 15a9616a00943ada6c20a0f158e3adb39df2ccac (matches ch3.8/5.4/5.5). NEVER invent a sha.
   alt_repo: Physical-Intelligence/openpi   # pi0: PaliGemma/SigLIP image path -> flow action expert
   focus:
-    - "how a FROZEN/pretrained vision backbone (Prismatic's fused SigLIP + DINOv2) is consumed by the action head — our ViT-CLS-feature -> adapter -> head, grown up to a real aligned backbone -> LLM -> action decoder"
+    - "how a FROZEN/pretrained vision backbone (Prismatic's fused SigLIP + DINOv2) is consumed by the action head, our ViT-CLS-feature -> adapter -> head, grown up to a real aligned backbone -> LLM -> action decoder"
     - "the projection/adapter from vision features into the policy's token/feature space (our thin nn.Linear adapter onto the frozen CLS feature)"
-    - "why the backbone stays frozen (or lightly adapted): the alignment is the expensive, transferable part — exactly the aligned-vs-random gap this chapter measures"
+    - "why the backbone stays frozen (or lightly adapted): the alignment is the expensive, transferable part, exactly the aligned-vs-random gap this chapter measures"
 
 demo: pixels_load_bearing_vision
 # The hero shows the CONTROL-USEFULNESS gap (the reproducible headline): the aligned encoder's
 # probe val_mse < random's, and the aligned CLS-attention saliency (8x8 patch grid, in vizdata)
 # concentrates on the block+pusher while the random encoder's is diffuse. vizdata ALSO records the
 # two rollouts side-by-side, but AUTHOR NOTE: at free-tier both rollouts floor (0/12), so the
-# "aligned recovers, random doesn't" rollout framing is a SCALE-LAB claim — lead the panel with the
+# "aligned recovers, random doesn't" rollout framing is a SCALE-LAB claim. Lead the panel with the
 # probe-gap + saliency, not the rollout. A LIVE in-browser pixel rollout needs offscreen RGB
-# rendering to featurize frames, which MuJoCo-WASM does not expose — same block ch1.8 documents.
+# rendering to featurize frames, which MuJoCo-WASM does not expose. Same block ch1.8 documents.
 
 # All reference metrics: cpu, mujoco 3.10.0 / torch 2.10.0 / numpy 2.4.6, seeds 0/1/2. Env resets +
 # rendering are bitwise on the SAME machine (the smoke metrics.json is byte-identical twice-run);
@@ -100,14 +101,14 @@ demo: pixels_load_bearing_vision
 # val MSE (measured on seeds 0/1/2; see reference_run). Author: run wallclock-bench (PENDING) and
 # re-confirm reference_run at DEFAULT config; the numbers there are MEASURED at exercise_config.
 reference_run:
-  provenance: "MEASURED 2026-07-08, cpu (M-series), seeds 0/1/2, at exercise_config (episodes 70, dim 96, depth 3, heads 3, align_epochs 30, probe_epochs 150, bc_epochs 250, eval_episodes 12). HEADLINE = the control-usefulness PROBE (held-out action-regression val_mse). Numbers below are the seed-0 point + the 0/1/2 band; MuJoCo raster is not bitwise across CPU arches, so absolutes are platform-sensitive — the gated claim is the DIRECTION (aligned < random val MSE, every seed). Author: re-confirm at DEFAULT config via wallclock-bench before drop."
+  provenance: "MEASURED 2026-07-08, cpu (M-series), seeds 0/1/2, at exercise_config (episodes 70, dim 96, depth 3, heads 3, align_epochs 30, probe_epochs 150, bc_epochs 250, eval_episodes 12). HEADLINE = the control-usefulness PROBE (held-out action-regression val_mse). Numbers below are the seed-0 point + the 0/1/2 band; MuJoCo raster is not bitwise across CPU arches, so absolutes are platform-sensitive: the gated claim is the DIRECTION (aligned < random val MSE, every seed). Author: re-confirm at DEFAULT config via wallclock-bench before drop."
   # HEADLINE (reproducible, gated): aligned features are more control-useful than random.
   probe_mse_gap: 0.0281              # random_val_mse - aligned_val_mse; seeds 0/1/2 = +0.028 / +0.040 / +0.054 (> 0 EVERY seed)
   probe_val_mse_aligned: 0.1297     # seed 0 (seed 1: 0.1205, seed 2: 0.1100)
   probe_val_mse_random: 0.1578      # seed 0 (seed 1: 0.1604, seed 2: 0.1635)
   align_final_loss: 0.24            # InfoNCE converges once the frame is background-subtracted (~0.07-0.43 across seeds)
   parity_delta: 0.0                 # torch/onnx contract-v1 parity; asserted < 1e-4 in-run (measured 0.0)
-  # HIGHER BAR (Scale Lab; does NOT reproduce at free-tier — bands stay PENDING, ungated):
+  # HIGHER BAR (Scale Lab; does NOT reproduce at free-tier, bands stay PENDING, ungated):
   success_gap: PENDING              # rollout aligned - random; measured 0/12 - 0/12 = 0.0 every seed (both floor)
   aligned_success_rate: 0.0         # 0/12 every seed, mean_return ~ -107
   random_success_rate: 0.0          # 0/12 every seed, mean_return ~ -105
@@ -116,9 +117,9 @@ reference_run:
 # provenance, not a bare magic number). checks.py reads these instead of inlining tolerances.
 # The self-contained gate (ex3 InfoNCE completion) is FAST + deterministic and runs in
 # `make check`. The reproduce check ex1 (aligned probe < random probe) TRAINS both encoders and
-# is @pytest.mark.slow — excluded from `make check`. ex2 (unfrozen encoder MEMORIZES -> LOWER
+# is @pytest.mark.slow, excluded from `make check`. ex2 (unfrozen encoder MEMORIZES -> LOWER
 # bc_final_loss than frozen) is also @pytest.mark.slow; it gates the BC-train-loss DIRECTION, not
-# the rollout (which floors for both at free-tier — see the re-measurement above).
+# the rollout (which floors for both at free-tier, see the re-measurement above).
 exercise_checks:
   exercise_config:                 # the config the SLOW reproduce check runs at (below the artifact default so it finishes; MEASURED to show the probe direction on seeds 0/1/2)
     episodes: 70
@@ -129,29 +130,29 @@ exercise_checks:
     probe_epochs: 150
     bc_epochs: 250
     eval_episodes: 12
-    provenance: "MEASURED 2026-07-08, cpu, seeds 0/1/2 at this config. The GATED, reproducible ex1 claim is the CONTROL-USEFULNESS PROBE direction: probe_mse_gap (random_val_mse - aligned_val_mse) = +0.028 / +0.040 / +0.054 on seeds 0/1/2 (> 0 every seed). The ex2 gate is the MEMORIZATION direction: unfreezing the encoder (--train_encoder) drives bc_final_loss LOWER than the frozen head-only fit (the tiny from-scratch ViT memorizes the demo set); min_train_loss_drop is a DIRECTIONAL/PROVISIONAL floor from the mechanism (author to re-measure the exact magnitude via wallclock-bench). The ROLLOUT direction does NOT reproduce (0/12 both, every seed) and is NOT gated — it is the Scale Lab."
-    min_probe_advantage: 0.015      # ex1 (GATED): probe_mse_gap must be >= this — aligned features more control-useful than random (measured min +0.028, so 0.015 is a safe DIRECTION floor)
-    min_aligned_over_random: PENDING   # ex1 rollout gap — UNGATED: does not reproduce at free-tier (both 0/12). Re-enable at a larger tier (Scale Lab).
-    min_train_loss_drop: 0.001      # ex2 (GATED, DIRECTIONAL/PROVISIONAL): frozen bc_final_loss - trap bc_final_loss must be >= this. Unfreezing the encoder MEMORIZES the tiny demo set -> strictly LOWER BC train loss (the overfit signature). A directional floor from the mechanism, NOT a measured magnitude — author to re-measure the exact drop via wallclock-bench before drop.
+    provenance: "MEASURED 2026-07-08, cpu, seeds 0/1/2 at this config. The GATED, reproducible ex1 claim is the CONTROL-USEFULNESS PROBE direction: probe_mse_gap (random_val_mse - aligned_val_mse) = +0.028 / +0.040 / +0.054 on seeds 0/1/2 (> 0 every seed). The ex2 gate is the MEMORIZATION direction: unfreezing the encoder (--train_encoder) drives bc_final_loss LOWER than the frozen head-only fit (the tiny from-scratch ViT memorizes the demo set); min_train_loss_drop is a DIRECTIONAL/PROVISIONAL floor from the mechanism (author to re-measure the exact magnitude via wallclock-bench). The ROLLOUT direction does NOT reproduce (0/12 both, every seed) and is NOT gated. It is the Scale Lab."
+    min_probe_advantage: 0.015      # ex1 (GATED): probe_mse_gap must be >= this, aligned features more control-useful than random (measured min +0.028, so 0.015 is a safe DIRECTION floor)
+    min_aligned_over_random: PENDING   # ex1 rollout gap, UNGATED: does not reproduce at free-tier (both 0/12). Re-enable at a larger tier (Scale Lab).
+    min_train_loss_drop: 0.001      # ex2 (GATED, DIRECTIONAL/PROVISIONAL): frozen bc_final_loss - trap bc_final_loss must be >= this. Unfreezing the encoder MEMORIZES the tiny demo set -> strictly LOWER BC train loss (the overfit signature). A directional floor from the mechanism, NOT a measured magnitude. Author to re-measure the exact drop via wallclock-bench before drop.
   ex1:                             # ex1_predict_aligned_vs_random.py (predict-then-run; SLOW)
-    answer: "B"                    # aligned features are more CONTROL-USEFUL (lower probe val MSE) than random — from pixels with no state, encoder quality is the whole ballgame
+    answer: "B"                    # aligned features are more CONTROL-USEFUL (lower probe val MSE) than random. From pixels with no state, encoder quality is the whole ballgame
   ex2:                             # ex2_predict_train_encoder.py (predict-then-run + the learner-generated trap; SLOW)
     answer: "A"                    # unfreezing the encoder MEMORIZES the tiny demo set -> LOWER bc_final_loss (the overfit signature). NOT a rollout claim: both rollouts floor 0/12 at free-tier (Scale Lab), so the lower train loss is memorization, not skill.
   ex3:                             # ex3_completion_infonce.py (code-completion, fast)
     abs_tol: 1.0e-5             # a correct symmetric InfoNCE matches the reference within this
 
 # region_hashes: sha256 of each include-by-region span, checked by check_prose_code_drift
-# against the artifact. Populated at chapter-build time (site records) — OMITTED here.
+# against the artifact. Populated at chapter-build time (site records). OMITTED here.
 
-notebook_hash: 62c08a6087024cf4c1bea0e83d1bfce38f761dce9fa7db0f4abc51849d96243c        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 8e282013e8a326d6d795ead335c5a14efc1000cb6d4fe108740ef2240f595d0c   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 9ca98e7045231f619989b0c9ddb54189dc812c454f03bce83763d24b7fb8ddc8        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: ba0d2346c4f0ba73e8e245d064cb6759ba6e298ae1a495ccc552a2a26c771323   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: dbc74a5dd0bb66fa61f45e85001aff2cb96abe65366c17040909ab27831404ac
+  setup: d988679c75fb684470045fc7dd9857d170ee4e2bdc1cafa3d7f94e60e245706a
   data: b65d4a41829509d8e35bd3a89a946dee992448ec40d07c3e07914ea9f643843b
   model: cda5e357fd4c10014623fce5a970c24f5c43d33ae73db0c1db63a3c49a2f3c06
   align: 30ba6b92a8c0d41dff9649eb849d0b2d2fdbe9c6a415121088d24ae443f9106f
   probe: 89f5cb1496e55d5c3a5488deccaef414d29c21ad2eaa9af43d7bdf13051efcb8
   train: 041d4c90f8b6e93953da0f7f5c03c97336b7b333d559acd64b32d4d9e5ddfd19
   eval: 556b2ea983cb5cb92a378d78a09e6bef86a0c5f90bbda464e14a38f5291e29e5
-  report: 41903d16e1dfa1283aeb5ec5bfbdf7d58e98a06e2fcb025e0700d5092b3af8c4
+  report: bd8451eddb0eeb9f3422a0568de539b7fdf6857f856ec80adc01ba878300317a

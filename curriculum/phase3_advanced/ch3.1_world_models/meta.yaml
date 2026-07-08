@@ -1,27 +1,27 @@
 id: ch3.1-world-models
 title: "World Models I: Learning the Simulator"
-track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+track: elective            # off the main line (0→1→2→4→5). Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
 artifact: wm.py            # 369 LOC (measured); target ~380, hard cap 450
-task: pusht                # curriculum/common/envs/pusht — scripted-expert STATE sequences (see FEASIBILITY below)
+task: pusht                # curriculum/common/envs/pusht: scripted-expert STATE sequences (see FEASIBILITY below)
 dataset:
   reference: null          # the world model generates its own data by rolling the scripted expert; no demo dataset
   learner_path: false      # (a learner could point --data at their ch0.4 states in a follow-up; not wired here)
 requires: [ch1.4]          # map dependency: Phase 3.1-3.2 require the diffusion chapter (encoder/decoder idiom)
 objectives:
-  - Build a Dreamer-style latent world model from scratch (torch) — encoder, a deterministic-latent GRU transition, and a decoder — that steps forward on actions alone instead of calling mj_step; honestly, it learns the EASY half (pusher kinematics) and not yet the hard half (the object/contact dynamics), and the eval prints that split
-  - Separate the PRIOR (predict the next latent from the recurrent state alone) from the POSTERIOR (correct that latent once the observation arrives) — the split that makes reconstruction and prediction two different questions
-  - Measure RECONSTRUCTION vs PREDICTION honestly — reconstruction (posterior, has seen the frame) is easy; k-step PREDICTION (prior rollout on actions alone) is the real test, scored against a copy-last baseline
-  - Explain the crossover: at k=1 copy-last wins (nothing moved), and the world model overtakes it in aggregate as the horizon grows — but read the per-dim split honestly (the win is pusher kinematics; copy-last still wins the object dynamics)
+  - Build a Dreamer-style latent world model from scratch in torch (encoder, a deterministic-latent GRU transition, and a decoder) that steps forward on actions alone instead of calling mj_step; honestly, it learns the EASY half (pusher kinematics) and not yet the hard half (the object/contact dynamics), and the eval prints that split
+  - Separate the PRIOR (predict the next latent from the recurrent state alone) from the POSTERIOR (correct that latent once the observation arrives): the split that makes reconstruction and prediction two different questions
+  - Measure RECONSTRUCTION vs PREDICTION honestly: reconstruction (posterior, has seen the frame) is easy; k-step PREDICTION (prior rollout on actions alone) is the real test, scored against a copy-last baseline
+  - Explain the crossover: at k=1 copy-last wins (nothing moved), and the world model overtakes it in aggregate as the horizon grows, but read the per-dim split honestly (the win is pusher kinematics; copy-last still wins the object dynamics)
 
-# FEASIBILITY (this chapter shipped from a GO/NO-GO spike — see 00-kickoff format).
+# FEASIBILITY (this chapter shipped from a GO/NO-GO spike; see 00-kickoff format).
 # The map row reads "PushT pixels". The spike measured that call and REVISED it:
 #  * H1 (render cost) PASS: PushT renders 32x32 grayscale offscreen at ~0.7 ms/frame
-#    on CPU — a pixel dataset is cheap to build free-tier.
+#    on CPU. A pixel dataset is cheap to build free-tier.
 #  * H2 (reconstruction) PASS on pixels: the conv encoder/decoder reconstructs frames
 #    beautifully (recon MSE ~5e-4).
 #  * H3 (prediction beats copy-last) FAIL on pixels at free-tier scale: a T and a
 #    pusher are a few pixels on a static background, so copy-last's pixel-MSE is tiny
-#    and a small model's reconstruction-blur floor never dips below it — NO crossover
+#    and a small model's reconstruction-blur floor never dips below it. NO crossover
 #    measured through k=22. Beating it needs a sharper decoder = more compute.
 #  * On the low-dim STATE the SAME recipe wins cleanly (crossover k~3, ~2.4x lower than
 #    copy-last). So the free-tier chapter teaches the MECHANISM on state; pixels are the
@@ -31,22 +31,22 @@ objectives:
 # and the substrate ch3.2 grows into.
 
 scale_lab: true
-# The Scale Lab is the PIXEL world model — the honest "why world models eat compute" study.
+# The Scale Lab is the PIXEL world model, the honest "why world models eat compute" study.
 # Observed in the spike (facts only; interpretation is the author's):
 #  - 32x32 grayscale, conv enc/deconv dec, deterministic-latent GRU (same as this chapter).
 #  - reconstruction MSE ~5e-4 (frames look right); OPEN-LOOP prediction never beats
 #    full-frame copy-last through a 22-step horizon at the small model's floor.
 #  - crossing over would take a sharper (larger) decoder and/or a perceptual/foreground
-#    loss — i.e. the 4090 config. That is the ch3.2 substrate and the "genuinely
+#    loss, i.e. the 4090 config. That is the ch3.2 substrate and the "genuinely
 #    instructive, deliberately small" line from the map.
 
 read_the_real_thing: true
-# READ-THE-REAL-THING left for the author to pin — I did not have a verified offline commit
+# READ-THE-REAL-THING left for the author to pin. I did not have a verified offline commit
 # sha and must never invent one. Good anchors:
-#   - danijar/dreamerv3 (or dreamerv2): the RSSM — the prior/posterior split this chapter
+#   - danijar/dreamerv3 (or dreamerv2): the RSSM, the prior/posterior split this chapter
 #     builds by hand, plus the stochastic-categorical latent and KL balancing we cut.
-#   - Ha & Schmidhuber, "World Models" (2018): the VAE + MDN-RNN + controller decomposition
-#     — the ancestor of the encoder/dynamics/decoder split here.
+#   - Ha & Schmidhuber, "World Models" (2018): the VAE + MDN-RNN + controller decomposition,
+#     the ancestor of the encoder/dynamics/decoder split here.
 rtrt:
   repo: danijar/dreamerv3
   commit: e3f02248693a79dc8b0ebd62c93683888ddaccfe   # default-branch HEAD (no tags in repo); pinned 2026-07-07
@@ -55,10 +55,10 @@ rtrt:
     - "the KL loss between prior and posterior: our deterministic dyn_loss is its stripped cousin"
     - "why the recurrent state is deterministic AND stochastic (we keep only the deterministic half)"
 
-demo: world_model_prediction    # recon-vs-prediction viz — see demo/embed.yaml (site component is a follow-up)
+demo: world_model_prediction    # recon-vs-prediction viz; see demo/embed.yaml (site component is a follow-up)
 
-# NOTE: ch3.2 (World Models II: Acting in Imagination) builds directly on this file —
-# it learns a policy INSIDE the learned model by rolling the prior forward (imagine()).
+# NOTE: ch3.2 (World Models II: Acting in Imagination) builds directly on this file.
+# It learns a policy INSIDE the learned model by rolling the prior forward (imagine()).
 # The prior/posterior split and imagine() rollout here are exactly the substrate 3.2 needs.
 
 # Reference run + seeded bands. All numbers seed sweep 0-2 on cpu, torch 2.10.0 /
@@ -69,27 +69,27 @@ reference_run:
   val_recon: 0.035              # reconstruction floor (posterior, sees the frame): 0.0336-0.0358 across seeds
   world_model_pred_mean: 0.058  # mean k-step prediction MSE (prior rollout): 0.0549-0.0608 across seeds
   copy_last_pred_mean: 0.137    # mean k-step copy-last MSE: 0.132-0.146 across seeds
-  pred_ratio_copy_over_wm: 2.3  # copy-last / world-model error: 2.18-2.45x across seeds — >2x lower IN AGGREGATE
+  pred_ratio_copy_over_wm: 2.3  # copy-last / world-model error: 2.18-2.45x across seeds, >2x lower IN AGGREGATE
   crossover_k: 3                # horizon where WM first beats copy-last (aggregate): k=2-3 across seeds
   # WHERE the aggregate win lives (measured per-dim, seeds 0-2; the eval prints this split):
-  pusher_dims_wm_beats_copy: true   # pusher xy (dims 0,1): WM ~8x lower (7.9-8.3x seeds 0-2) — a trivial integral of the commanded velocity
-  object_dims_wm_beats_copy: false  # tee/block pose (dims 2-5): copy-last WINS every seed — the contact dynamics are NOT yet beaten
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  pusher_dims_wm_beats_copy: true   # pusher xy (dims 0,1): WM ~8x lower (7.8-8.3x seeds 0-2), a trivial integral of the commanded velocity
+  object_dims_wm_beats_copy: false  # tee/block pose (dims 2-5): copy-last WINS every seed; the contact dynamics are NOT yet beaten
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * WHERE THE WIN COMES FROM (the load-bearing caveat, added after adversarial review):
   #    the ~2.3x aggregate win is carried ENTIRELY by the fast pusher dims (next pusher pos =
-  #    a first-order integral of the commanded velocity — easy). On the OBJECT dims (the
+  #    a first-order integral of the commanded velocity, easy). On the OBJECT dims (the
   #    T-block pose, the contact dynamics PushT is actually about) copy-last WINS on all 3
-  #    seeds — the block barely moves, so copy-last is near-perfect and the model injects
+  #    seeds. The block barely moves, so copy-last is near-perfect and the model injects
   #    noise. The model learned the EASY half (pusher kinematics), NOT the hard half (object
   #    dynamics). Do NOT present the aggregate crossover as "it learned the simulator/the
-  #    dynamics" — the eval prints the split; lead with it honestly.
+  #    dynamics." The eval prints the split; lead with it honestly.
   #  * The ORDERING is the rock (seeds 0/1/2): copy-last wins at k=1, the world model
   #    overtakes it IN AGGREGATE by k=2-3 and the aggregate gap WIDENS with horizon.
-  #  * This is a TINY model by design (0.33 min CPU). It is NOT a strong Dreamer — the
+  #  * This is a TINY model by design (0.33 min CPU). It is NOT a strong Dreamer: the
   #    lesson is the mechanism (encoder/prior/posterior/decoder) and the recon-vs-prediction
   #    distinction, not a competitive world model. Do NOT sell it as one.
   #  * PIXELS are the honest counter-example (the Scale Lab): the same recipe reconstructs
-  #    pixels but can't beat pixel copy-last free-tier. Keep that — it prevents the
+  #    pixels but can't beat pixel copy-last free-tier. Keep that. It prevents the
   #    over-claim "a world model always beats copy-last."
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
@@ -103,13 +103,13 @@ exercise_checks:
   ex2:                          # ex2_latent_dim_investigation.py (investigation: latent_dim vs prediction quality)
     provenance: "cpu, seeds 0-1, latent_dim in {2, 16}, default otherwise; measured 2026-07-06"
     tiny_latent_ratio_max: 1.6  # at latent_dim=2 the WM barely beats copy-last (ratio near 1); stays under this
-    full_latent_ratio_min: 1.8  # at latent_dim=16 the WM clearly wins (>1.8x) — capacity buys prediction quality
+    full_latent_ratio_min: 1.8  # at latent_dim=16 the WM clearly wins (>1.8x): capacity buys prediction quality
 
 # region_hashes are recorded by the site build on first render (check_prose_code_drift
 # passes a chapter that carries none); do not hand-write them.
 
 notebook_hash: 91fc7c63997c586206bfec41da0d99111088af18aa3168e1c9620a1cd28cd335        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: d4725653140069b2a25b622fac9a073d5d646152f9db3d0d385e9a123ef688b8   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 6dc685278d12bc2333e7bda6b99a464eb37bafe746a0157013fc7b8a0d76f8e2   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: a0892317d02d15ad277e83c7d424abc8fb42af12395d106d178585b824e63dce

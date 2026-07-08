@@ -1,0 +1,86 @@
+---
+// OnThisPage — a sticky "On this page" section TOC (a right rail on wide screens).
+//
+// It is built ENTIRELY by progressive enhancement from the current page's
+// server-rendered heading ids: lib/prose.ts addHeadingIds() stamps stable
+// h2/h3 ids on the prose, and the script below reads those out of the live DOM,
+// builds the list, and scroll-spies the section nearest the top.
+//
+// JS-OFF: this <nav> stays `hidden` and the layout stays two-column — the reader
+// loses nothing (the left sidebar + the in-page headings themselves remain the
+// navigation). It's additive chrome, never load-bearing. It also self-hides when
+// a page has fewer than two headings (index / map / short pages), so the rail
+// only appears where a long chapter actually needs it.
+---
+<nav class="on-this-page" aria-labelledby="on-this-page-label" data-on-this-page hidden>
+  <p class="on-this-page__label" id="on-this-page-label">On this page</p>
+  <ol class="on-this-page__list"></ol>
+</nav>
+
+<script>
+  const nav = document.querySelector<HTMLElement>("[data-on-this-page]");
+  const list = nav?.querySelector<HTMLOListElement>(".on-this-page__list");
+  // Scope to the rendered chapter / further-module prose. This class marks the
+  // long reading pages only (chapters + Phase-5 modules) — the landing, map,
+  // about and progress pages have no .bk-prose, so they never sprout a rail.
+  const prose = document.querySelector<HTMLElement>("#content .bk-prose");
+
+  if (nav && list && prose) {
+    // Only the stamped section headings — h2/h3 carrying a stable id (from
+    // lib/prose.ts addHeadingIds). Headings without ids (Objectives / Exercises
+    // chrome, the colophon) are skipped so the TOC lists real prose sections only.
+    const heads = Array.from(
+      prose.querySelectorAll<HTMLElement>("h2[id], h3[id]"),
+    ).filter((h) => h.id);
+
+    // Fewer than two sections isn't worth a rail — leave it hidden (JS-off parity).
+    if (heads.length >= 2) {
+      for (const h of heads) {
+        const li = document.createElement("li");
+        li.className =
+          h.tagName === "H3" ? "on-this-page__item on-this-page__item--sub" : "on-this-page__item";
+        const a = document.createElement("a");
+        a.className = "on-this-page__link";
+        a.href = `#${h.id}`;
+        a.textContent = (h.textContent || "").trim();
+        a.dataset.spy = h.id;
+        li.appendChild(a);
+        list.appendChild(li);
+      }
+
+      const links = Array.from(list.querySelectorAll<HTMLAnchorElement>(".on-this-page__link"));
+
+      // Scroll-spy: the active section is the last heading whose top has passed a
+      // band near the viewport top. rAF-throttled; cheap and robust across
+      // browsers (no IntersectionObserver quirks with fast scrolls / short pages).
+      let raf = 0;
+      const OFFSET = 120;
+      const highlight = () => {
+        raf = 0;
+        let active = heads[0];
+        for (const h of heads) {
+          if (h.getBoundingClientRect().top <= OFFSET) active = h;
+          else break;
+        }
+        for (const a of links) a.removeAttribute("aria-current");
+        const link = active && list.querySelector<HTMLElement>(`[data-spy="${CSS.escape(active.id)}"]`);
+        if (link) {
+          link.setAttribute("aria-current", "location");
+          // keep the active item in view within the (independently scrollable) rail
+          link.scrollIntoView({ block: "nearest" });
+        }
+      };
+      const onScroll = () => {
+        if (!raf) raf = requestAnimationFrame(highlight);
+      };
+
+      // Reveal the rail and flip the shell to its three-column (has-toc) grid.
+      nav.hidden = false;
+      document.querySelector(".shell")?.classList.add("shell--has-toc");
+
+      highlight();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll, { passive: true });
+    }
+  }
+</script>

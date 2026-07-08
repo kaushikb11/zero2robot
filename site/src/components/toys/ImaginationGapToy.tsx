@@ -26,9 +26,11 @@
  *   3. STEP 1 (unchanged from 3.1) — the world model the actor dreams inside:
  *      reconstruction (the easy half) falls fast; the dynamics loss stays low.
  *
- * Colour by MEANING: --signal blue = IMAGINATION (the dream — rosy but DELUDED, never
- * an endorsement; the badges say so), --alert red = REALITY (the honest floor: real
- * return, 0% success, the block that never parks), --ink-mute = neutral instrument.
+ * Colour by MEANING (hue tracks how much to TRUST each series): --alert red = IMAGINATION
+ * (the dream — rosy but DELUDED, so it wears the cautionary hue: "don't trust this rosy
+ * number"), --signal blue = REALITY (the honest ground truth you SHOULD believe — real
+ * return + floor — even though its news is bad), --alert red also flags the standalone
+ * 0%-real-success alarm (the punchline failure), --ink-mute = neutral instrument.
  * The server-rendered default (both bars + the reality check + both full curves + the
  * final-iteration readout) IS the JS-off experience; only the iteration scrubber goes
  * inert without hydration.

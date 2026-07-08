@@ -1,6 +1,6 @@
 /* ch2.5 walk — the LIVE emergent-gait toy (QuadrupedWalkLive.tsx).
  *
- * Co-located CSS, namespaced `qw-*` so it never collides with the recorded
+ * Co-located CSS, namespaced `ql-*` so it never collides with the recorded
  * QuadrupedWalkToy's classes or the global ct-, sl-, bk- prefixes. Hardcoded-LIGHT lab
  * instrument in both themes (literal colours). Colour by meaning:
  *   - navy         → the robot (the same robot every panel)
@@ -13,7 +13,7 @@
 .qw { display: grid; gap: 0; }
 
 /* landscape side-view stage — poster and canvas share the exact box (no reflow) */
-.qw-figure {
+.ql-figure {
   position: relative;
   margin: 0;
   aspect-ratio: 520 / 340;
@@ -24,26 +24,26 @@
   background: linear-gradient(180deg, #fbf9f3, #f4efe3);
   touch-action: none;
 }
-.qw-figure:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.ql-figure:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
 
-.qw-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.qw-canvas[hidden] { display: none; }
-.qw-poster { position: absolute; inset: 0; }
-.qw-poster[hidden] { display: none; }
-.qw-poster-svg { display: block; width: 100%; height: 100%; }
+.ql-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ql-canvas[hidden] { display: none; }
+.ql-poster { position: absolute; inset: 0; }
+.ql-poster[hidden] { display: none; }
+.ql-poster-svg { display: block; width: 100%; height: 100%; }
 
 /* poster vector styling (static) */
-.qw-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
-.qw-ground { stroke: #c8bc9e; stroke-width: 2; }
-.qw-torso { fill: #333e6b; }
-.qw-head { fill: #1f56de; }
-.qw-leg { fill: none; stroke: #3a4576; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
-.qw-leg--far { opacity: 0.42; stroke-width: 4; }
-.qw-foot { fill: #cc5a4c; }
-.qw-poster-lbl { font-family: ui-monospace, monospace; font-size: 12px; fill: #6d6252; }
+.ql-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
+.ql-ground { stroke: #c8bc9e; stroke-width: 2; }
+.ql-torso { fill: #333e6b; }
+.ql-head { fill: #1f56de; }
+.ql-leg { fill: none; stroke: #3a4576; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.ql-leg--far { opacity: 0.42; stroke-width: 4; }
+.ql-foot { fill: #cc5a4c; }
+.ql-poster-lbl { font-family: ui-monospace, monospace; font-size: 12px; fill: #6d6252; }
 
 /* HUD */
-.qw-hud {
+.ql-hud {
   position: absolute; top: 0.7rem; left: 0.7rem;
   width: min(15rem, 58%);
   display: grid; gap: 0.35rem;
@@ -56,28 +56,28 @@
   font-size: 0.72rem;
   pointer-events: none;
 }
-.qw-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
-.qw-k { color: #6d6252; letter-spacing: 0.02em; }
-.qw-v { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; }
-.qw-v.qw-bad { color: #c0362a; }
-.qw-meter { height: 5px; border-radius: 100px; background: rgba(120, 108, 86, 0.2); overflow: hidden; }
-.qw-meter-fill { height: 100%; background: #1f56de; transition: width 0.12s linear; }
-.qw-meter-fill[data-fell="true"] { background: #c0362a; }
+.ql-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.ql-k { color: #6d6252; letter-spacing: 0.02em; }
+.ql-v { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; }
+.ql-v.ql-bad { color: #c0362a; }
+.ql-meter { height: 5px; border-radius: 100px; background: rgba(120, 108, 86, 0.2); overflow: hidden; }
+.ql-meter-fill { height: 100%; background: #1f56de; transition: width 0.12s linear; }
+.ql-meter-fill[data-fell="true"] { background: #c0362a; }
 
-.qw-status {
+.ql-status {
   position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
   font-family: ui-monospace, monospace; font-size: 0.64rem;
   color: #6d6252;
   display: flex; justify-content: space-between; gap: 0.8rem;
   pointer-events: none;
 }
-.qw-status[data-failed="true"] { color: #c0362a; }
+.ql-status[data-failed="true"] { color: #c0362a; }
 
-.qw-controls {
+.ql-controls {
   display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
   padding: 0.85rem 0.1rem 0.1rem;
 }
-.qw-btn {
+.ql-btn {
   font-family: ui-monospace, monospace;
   font-size: 0.74rem; letter-spacing: 0.01em;
   padding: 0.4rem 0.85rem;
@@ -88,19 +88,19 @@
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.qw-btn:hover { border-color: #1f56de; color: #23201b; }
-.qw-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
-.qw-btn--primary {
+.ql-btn:hover { border-color: #1f56de; color: #23201b; }
+.ql-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.ql-btn--primary {
   background: #1f56de; color: #fff; border-color: #1f56de;
   box-shadow: 0 1px 4px -1px rgba(31, 86, 222, 0.4);
 }
-.qw-btn--primary:hover { color: #fff; background: color-mix(in srgb, #1f56de 90%, #000); }
-.qw-btn:disabled { opacity: 0.5; cursor: default; }
-.qw-control-note {
+.ql-btn--primary:hover { color: #fff; background: color-mix(in srgb, #1f56de 90%, #000); }
+.ql-btn:disabled { opacity: 0.5; cursor: default; }
+.ql-control-note {
   font-family: ui-monospace, monospace; font-size: 0.64rem;
   color: #6d6252; margin-left: auto;
 }
 @media (max-width: 34rem) {
-  .qw-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(13rem, 62%); }
-  .qw-control-note { display: none; }
+  .ql-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(13rem, 62%); }
+  .ql-control-note { display: none; }
 }

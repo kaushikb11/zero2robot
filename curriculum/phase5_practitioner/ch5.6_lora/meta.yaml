@@ -3,7 +3,7 @@ builds_on:  # for the /map/ dependency graph (documented in the curriculum map; 
   - ch1.8   # the VLA whose expert LoRA adapts
   - ch3.8   # the synthetic-routing task + TinyPolicy
 title: "LoRA From Scratch: Adapt a Frozen Policy"
-artifact: lora.py            # target ~340 LOC (built to 378, hard cap 450: a from-scratch LoRALinear + a compact
+artifact: lora.py            # target ~340 LOC (built to 379, hard cap 450: a from-scratch LoRALinear + a compact
 #                              conditioned base + pretrain/hold-out/freeze + a frozen/full/LoRA rank sweep, one file)
 task: synthetic-routing      # no env rollout: a compact STATE-based conditioned policy (the ch3.8 routing task,
 #                              generated in-file) is pretrained, frozen, and adapted. No rendering => bitwise on CPU.
@@ -13,49 +13,49 @@ task: synthetic-routing      # no env rollout: a compact STATE-based conditioned
 # compact conditioned MLP base. So `allow_transformers` stays UNSET and the forbidden-imports
 # gate runs at full strictness. The real peft.LoRA layer is the READ-THE-REAL-THING, not an import.
 
-# WHY A ~78K BASE, NOT ch3.8's ~7K (the honest scale call — author: keep this):
+# WHY A ~78K BASE, NOT ch3.8's ~7K (the honest scale call, author: keep this):
 #   The chapter's real-world hook is "LoRA trains ~1% of the weights." That fraction is
 #   r*(in+out)/params PER wrapped layer; on a 7K base a rank-4 head adapter is ~15-20% of the
 #   weights and the "~1%" story evaporates. We therefore widen the action head (hidden=256) so
-#   the base is ~78K and a rank-4 head adapter is a realistic ~1.3% — while staying a tiny,
+#   the base is ~78K and a rank-4 head adapter is a realistic ~1.3%, while staying a tiny,
 #   CPU-instant, bitwise-deterministic state-based MLP (~55 LOC of model). This is the ch3.8
 #   TinyPolicy scaled for the parameter-fraction lesson, not ch1.8's attention backbone.
 
 objectives:
-  - Build LoRA from scratch — a from-scratch LoRALinear that wraps a FROZEN nn.Linear with a thin trainable low-rank bypass y = W x + (alpha/r) B(A x), where A[d->r] and B[r->d] are the only trainable tensors and B is ZERO-INITIALIZED so the adapted layer is bitwise the frozen one at step 0 (the exact init peft's reset_lora_parameters uses). Pretrain a compact conditioned policy on three skills, HOLD ONE OUT, torch.save + reload + FREEZE it (self-contained, no external checkpoint), then adapt it to the held-out skill three ways — frozen / full-fine-tune / LoRA — in one run, printing trainable-vs-total params for each.
-  - Sweep the LoRA rank r and read the ELBOW — held-out fit RISES then PLATEAUS at full fine-tuning's ceiling. Measure that a rank-4 LoRA training ~1% of the weights recovers MOST of full-FT's held-out fit (recovered fraction ~0.84, seed-robust), killing the misconception "fewer trainable parameters must mean a worse fit."
-  - Meet the honest twist, measured: freezing W does NOT automatically protect an old skill. Watch an in-distribution skill's fit COLLAPSE under LoRA just as it does under full fine-tuning (often more), because a single low-rank LINEAR adapter is added to EVERY input and cannot gate itself off for the old skill. LoRA's real win here is parameter efficiency, not free memory — and "frozen weights" is not "frozen behavior."
+  - Build LoRA from scratch: a from-scratch LoRALinear that wraps a FROZEN nn.Linear with a thin trainable low-rank bypass y = W x + (alpha/r) B(A x), where A[d->r] and B[r->d] are the only trainable tensors and B is ZERO-INITIALIZED so the adapted layer is bitwise the frozen one at step 0 (the exact init peft's reset_lora_parameters uses). Pretrain a compact conditioned policy on three skills, HOLD ONE OUT, torch.save + reload + FREEZE it (self-contained, no external checkpoint), then adapt it to the held-out skill three ways (frozen / full-fine-tune / LoRA) in one run, printing trainable-vs-total params for each.
+  - Sweep the LoRA rank r and read the ELBOW: held-out fit RISES then PLATEAUS at full fine-tuning's ceiling. Measure that a rank-4 LoRA training ~1% of the weights recovers MOST of full-FT's held-out fit (recovered fraction ~0.84, seed-robust), killing the misconception "fewer trainable parameters must mean a worse fit."
+  - Meet the honest twist, measured: freezing W does NOT automatically protect an old skill. Watch an in-distribution skill's fit COLLAPSE under LoRA just as it does under full fine-tuning (often more), because a single low-rank LINEAR adapter is added to EVERY input and cannot gate itself off for the old skill. LoRA's real win here is parameter efficiency, not free memory, and "frozen weights" is not "frozen behavior."
   - Feel why B is zero-initialized by breaking it (--break rand_init_B): init B like any other Linear (kaiming) instead of zeroing it, and the "adapted == frozen at step 0" invariant breaks (step0 gap 0.0 -> ~0.17, seed-robust). You no longer begin adaptation from the model you paid to pretrain.
 
 scale_lab: false
 # The map's ch5.6 row is a durable-single, CPU/T4. This chapter is state-based and CPU-instant
-# (a ~78K-param MLP, a few hundred Adam steps per arm, a 7-point rank sweep — well under a minute
+# (a ~78K-param MLP, a few hundred Adam steps per arm, a 7-point rank sweep, well under a minute
 # on a laptop). There is no scaling claim to make: the whole point is the MECHANISM (a low-rank
-# bypass, zero-init B, the rank elbow), which is size-invariant — the identical LoRALinear wraps a
+# bypass, zero-init B, the rank elbow), which is size-invariant: the identical LoRALinear wraps a
 # 7B-param VLA's attention/MLP projections. An author with a GPU + a token could add a Scale Lab
 # that LoRA-adapts a real released policy (SmolVLA action expert) offline and MEASURES the GPU tier
-# (set scale_lab: true + a ref, add allow_transformers IF it imports a HF loader) — but it must not
+# (set scale_lab: true + a ref, add allow_transformers IF it imports a HF loader), but it must not
 # become a free-tier requirement.
 
 # READ-THE-REAL-THING: the arc pairs this chapter with the production LoRA layer. The rtrt: block's
-# `commit:` is LEFT UNSET for the author to pin a verified SHA — I never invent one. The read:
-#   * huggingface/peft — src/peft/tuners/lora/layer.py, class Linear. The exact pieces you built:
+# `commit:` is LEFT UNSET for the author to pin a verified SHA. I never invent one. The read:
+#   * huggingface/peft: src/peft/tuners/lora/layer.py, class Linear. The exact pieces you built:
 #     update_layer creates lora_A = nn.Linear(in, r) and lora_B = nn.Linear(r, out); reset_lora_
 #     parameters kaiming-inits lora_A and ZEROES lora_B (our A/B init, verbatim in intent); scaling
 #     = lora_alpha / r (our alpha/r); forward is result + lora_B(lora_A(dropout(x))) * scaling (our
 #     W x + (alpha/r) B(A x)). Reading target: reset_lora_parameters (why B is zeroed) and the
-#     forward (the low-rank bypass). We READ it — lora.py imports only torch/numpy/stdlib.
+#     forward (the low-rank bypass). We READ it: lora.py imports only torch/numpy/stdlib.
 read_the_real_thing: true
 rtrt:
   repo: huggingface/peft
-  commit: ba6a19060d6ab54a87538a6e77e3e4d5a907375b   # huggingface/peft tag v0.19.1 (2026-04-16); pinned 2026-07-08 (API-verified: src/peft/tuners/lora/layer.py present — class Linear, reset_lora_parameters kaiming-inits lora_A + ZEROES lora_B, scaling = lora_alpha / r). NEVER invent a sha.
+  commit: ba6a19060d6ab54a87538a6e77e3e4d5a907375b   # huggingface/peft tag v0.19.1 (2026-04-16); pinned 2026-07-08 (API-verified: src/peft/tuners/lora/layer.py present, class Linear, reset_lora_parameters kaiming-inits lora_A + ZEROES lora_B, scaling = lora_alpha / r). NEVER invent a sha.
   focus:
-    - "reset_lora_parameters: lora_A kaiming-init, lora_B ZEROED (our zero-init B — why the adapter is a no-op at step 0)"
+    - "reset_lora_parameters: lora_A kaiming-init, lora_B ZEROED (our zero-init B, why the adapter is a no-op at step 0)"
     - "update_layer: lora_A = nn.Linear(in, r), lora_B = nn.Linear(r, out), scaling = lora_alpha / r (our A[r,in], B[out,r], alpha/r)"
-    - "the forward: result + lora_B(lora_A(x)) * scaling — the low-rank bypass added to the frozen base output (our W x + (alpha/r) B(A x))"
+    - "the forward: result + lora_B(lora_A(x)) * scaling, the low-rank bypass added to the frozen base output (our W x + (alpha/r) B(A x))"
 
 demo: lora_rank_dial          # a slider over rank r with two synced readouts (params-trained % climbing; held-out
-#                               fit rising then PLATEAUING — the visible elbow) + the task_A forgetting trace. Static
+#                               fit rising then PLATEAUING, the visible elbow) + the task_A forgetting trace. Static
 #                               vizdata (demo/vizdata.json), no MuJoCo/WASM, no policy runtime.
 
 # All reference metrics: seed 0, cpu, default config; torch 2.10.0 / numpy 2.4.6 (course pins).
@@ -69,7 +69,7 @@ reference_run:
   base_total_params: 77958            # the compact conditioned base we freeze + adapt
   held_out_skill: 3                   # skill 3 held out of pretraining (skills 0,1,2 pretrained)
   # --- the rank sweep (held-out skill fit; the ELBOW) ---
-  frozen_heldout_r2: -0.443355        # r=0: zero-shot on the unseen skill — it cannot do it
+  frozen_heldout_r2: -0.443355        # r=0: zero-shot on the unseen skill, it cannot do it
   sweep_ranks:      [0, 1, 2, 4, 8, 16, "full"]
   sweep_heldout_r2: [-0.443, -0.082, 0.253, 0.767, 0.998, 0.998, 1.000]   # RISES then PLATEAUS at full-FT
   sweep_trainable_pct: [0.0, 0.336, 0.672, 1.344, 2.689, 5.377, 100.0]    # params trained climbs with r
@@ -79,20 +79,20 @@ reference_run:
   full_heldout_r2: 0.999964           # full fine-tuning ceiling (100% of params)
   # --- the honest twist: forgetting (task_A = an in-distribution skill watched during adaptation) ---
   frozen_task_a_r2: 0.998484          # the pretrained base does task_A ~perfectly
-  lora_task_a_r2: -1.883667           # rank-4 LoRA COLLAPSES task_A — freezing W did NOT protect it
+  lora_task_a_r2: -1.883667           # rank-4 LoRA COLLAPSES task_A, freezing W did NOT protect it
   full_task_a_r2: -0.947966           # full-FT collapses task_A too; both forget (LoRA here forgets more)
   sweep_task_a_r2: [0.998, 0.456, -0.318, -1.884, -2.359, -2.306, -0.948]  # task_A degrades as adaptation bites
   # --- the mechanism / break ---
   lora_step0_frozen_gap: 0.0          # zero-init B: adapted output is BITWISE the frozen policy at step 0
   break_step0_frozen_gap: 0.169663    # --break rand_init_B: kaiming B -> gap 0.17 (invariant broken)
   # Seed robustness (default config, cpu, measured 2026-07-08):
-  #   frozen_heldout_r2  seed0 -0.44 / seed1 -0.82 / seed2 -0.53  (negative EVERY seed — zero-shot fails)
+  #   frozen_heldout_r2  seed0 -0.44 / seed1 -0.82 / seed2 -0.53  (negative EVERY seed, zero-shot fails)
   #   lora r4 heldout_r2 seed0  0.77 / seed1  0.69 / seed2  0.77  (recovered_frac 0.84 / 0.83 / 0.85)
   #   r8 heldout_r2       ~0.998 every seed (plateau at full-FT); the ELBOW (rise then plateau) is the rock
   #   lora r4 task_A_r2  seed0 -1.88 / seed1 -1.56 / seed2 -2.17  (<< frozen ~1.0 every seed: LoRA forgets task_A)
   #   full   task_A_r2   seed0 -0.95 / seed1 -0.64 / seed2 -0.89  (full-FT forgets too)
   #   break step0 gap    seed0  0.17 / seed1  0.21 / seed2  0.16  (clean gap 0.0 EXACTLY every seed)
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * THE DELIVERABLE IS A MECHANISM: a from-scratch LoRALinear + the rank elbow. Lead with "a
   #    rank-4 adapter over ~1% of the weights recovers most of full-FT's fit," not a third decimal.
   #  * THE SPEC'S SECOND HEADLINE WAS REFRAMED (measured, not assumed). The build brief asked to
@@ -100,13 +100,13 @@ reference_run:
   #    this from-scratch toy: LoRA forgets task_A just as much (here MORE), because a single low-rank
   #    LINEAR adapter is added to every input and cannot gate itself off per-skill. In the clean
   #    skill-separable regime full-FT can even PRESERVE the old skill better (it localizes its update
-  #    to the new skill's own weights). So the chapter teaches the HONEST result — "frozen weights is
-  #    not frozen behavior; LoRA buys parameter efficiency, not free memory" — and NO exercise gates
+  #    to the new skill's own weights). So the chapter teaches the HONEST result ("frozen weights is
+  #    not frozen behavior; LoRA buys parameter efficiency, not free memory") and NO exercise gates
   #    on "LoRA forgets less." The naive-intuition-that-fails IS the lesson (this is the ch5 house bar).
   #  * THE --break DEGRADES AN INVARIANT, NOT THE OUTCOME. random-init B breaks "adapted == frozen at
   #    step 0" (gap 0.0 -> 0.17), but adaptation still recovers the held-out fit. Do NOT claim the
   #    outcome collapses; the measured lesson is that you no longer BEGIN from the pretrained model.
-  #  * Wall-clock is PENDING (see wallclock.csv). The banner prints "not yet measured" — correct.
+  #  * Wall-clock is MEASURED: 0.18 min, cpu-laptop (see wallclock.csv, row dated 2026-07-08). The banner prints that measured row.
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with provenance,
 # not a bare magic number). checks.py reads these. ex3 (LoRALinear completion) is FAST + self-
@@ -124,21 +124,21 @@ exercise_checks:
     min_task_a_forget: 0.5            # ex2: task_A R2 must DROP by >= this from the frozen baseline under BOTH LoRA and full-FT (measured >= 1.9)
     max_zero_init_gap: 1.0e-6         # ex3: zero-init B -> adapted output == frozen (gap ~ 0, bitwise)
     min_break_gap: 0.05               # ex3/break: not-zeroing B -> adapted != frozen at step 0 (measured 0.16-0.21)
-  ex1:                                # ex1_predict_elbow.py (predict-then-run; SLOW — runs lora.py)
+  ex1:                                # ex1_predict_elbow.py (predict-then-run; SLOW, runs lora.py)
     answer: "B"                       # held-out fit RISES with rank then PLATEAUS at full-FT; a small rank recovers most
   ex2:                                # ex2_predict_forgetting.py (predict-then-run + the honest twist; SLOW)
-    answer: "C"                       # freezing W does NOT protect task_A — it collapses under LoRA as under full-FT
+    answer: "C"                       # freezing W does NOT protect task_A, it collapses under LoRA as under full-FT
   ex3:                                # ex3_completion_lora.py (code-completion + the learner-generated failure; FAST)
     abs_tol: 1.0e-6                   # a correct LoRALinear matches the reference; zero-init B is a no-op; kaiming B is not
 
-# region_hashes: OMITTED — the site records them at chapter-build time (per the arc contract).
+# region_hashes: OMITTED. The site records them at chapter-build time (per the arc contract).
 # notebook_hash / notebook_file_hash: PENDING (regenerate via notebook-tier-test once code is frozen).
 
-# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). A few seconds on the drafting CPU at default config, but NO number ships
-# until wallclock-bench MEASURES it on the reference tier (root invariant: never estimate wall-clock).
+# wall-clock: MEASURED 0.18 min (cpu-laptop; see curriculum/common/wallclock.csv, row dated 2026-07-08). A few seconds at default config.
+# The banner reads that measured row at startup (root invariant: never estimate wall-clock).
 
-notebook_hash: b1c39cec7fd6774e4bf988c9faab8f15773ce668d4de68b3919c163160294c56        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 2286c36f86b888effd804da6afe4348ba47d4c1cc271a34963b1cbaec5a65101   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 9854399c2ee4520bc7627f931c03f79d65f01a497093895b06919bcef9b0ebaa        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 25ed218e48c38fd7368e0ed6d5c8631e99b1c05199029166218d9356d9d5cf5b   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: cca0df1e7de3f0cb80485499e642a4f153397cb4e859711b3cf71993692282db
@@ -146,4 +146,4 @@ region_hashes:
   lora: c0dccae816700d9daa1390a7fd93480928259fbe32ba60f8d367bda4744abd91
   pretrain: 16b66ff46f80e43e89f4dbc45d6155cddf6d76d1e209a626a5f0fcc07ad10320
   sweep: 07febbbf9a6a92c9e80f42439ed83dd4fa97c9ed69d3225809f504f980293ca3
-  report: 3778c49b2730630f5432fff7f1778ee5bda0ee41a8c5888d574c22f2552913a8
+  report: 2c4a053647a1fbfbb7b9992f62dd518d61fbc449ff5d9befbcd9d681b022f53f

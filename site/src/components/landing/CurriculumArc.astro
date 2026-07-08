@@ -11,9 +11,8 @@
 //    a phase teaches, never claim un-built chapters exist.
 //  · The five phases are structural facts (curriculum/ subdirectories). Phases
 //    with no built chapters render as "coming" — no invented titles or counts.
-//  · Phase 4's leaderboard capstone is graded against HIDDEN seeds, so it stays
-//    gated (not linkable) until the grading server ships. The gate note says so
-//    plainly; it is not marketing, it is the honest status.
+//  · Every Phase 4 (Post-Training) chapter is built and linkable: the
+//    offline-RL primer, DAgger corrections, and HIL-SERL.
 //
 // SSR / JS-OFF: fully server-rendered; this is the readable-without-JS TOC.
 import { discoverChapters, chaptersByPhase } from "../../lib/curriculum.ts";
@@ -25,8 +24,7 @@ const builtByPhase = new Map(groups.map((g) => [g.phaseKey, g.chapters]));
 const liveCount = chapters.length;
 
 // The canonical six-phase arc (keys === curriculum/ subdirs, labels === the
-// bridge's phaseLabelFor). Blurbs + the phase-4 `gated` note are final,
-// voice-checked prose.
+// bridge's phaseLabelFor). Blurbs are final, voice-checked prose.
 //
 // `total` is the chapter count the committed curriculum map (43 chapters built
 // across six phases) plans for each phase — the ONE intended-arc fact not
@@ -34,15 +32,12 @@ const liveCount = chapters.length;
 // ONLY to decide the built-vs-coming tail: without it, a FINISHED phase would
 // keep advertising "more chapters in progress" it will never get. Only BUILT
 // chapters (discovered from curriculum/) ever render as links; `total` invents
-// no titles and links to nothing. `gated` marks a phase whose remaining chapters
-// are blocked on infrastructure (Phase 4's hidden-seed graded capstone) so it is
-// honestly "coming — gated", not merely "being written".
+// no titles and links to nothing.
 const PHASES: {
   key: string;
   label: string;
   blurb: string;
   total: number;
-  gated?: string; // honest status note for a phase with gated (not-yet-linkable) chapters
 }[] = [
   {
     key: "phase0_foundations",
@@ -62,45 +57,34 @@ const PHASES: {
     key: "phase2_reinforcement",
     label: "Phase 2 · Reinforcement",
     blurb:
-      "Learn from reward instead of examples — for when demonstrations run out and the robot has to try, fail, and improve.",
+      "Learn from reward instead of examples: for when demonstrations run out and the robot has to try, fail, and improve.",
     total: 8,
   },
   {
     key: "phase3_advanced",
     // Depth is the optional interlude the curriculum map frames it as — off the
-    // main line, and the capstone requires nothing from it.
+    // main line, and nothing downstream requires it.
     label: "Phase 3 · Depth (optional)",
     blurb:
-      "Off the main line, taken when the itch strikes. Learn a world model, build a physics engine from scratch — dynamics, constraints, contact — compare it against the simulator you have trusted all along, then plan through your own engine with sampling-based MPC. The capstone needs none of it.",
+      "Off the main line, taken when the itch strikes. Learn a world model, build a physics engine from scratch (dynamics, constraints, contact), compare it against the simulator you have trusted all along, then plan through your own engine with sampling-based MPC. The main line needs none of it.",
     total: 9,
   },
   {
     key: "phase4_capstone",
-    label: "Phase 4 · Capstone",
+    label: "Phase 4 · Post-Training",
     blurb:
-      "Put every phase together into one project you can point at, measure honestly, and show — including the human-in-the-loop RL that turns a decent policy into a reliable one.",
-    total: 4,
-    // Honest status, not marketing: the leaderboard chapters that close the
-    // course are graded against HIDDEN seeds, so they stay gated (not linkable)
-    // until the grading server ships. The RL correction chapters that lead into
-    // them are already built and linked above.
-    gated:
-      "The leaderboard capstone is scored against hidden seeds, so those chapters open only once the grading server ships — they aren't linkable yet, and we won't pretend they are. The chapters that lead into them are already here.",
+      "Take an already-trained policy and make it reliable. An offline-RL primer that learns from logged data, DAgger corrections that close the gaps demonstrations left, and human-in-the-loop RL (HIL-SERL) that turns a decent policy into a dependable one.",
+    total: 3,
   },
   {
     key: "phase5_practitioner",
     label: "Phase 5 · Practitioner",
     blurb:
-      "Build the practitioner's stack from scratch. A ViT and contrastive vision-language for perception, the two-tower VLA shape and a FAST action tokenizer, LoRA and INT8 quantization by hand — then the real-arm teleop → record → train → deploy loop that graduates you off the simulator.",
+      "Build the practitioner's stack from scratch. A ViT and contrastive vision-language for perception, the two-tower VLA shape and a FAST action tokenizer, LoRA and INT8 quantization by hand, then the real-arm teleop → record → train → deploy loop that graduates you off the simulator.",
     total: 8,
   },
 ];
 
-/** Split "Title: Subtitle" so the subtitle can hang below (mirrors [chapter].astro). */
-function splitTitle(title: string): [string, string] {
-  const i = title.indexOf(":");
-  return i >= 0 ? [title.slice(0, i).trim(), title.slice(i + 1).trim()] : [title, ""];
-}
 ---
 
 <section class="ln-arc" id="curriculum" aria-labelledby="ln-arc-title">
@@ -109,102 +93,39 @@ function splitTitle(title: string): [string, string] {
     <h2 class="ln-arc__title" id="ln-arc-title">Six phases, one runnable file at a time.</h2>
 
     <p class="ln-arc__stat">
-      <b class="ln-arc__count">{liveCount}</b>
-      {liveCount === 1 ? "chapter is" : "chapters are"} live and readable today —
-      the whole arc from a bare simulation loop to a from-scratch practitioner's
-      stack and a real-arm graduation. The only thing not yet linkable is the
-      leaderboard capstone: it's graded against hidden seeds, so it opens when the
-      grading server ships, and not before.
-    </p>
-
-    <p class="ln-arc__maplink">
-      <a href="/map/">See the dependency map — how every chapter connects →</a>
+      <b class="ln-arc__count">{liveCount}</b>{" "}
+      {liveCount === 1 ? "chapter is" : "chapters are"} live and readable today,
+      across six phases, from a bare simulation loop to a from-scratch
+      practitioner's stack and a real-arm graduation.
     </p>
   </header>
 
-  <ol class="ln-phases">
+  {/* Compact, scannable overview: one lean card per phase, not six paragraph-heavy
+      blocks with the whole chapter list inline (that duplicated the sidebar and
+      /map/). The full per-chapter detail + dependencies live on the map, which is
+      the single onward action below. */}
+  <ol class="ln-arc__grid">
     {
       PHASES.map((phase) => {
         const built = builtByPhase.get(phase.key) ?? [];
         const builtCount = built.length;
         const isLive = builtCount > 0;
-        // A live phase only advertises "more coming" when the map plans chapters
-        // it hasn't shipped AND those aren't the gated capstone (which gets its
-        // own honest marker). A fully-built phase shows NO "more coming" tail.
-        const moreComing = isLive && builtCount < phase.total && !phase.gated;
         return (
-          <li class="ln-phase" data-state={isLive ? "live" : "coming"}>
-            <div class="ln-phase__rail" aria-hidden="true">
-              <span class="ln-phase__dot" />
+          <li class="ln-pcard" data-state={isLive ? "live" : "coming"}>
+            <div class="ln-pcard__head">
+              <h3 class="ln-pcard__label">{phase.label}</h3>
+              <span class="ln-pcard__pill" data-state={isLive ? "live" : "coming"}>
+                {isLive ? `${builtCount} live` : "coming"}
+              </span>
             </div>
-
-            <div class="ln-phase__body">
-              <div class="ln-phase__head">
-                <h3 class="ln-phase__label">{phase.label}</h3>
-                <span class="ln-phase__pill" data-state={isLive ? "live" : "coming"}>
-                  {isLive ? `${builtCount} live` : "coming"}
-                </span>
-                {phase.gated && (
-                  <span class="ln-phase__pill" data-state="gated">capstone gated</span>
-                )}
-              </div>
-              <p class="ln-phase__blurb">{phase.blurb}</p>
-
-              {isLive ? (
-                <ul class="ln-chapters">
-                  {built.map((ch) => {
-                    const [main, sub] = splitTitle(ch.title);
-                    return (
-                      <li class="ln-chapter">
-                        <a class="ln-chapter__link" href={`/${ch.slug}/`}>
-                          <span class="ln-chapter__num">{ch.number}</span>
-                          <span class="ln-chapter__text">
-                            <span class="ln-chapter__title">
-                              {main}
-                              {sub && <span class="ln-chapter__sub">{sub}</span>}
-                            </span>
-                            <span class="ln-chapter__meta">
-                              {ch.objectives.length} objectives · <code>{ch.artifactBasename}</code>
-                              {ch.demo === "pusht_bc_recovery" && (
-                                <span class="ln-chapter__tag">flagship</span>
-                              )}
-                            </span>
-                          </span>
-                          <span class="ln-chapter__go" aria-hidden="true">→</span>
-                        </a>
-                      </li>
-                    );
-                  })}
-                  {moreComing && (
-                    <li class="ln-chapter ln-chapter--more" aria-hidden="true">
-                      <span class="ln-chapter__num">··</span>
-                      <span class="ln-chapter__text">
-                        <span class="ln-chapter__soon">more chapters in progress</span>
-                      </span>
-                    </li>
-                  )}
-                </ul>
-              ) : (
-                <p class="ln-phase__soon">
-                  Chapters for this phase are still being written. They'll link
-                  from here the day they're ready.
-                </p>
-              )}
-
-              {phase.gated && (
-                <div
-                  class="ln-phase__gate"
-                  role="note"
-                  aria-label="Capstone status — coming, gated on the grading server"
-                >
-                  <span class="ln-phase__gate-tag">coming · gated</span>
-                  <span class="ln-phase__gate-text">{phase.gated}</span>
-                </div>
-              )}
-            </div>
+            <p class="ln-pcard__blurb">{phase.blurb}</p>
           </li>
         );
       })
     }
   </ol>
+
+  <p class="ln-arc__maplink">
+    <a href="/map/">See the full map: every chapter, and how they connect →</a>
+  </p>
 </section>

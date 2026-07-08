@@ -1,25 +1,25 @@
 id: ch3.5-contact
 title: "Build a Physics Engine III: Contact"
-track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+track: elective            # off the main line (0→1→2→4→5). Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
 artifact: contact.py         # 414 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
-task: bodies-on-a-table      # a ball/puck dropping, bouncing, and a stacked tower — all from-scratch numpy
+task: bodies-on-a-table      # a ball/puck dropping, bouncing, and a stacked tower, all from-scratch numpy
 objectives:
-  - See that CONTACT is a one-sided constraint (an INEQUALITY, not ch3.4's equality): the table may only PUSH, never pull, so gap>=0, force>=0, and gap*force=0 — a COMPLEMENTARITY problem, not a force you can write down
-  - Build a PENALTY contact (a stiff spring-damper on penetration depth, clamped push-only) that is a plain ADDED force, so ch3.3's integrator steps it unchanged — and measure the price: it sinks by mg/k, rings while it settles, and explodes past dt_crit ~ 2*sqrt(m/k)
+  - See that CONTACT is a one-sided constraint (an INEQUALITY, not ch3.4's equality): the table may only PUSH, never pull, so gap>=0, force>=0, and gap*force=0, a COMPLEMENTARITY problem, not a force you can write down
+  - Build a PENALTY contact (a stiff spring-damper on penetration depth, clamped push-only) that is a plain ADDED force, so ch3.3's integrator steps it unchanged, and measure the price: it sinks by mg/k, rings while it settles, and explodes past dt_crit ~ 2*sqrt(m/k)
   - Build an LCP-FLAVORED contact (solve the complementarity for the contact IMPULSE via a fixed-iteration projected Gauss-Seidel) that HOLDS the body on the table with almost no penetration, no phantom energy, and stays stable where penalty diverges
-  - Measure the CONTACT-QUALITY honesty metric (penetration, phantom energy, jitter, and stability-vs-dt) parallel to ch3.3's energy drift / ch3.4's constraint drift — and connect the penalty-vs-complementarity trade you just fought to WHY MuJoCo uses a SOFT, regularized, convex contact model (the principled middle path)
+  - Measure the CONTACT-QUALITY honesty metric (penetration, phantom energy, jitter, and stability-vs-dt) parallel to ch3.3's energy drift / ch3.4's constraint drift, and connect the penalty-vs-complementarity trade you just fought to WHY MuJoCo uses a SOFT, regularized, convex contact model (the principled middle path)
 
 scale_lab: false
 # ch3.5 is the free-tier core of the from-scratch physics arc (map: 3.3-3.6 need only
 # Phase 0). The whole run is ~1 s of pure-numpy stepping + tiny scalar contact solves on
-# any CPU — nothing to scale onto a GPU. The scale knobs are the LESSON, not a tier ramp:
+# any CPU, nothing to scale onto a GPU. The scale knobs are the LESSON, not a tier ramp:
 # --stiffness trades sinking against the stable timestep; --dt past dt_crit blows penalty
 # up while lcp holds; --scene stack turns on the body-body (few-contact) PGS path. No Scale Lab.
 
 # READ-THE-REAL-THING: the map pairs this arc with a real contact-dynamics reference.
-# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# The rtrt: block is LEFT FOR THE AUTHOR to pin. I did not have a verified offline commit
 # sha and must never invent one. Good candidates: MuJoCo's documentation/source on its
-# CONTACT model (the soft, regularized, convex contact solver — the principled answer to
+# CONTACT model (the soft, regularized, convex contact solver, the principled answer to
 # exactly the penalty-vs-hard-LCP trade this chapter measures by hand), or a contact-dynamics
 # reference: Baraff (1994, "Fast Contact Force Computation for Nonpenetrating Rigid Bodies",
 # the LCP formulation), or Stewart & Trinkle (1996, the time-stepping LCP scheme our
@@ -29,15 +29,15 @@ rtrt:
   repo: google-deepmind/mujoco
   commit: 28009f9105cd92784b7b0b30c0605a5e29107a77   # tag 3.10.0 (matches the course-pinned mujoco); pinned 2026-07-07
   focus:
-    - "the docs' \"Computation\" / contact model: soft contacts, solref/solimp (the impedance/reference parameters) — the principled version of the penalty stiffness and the Baumgarte push we hand-tune here"
+    - "the docs' \"Computation\" / contact model: soft contacts, solref/solimp (the impedance/reference parameters), the principled version of the penalty stiffness and the Baumgarte push we hand-tune here"
     - "engine_core_constraint / the PGS-or-CG solver over contacts: the same per-contact projected sweep our solve_contacts does, but convex and regularized, not a hard clamp"
-    - "WHY a bare penalty contact (stiff spring) needs a tiny dt and a hard LCP is expensive/brittle — and why MuJoCo chose a soft, convex formulation between the two"
+    - "WHY a bare penalty contact (stiff spring) needs a tiny dt and a hard LCP is expensive/brittle, and why MuJoCo chose a soft, convex formulation between the two"
 
 demo: contact_quality        # 2D body height + penetration + energy curves, penalty vs lcp; pure numpy
 
 # Reference run: the FULL default (--scene drop --seed 0, contact all, dt 0.002, stiffness
 # 1e4, damping 80, 2000 steps = 4 s sim). All numbers seed 0 on cpu, numpy 2.4.6, measured
-# 2026-07-06. These are the CONTACT-QUALITY HEADLINE — the honesty metric, stated so the
+# 2026-07-06. These are the CONTACT-QUALITY HEADLINE, the honesty metric, stated so the
 # "penalty penetrates/sinks/explodes >> lcp holds" ordering is unmissable. Penetration and
 # jitter are fractions of the body radius (0.1); energy_excess is relative to the drop energy.
 reference_run:
@@ -46,23 +46,23 @@ reference_run:
   radius: 0.1
   # --- PENALTY (stiff spring-damper): sinks and (past dt_crit) explodes ---
   penalty_max_penetration_frac: 0.251329183485   # on impact the ball drives 25% of its radius into the table before the spring reacts
-  penalty_rest_penetration_frac: 0.00981         # static sink at rest == mg/k / radius (9.81e-4 / 0.1) — the body lives INSIDE the table
+  penalty_rest_penetration_frac: 0.00981         # static sink at rest == mg/k / radius (9.81e-4 / 0.1), the body lives INSIDE the table
   penalty_stable_dt: 0.008                        # largest dt (of the probed grid) at which penalty stays bounded
   # --- LCP-FLAVORED (impulse solve): holds the body on the table ---
   lcp_max_penetration_frac: 0.056743325071        # 4.4x shallower on impact (~one step of approach velocity), then pushed back out
-  lcp_rest_penetration_frac: 0.0                  # rests exactly ON the table — no sink
+  lcp_rest_penetration_frac: 0.0                  # rests exactly ON the table, no sink
   lcp_stable_dt: 0.064                             # stable across the whole probed dt grid (no stiff spring to blow up)
   dt_crit_penalty: 0.02                            # 2*sqrt(m/k); raise dt toward this and penalty diverges
   # --- BOUNCE scene (--scene bounce): the PHANTOM-ENERGY artifact ---
-  #   penalty energy_excess = +0.0058 (the discrete spring INJECTS energy — the ball bounces
+  #   penalty energy_excess = +0.0058 (the discrete spring INJECTS energy, the ball bounces
   #     higher than it started; at dt 0.005 this grows to +0.148, a 15% energy gain out of nothing),
   #     penalty rest_jitter = 0.056 (it never stops ringing); lcp energy_excess = 0.0 (a correct
   #     inelastic/restitution contact only ever REMOVES energy) and lcp holds the floor.
   # --- STACK scene (--scene stack): the few-contact (body-body PGS) case, reusable by ch3.6 ---
   #   penalty max_penetration_frac = 0.0595, rest = 0.0294 (the tower sinks into itself and the floor);
   #   lcp max_penetration_frac = 5.0e-6, rest = 4.2e-6 (five-millionths of a radius == sub-micron:
-  #   0.5 um at radius 0.1 m) — the projected Gauss-Seidel sweep solving floor + two body-body contacts.
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #   0.5 um at radius 0.1 m), the projected Gauss-Seidel sweep solving floor + two body-body contacts.
+  # HONESTY (author MUST keep this framing, it is the measured truth):
   #  * The ORDERING is the rock and is seed-robust (checked seeds 0/1/2 on drop): penalty's
   #    impact penetration (0.23-0.25) is 4x-10x lcp's (0.02-0.057), and penalty's static sink
   #    (mg/k = 9.81e-3) never goes to zero while lcp's is 0. Lead with the ordering, not the number.
@@ -80,7 +80,7 @@ reference_run:
 # provenance, not a bare magic number). checks.py reads these instead of inlining
 # tolerances. All checks are pure-numpy and bitwise deterministic, so the bands are TIGHT.
 exercise_checks:
-  smoke_drop:                      # contact.py --smoke --seed 0 (drop, 800 steps, contact all) — the signature the checks reproduce
+  smoke_drop:                      # contact.py --smoke --seed 0 (drop, 800 steps, contact all), the signature the checks reproduce
     provenance: "seed 0 on cpu, numpy 2.4.6, --smoke (800 steps, dt 0.002, drop, contact all); measured 2026-07-06"
     penalty_max_penetration_frac: 0.251329183485
     penalty_rest_penetration_frac: 0.00981
@@ -102,7 +102,7 @@ exercise_checks:
 
 
 notebook_hash: 97cdbb6f5af7dab613c516cc766fb2aef50281376ba7e629c1349949c4304231        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 56501fb969bbd7761acbe3202674555a256f50cf0f39e0330421e8834edbd360   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 73988d2e9ba5827063c532dd6fc9be648cba5b00356a06585d75dfd535bafbf4   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: b84fc777c9f06b9072d798035adb48dc03501c0151bf58c77792ccafd886154f

@@ -7,7 +7,7 @@
 //
 //   requires:        [chX.Y, ...]   hard map prerequisite (e.g. ch3.1 requires ch1.4)
 //   builds_on:       chX.Y-slug     direct sequel — reuses the prior chapter's code
-//   phase_requires:  [chX.Y, ...]   Phase-4 gate (the capstone's assumed chapters)
+//   phase_requires:  [chX.Y, ...]   Phase-4 prerequisite (Post-Training's assumed chapters)
 //   policy_reused:   chX.Y-slug     optionally runs an EARLIER chapter's trained policy
 //
 // Each field may be written inline (`key: val` or `key: [a, b]`) OR as a YAML

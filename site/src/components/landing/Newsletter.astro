@@ -1,0 +1,57 @@
+---
+// Newsletter.astro — a slim, native Substack subscribe box. No iframe, no
+// third-party widget, no heavy script, no CORS POST: a plain GET <form> that
+// hands the reader's email to the publication's own /subscribe page (opens in a
+// new tab with the email prefilled), so it works with JavaScript OFF and never
+// touches a fragile client-side API. Scoped CSS in ./newsletter.css (.nl-*).
+import "./newsletter.css";
+
+// The live Physical AI Weekly publication. To move to a custom domain later
+// (e.g. newsletter.zero2robot.com), change this one line.
+const SUBSTACK_URL = "https://physicalaiweekly.substack.com";
+const action = `${SUBSTACK_URL}/subscribe`;
+
+interface Props {
+  // "band"   — the full-width strip on the landing (below the curriculum arc).
+  // "inline" — a compact line for the /about colophon, near the support note.
+  variant?: "band" | "inline";
+  // A stable per-mount id prefix keeps label/aria wiring unique if two boxes
+  // ever share a page. Defaults to the variant name.
+  idPrefix?: string;
+}
+const { variant = "band", idPrefix } = Astro.props;
+const pfx = idPrefix ?? variant;
+const emailId = `${pfx}-nl-email`;
+const titleId = `${pfx}-nl-title`;
+
+const PITCH = "A weekly newsletter on Physical AI.";
+---
+
+<section
+  class="nl-box"
+  data-variant={variant}
+  data-state="live"
+  aria-labelledby={titleId}
+>
+  <div class="nl-copy">
+    <p class="nl-kicker">Newsletter</p>
+    <p class="nl-pitch" id={titleId}>{PITCH}</p>
+  </div>
+
+  <form class="nl-form" action={action} method="get" target="_blank">
+    <div class="nl-field">
+      <label class="nl-label" for={emailId}>Email address</label>
+      <input
+        class="nl-input"
+        id={emailId}
+        type="email"
+        name="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        required
+      />
+    </div>
+    <button class="nl-btn" type="submit">Subscribe</button>
+  </form>
+</section>

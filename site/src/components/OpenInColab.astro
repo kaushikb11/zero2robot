@@ -1,39 +1,50 @@
 ---
-// OpenInColab — the "Open in Colab" affordance for a chapter page. The offline
-// learning path (notebooks/CLAUDE.md) ships a generated .ipynb per stable
-// chapter; Google Colab can open any of them straight from GitHub at
-//   https://colab.research.google.com/github/{ORG}/{REPO}/blob/{BRANCH}/notebooks/{id}.ipynb
-// so a learner runs the exact chapter code on a free T4 without a local install.
+// OpenInColab — the "run this chapter" affordance for a chapter page. Gives a
+// web learner TWO guaranteed paths to actually run what they just read, so the
+// "read like a book, run like a lab" promise never dead-ends:
 //
-// HONEST BY CONSTRUCTION (mirrors RTRT.astro's posture):
-//   - Renders NOTHING unless a notebook actually exists on disk for this
-//     chapter. We check notebooks/{id}.ipynb at BUILD time (Node fs), so the
-//     DRAFT chapters that have no generated notebook (ch0.5-inspect,
-//     ch1.2-curate) surface no button — never a dead link.
-//   - The GitHub org/repo/branch are NOT public yet (human-owned). They live in
-//     ONE place — COLAB_REPO below — behind a `public` flag. While `public` is
-//     false the button renders in a DISABLED state that states why; flip the one
-//     flag (and fix org/repo/branch) the day the repo goes public and every
-//     chapter's button links correctly with no other change.
+//   1. Open in Colab — the generated .ipynb per stable chapter (notebooks/{id}.ipynb)
+//      opens straight from GitHub on a free T4:
+//        https://colab.research.google.com/github/{ORG}/{REPO}/blob/{BRANCH}/notebooks/{id}.ipynb
+//      Zero install; runs the exact chapter code the page shows.
 //
-// JS-OFF SAFE: pure SSR — one anchor (or one disabled span) + scoped styles.
-// Nothing to hydrate.
+//   2. Run it locally — the exact `python curriculum/.../<artifact>.py --seed 0`
+//      command for THIS chapter, plus a link to the one-time setup on /about#run.
+//      This path needs no notebook and no Google account, so it is the always-on
+//      floor: even a draft chapter with no generated notebook still has a real,
+//      runnable command here rather than nothing.
+//
+// HONEST BY CONSTRUCTION:
+//   - The Colab button renders only when notebooks/{id}.ipynb actually exists on
+//     disk (checked at BUILD time via Node fs) — never a dead link to a missing
+//     notebook.
+//   - The GitHub org/repo/branch live in ONE place (COLAB_REPO). The repository
+//     github.com/kaushikb11/zero2robot is PUBLIC and its notebooks are reachable
+//     (verified: raw.githubusercontent + the Colab gateway both resolve on main),
+//     so `public: true` and the Colab button is live. If the repo ever goes
+//     private, flip `public` to false and the Colab button hides while the local
+//     run command below keeps the run path working.
+//
+// JS-OFF SAFE: pure SSR — anchors, selectable <code>, scoped styles. The only
+// <script> is a progressive-enhancement copy button; strip it and the command is
+// still selectable text.
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { REPO_ROOT } from "../lib/curriculum.ts";
+import { REPO_ROOT, discoverChapters } from "../lib/curriculum.ts";
 
-// --- single source of truth for the Colab target -----------------------------
-// TODO(repo-public): the GitHub org/repo are placeholders matching the HF
-// `zero2robot/` org used for datasets/checkpoints and the clone URL in
-// infra/ci/gen_notebook.py (REPO_URL). Set `public: true` and confirm
-// org/repo/branch the day the repository is published. Until then the button
-// renders disabled (a live link would 404 against a private/absent repo).
+// --- single source of truth for the run targets ------------------------------
+// The repo is public and its notebooks resolve on `main` (verified via
+// raw.githubusercontent.com/kaushikb11/zero2robot/main/notebooks/*.ipynb and the
+// colab.research.google.com/github/... gateway). Keep org/repo/branch here in one
+// place; the clone URL below is derived from the same fields so they never drift.
 const COLAB_REPO = {
-  org: "zero2robot",
+  org: "kaushikb11",
   repo: "zero2robot",
   branch: "main",
-  public: false,
+  public: true,
 } as const;
+
+const CLONE_URL = `https://github.com/${COLAB_REPO.org}/${COLAB_REPO.repo}`;
 
 function colabUrl(notebookId: string): string {
   const { org, repo, branch } = COLAB_REPO;
@@ -46,12 +57,20 @@ interface Props {
 const { chapterId } = Astro.props;
 
 // A notebook exists for this chapter iff notebooks/{id}.ipynb is on disk. Drafts
-// without a generated notebook get no button at all.
+// without a generated notebook get no Colab button (but still get the local run
+// command below).
 const hasNotebook = existsSync(
   resolve(REPO_ROOT, "notebooks", `${chapterId}.ipynb`),
 );
 const enabled = hasNotebook && COLAB_REPO.public;
 const href = enabled ? colabUrl(chapterId) : undefined;
+
+// The local run path: resolve THIS chapter's runnable artifact from the same
+// curriculum bridge the site routes on, so the command can never drift from the
+// real file. Canonical invocation (matches every chapter's file header + the
+// README quickstart): run from the repo root, `--seed` mandatory.
+const chapter = discoverChapters().find((c) => c.id === chapterId) ?? null;
+const runCmd = chapter ? `python ${chapter.artifactPath} --seed 0` : null;
 
 // Inline Colab-style mark (two linked rings). Inlined as markup — never an
 // external asset — so it survives the JS-off / offline / strict-CSP path the
@@ -60,37 +79,86 @@ const markSvg = `<svg class="colab__mark" width="18" height="18" viewBox="0 0 24
 ---
 
 {
-  hasNotebook && (
+  (hasNotebook || runCmd) && (
     <div class="colab" data-enabled={String(enabled)}>
-      {enabled ? (
-        <a
-          class="colab__btn"
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Fragment set:html={markSvg} />
-          <span class="colab__label">Open in Colab</span>
-        </a>
-      ) : (
-        <span
-          class="colab__btn colab__btn--disabled"
-          aria-disabled="true"
-          title="Available once the GitHub repository is public — see COLAB_REPO in OpenInColab.astro"
-        >
-          <Fragment set:html={markSvg} />
-          <span class="colab__label">Open in Colab</span>
-          <span class="colab__soon">soon</span>
-        </span>
+      {hasNotebook && (
+        <>
+          {enabled ? (
+            <a
+              class="colab__btn"
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Fragment set:html={markSvg} />
+              <span class="colab__label">Open in Colab</span>
+            </a>
+          ) : (
+            <span
+              class="colab__btn colab__btn--disabled"
+              aria-disabled="true"
+              title="Colab opens from the public GitHub repo; re-enable by setting COLAB_REPO.public in OpenInColab.astro"
+            >
+              <Fragment set:html={markSvg} />
+              <span class="colab__label">Open in Colab</span>
+              <span class="colab__soon">offline</span>
+            </span>
+          )}
+          <p class="colab__note">
+            {enabled
+              ? "Runs this chapter's generated notebook on a free Colab T4 — no local install, no account beyond a Google login."
+              : "Free-tier notebook — re-enable the Colab button once the repository is public again."}
+          </p>
+        </>
       )}
-      <p class="colab__note">
-        {enabled
-          ? "Runs this chapter's generated notebook on a free Colab T4 — no local install."
-          : "Free-tier notebook — the button goes live when the course repository is published."}
-      </p>
+
+      {runCmd && (
+        <div class="colab__local">
+          <p class="colab__local-label">
+            {hasNotebook ? "Or run it locally:" : "Run it locally:"}
+          </p>
+          <div class="colab__cmd-line">
+            <code class="colab__cmd">{runCmd}</code>
+            <button
+              type="button"
+              class="colab__copy"
+              data-copy={runCmd}
+              aria-label="Copy the run command"
+            >
+              copy
+            </button>
+          </div>
+          <p class="colab__local-note">
+            Run from the repo root after the one-time{" "}
+            <a href="/about#run">setup</a> (<code>git clone</code> +{" "}
+            <code>uv sync</code>). Every artifact also takes <code>--smoke</code>{" "}
+            for a fast check.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
+
+{/* Progressive enhancement ONLY: copy the local run command. The <code> beside
+    the button is selectable with JS off, so nothing is lost when this is stripped. */}
+<script>
+  document.querySelectorAll<HTMLButtonElement>("button.colab__copy[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cmd = btn.dataset.copy ?? "";
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const prev = btn.textContent;
+        btn.textContent = "copied";
+        window.setTimeout(() => {
+          btn.textContent = prev;
+        }, 1600);
+      } catch {
+        /* clipboard blocked — the <code> beside it is selectable regardless */
+      }
+    });
+  });
+</script>
 
 <style>
   .colab {
@@ -152,8 +220,86 @@ const markSvg = `<svg class="colab__mark" width="18" height="18" viewBox="0 0 24
     color: var(--ink-mute);
   }
 
+  /* --- the always-on local run path ---------------------------------------- */
+  .colab__local {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .colab__local-label {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .colab__cmd-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .colab__cmd {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 0.5rem 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--ink);
+    background: var(--paper-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .colab__copy {
+    flex: none;
+    padding: 0.4rem 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-mute);
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease;
+  }
+
+  .colab__copy:hover {
+    color: var(--ink);
+    border-color: var(--ink-mute);
+  }
+
+  .colab__copy:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  .colab__local-note {
+    margin: 0.5rem 0 0;
+    font-size: 0.78rem;
+    color: var(--ink-mute);
+  }
+
+  .colab__local-note code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: var(--ink-soft);
+  }
+
+  .colab__local-note a {
+    color: var(--signal);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .colab__btn {
+    .colab__btn,
+    .colab__copy {
       transition: none;
     }
   }

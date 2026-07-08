@@ -41,68 +41,77 @@
  * ============================================================================
  */
 import { useEffect, useRef, useState } from "preact/hooks";
+import { lazy, Suspense } from "preact/compat";
 import coverage from "../data/pusht_coverage.json";
 // P5 per-chapter concept-toys (each is a self-contained island built to the
 // FROZEN CONCEPT-TOY CONTRACT below; the toy's own SSR poster is the JS-off
-// fallback, its WASM/heavy deps are lazy). Statically imported so each toy's
-// poster server-renders; the heavy sim/policy stays dynamic-imported per toy.
-import SimLoopPerturb from "./toys/sim-loop-perturb";
-import PushTSceneBuild from "./toys/pusht-scene-build";
-import FramesDrag from "./toys/frames-drag";
-import PushTTeleopToy from "./toys/pusht-teleop";
-import CartpolePpo from "./toys/cartpole-ppo";
+// fallback, its WASM/heavy deps are lazy). Each is lazy()-imported so it lands
+// in its OWN client chunk (+ its own scoped CSS): a page ships only the toy it
+// renders instead of the full ~55-toy monolith. renderToStringAsync (Astro's
+// preact server renderer) awaits each lazy import, so the toy's SSR poster is
+// still emitted into the static HTML — the JS-off fallback is preserved.
+const SimLoopPerturb = lazy(() => import("./toys/sim-loop-perturb"));
+const PushTSceneBuild = lazy(() => import("./toys/pusht-scene-build"));
+const FramesDrag = lazy(() => import("./toys/frames-drag"));
+const PushTTeleopToy = lazy(() => import("./toys/pusht-teleop"));
+const CartpolePpo = lazy(() => import("./toys/cartpole-ppo"));
 // Phase-1 chapter concept-toys (2D data panels; each server-renders its own
 // SSR poster as the JS-off fallback, data from the chapter's measured vizdata).
-import EvalBandsToy from "./toys/EvalBandsToy";
-import DiffusionRing from "./toys/diffusion-ring";
-import DiffusionPushtLive from "./toys/DiffusionPushtLive";
-import FlowRing from "./toys/flow-ring";
-import FlowPushtLive from "./toys/FlowPushtLive";
-import BridgeCompareToy from "./toys/BridgeCompareToy";
-import ActChunkToy from "./toys/ActChunkToy";
-import CurateQualityToy from "./toys/CurateQualityToy";
-import VlaBrowserToy from "./toys/VlaBrowserToy";
-import VlaRolloutToy from "./toys/VlaRolloutToy";
-import MjxParallelToy from "./toys/MjxParallelToy";
-import EngineDrift from "./toys/EngineDriftToy";
-import DoublePendulumToy from "./toys/DoublePendulumToy";
-import ContactToy from "./toys/ContactToy";
-import SimGapToy from "./toys/SimGapToy";
-import SacReachToy from "./toys/SacReachToy";
-import RewardHackToy from "./toys/RewardHackToy";
-import QuadrupedWalkToy from "./toys/QuadrupedWalkToy";
-import LatencyDegradeToy from "./toys/LatencyDegradeToy";
-import DomainRandToy from "./toys/DomainRandToy";
-import RuntimeGraphToy from "./toys/RuntimeGraphToy";
-import WorldModelToy from "./toys/WorldModelToy";
-import ImaginationGapToy from "./toys/ImaginationGapToy";
-import DataScale from "./toys/DataScaleToy";
-import ProbeToy from "./toys/ProbeToy";
-import MpcPlanToy from "./toys/MpcPlanToy";
-import DatasetInspectToy from "./toys/DatasetInspectToy";
-import QuickstartWinToy from "./toys/QuickstartWinToy";
-import DaggerRecovery from "./toys/DaggerRecoveryToy";
-import DaggerPushtLive from "./toys/DaggerPushtLive";
-import OfflineRLToy from "./toys/OfflineRLToy";
-import SerlSampleEfficiencyToy from "./toys/SerlSampleEfficiencyToy";
-import VitAttentionToy from "./toys/VitAttentionToy";
-import AlignRetrievalToy from "./toys/AlignRetrievalToy";
-import PixelsVisionToy from "./toys/PixelsVisionToy";
-import PrefixSuffixToy from "./toys/PrefixSuffixToy";
-import FastCodecToy from "./toys/FastCodecToy";
-import LoraRankDialToy from "./toys/LoraRankDialToy";
-import QuantizeDialToy from "./toys/QuantizeDialToy";
-import RealLoopToy from "./toys/RealLoopToy";
-import SacReachLive from "./toys/SacReachLive";
-import OfflineReachLive from "./toys/OfflineReachLive";
-import QuadrupedWalkLive from "./toys/QuadrupedWalkLive";
-import RewardHackLive from "./toys/RewardHackLive";
-import DomainRandLive from "./toys/DomainRandLive";
+const EvalBandsToy = lazy(() => import("./toys/EvalBandsToy"));
+const DiffusionRing = lazy(() => import("./toys/diffusion-ring"));
+const DiffusionPushtLive = lazy(() => import("./toys/DiffusionPushtLive"));
+const FlowRing = lazy(() => import("./toys/flow-ring"));
+const FlowPushtLive = lazy(() => import("./toys/FlowPushtLive"));
+const BridgeCompareToy = lazy(() => import("./toys/BridgeCompareToy"));
+const ActChunkToy = lazy(() => import("./toys/ActChunkToy"));
+const CurateQualityToy = lazy(() => import("./toys/CurateQualityToy"));
+const VlaBrowserToy = lazy(() => import("./toys/VlaBrowserToy"));
+const VlaRolloutToy = lazy(() => import("./toys/VlaRolloutToy"));
+const MjxParallelToy = lazy(() => import("./toys/MjxParallelToy"));
+const EngineDrift = lazy(() => import("./toys/EngineDriftToy"));
+const DoublePendulumToy = lazy(() => import("./toys/DoublePendulumToy"));
+const ContactToy = lazy(() => import("./toys/ContactToy"));
+const SimGapToy = lazy(() => import("./toys/SimGapToy"));
+const SacReachToy = lazy(() => import("./toys/SacReachToy"));
+const RewardHackToy = lazy(() => import("./toys/RewardHackToy"));
+const QuadrupedWalkToy = lazy(() => import("./toys/QuadrupedWalkToy"));
+const LatencyDegradeToy = lazy(() => import("./toys/LatencyDegradeToy"));
+const DomainRandToy = lazy(() => import("./toys/DomainRandToy"));
+const RuntimeGraphToy = lazy(() => import("./toys/RuntimeGraphToy"));
+const WorldModelToy = lazy(() => import("./toys/WorldModelToy"));
+const ImaginationGapToy = lazy(() => import("./toys/ImaginationGapToy"));
+const DataScale = lazy(() => import("./toys/DataScaleToy"));
+const ProbeToy = lazy(() => import("./toys/ProbeToy"));
+const MpcPlanToy = lazy(() => import("./toys/MpcPlanToy"));
+const DatasetInspectToy = lazy(() => import("./toys/DatasetInspectToy"));
+const QuickstartWinToy = lazy(() => import("./toys/QuickstartWinToy"));
+const DaggerRecovery = lazy(() => import("./toys/DaggerRecoveryToy"));
+const DaggerPushtLive = lazy(() => import("./toys/DaggerPushtLive"));
+const OfflineRLToy = lazy(() => import("./toys/OfflineRLToy"));
+const SerlSampleEfficiencyToy = lazy(() => import("./toys/SerlSampleEfficiencyToy"));
+const VitAttentionToy = lazy(() => import("./toys/VitAttentionToy"));
+const AlignRetrievalToy = lazy(() => import("./toys/AlignRetrievalToy"));
+const PixelsVisionToy = lazy(() => import("./toys/PixelsVisionToy"));
+const PrefixSuffixToy = lazy(() => import("./toys/PrefixSuffixToy"));
+const FastCodecToy = lazy(() => import("./toys/FastCodecToy"));
+const LoraRankDialToy = lazy(() => import("./toys/LoraRankDialToy"));
+const QuantizeDialToy = lazy(() => import("./toys/QuantizeDialToy"));
+const RealLoopToy = lazy(() => import("./toys/RealLoopToy"));
+const SacReachLive = lazy(() => import("./toys/SacReachLive"));
+const OfflineReachLive = lazy(() => import("./toys/OfflineReachLive"));
+const QuadrupedWalkLive = lazy(() => import("./toys/QuadrupedWalkLive"));
+const RewardHackLive = lazy(() => import("./toys/RewardHackLive"));
+const DomainRandLive = lazy(() => import("./toys/DomainRandLive"));
 
 interface Props {
   demo?: string | null;
   task?: string | null;
   title?: string | null;
+  // "hero" strips the flagship covariate-shift toy down to a first-impression
+  // instrument (canvas + drag affordance + ONE readout + the two buttons);
+  // "chapter" (default) keeps the full teaching instrument. Only the flagship
+  // PushTConceptToy honours this; every other toy renders the same in both.
+  variant?: "hero" | "chapter";
 }
 
 // ---------------------------------------------------------------- coverage data
@@ -253,7 +262,8 @@ const PALETTE_FALLBACK: Record<PaletteKey, string> = {
 };
 
 /** ch1.1 — the interactive covariate-shift toy (SSR poster + live MuJoCo island). */
-function PushTConceptToy() {
+function PushTConceptToy({ variant = "chapter" }: { variant?: "hero" | "chapter" }) {
+  const isHero = variant === "hero";
   const figureRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const apiRef = useRef<{
@@ -274,6 +284,10 @@ function PushTConceptToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         // --- lazy, hydration-gated source-sharing: the WASM modules are only
         //     fetched now (post-hydration, i.e. scrolled into view) --------------
         const [simMod, sceneMod, envMod, obsMod, inferMod, contractsMod, vpMod] =
@@ -307,13 +321,6 @@ function PushTConceptToy() {
         canvas.height = CANVAS_PX;
         const ctx = canvas.getContext("2d")!;
 
-        // resolve the page's design tokens once (canvas can't read CSS vars live)
-        const cs = getComputedStyle(canvas);
-        const col = (k: PaletteKey) => (cs.getPropertyValue(k).trim() || PALETTE_FALLBACK[k]);
-        const PUSHER = col("--entity-pusher"), BLOCK = col("--entity-block"),
-          TARGET = col("--entity-target"), SIGNAL = col("--signal"),
-          INK = col("--ink-mute"), RULE = col("--rule-strong");
-
         // --- bespoke top-down renderer: entities in the page's --entity-* hues ---
         const envPts = envelopeWorld();
         const teeCorners = (cx: number, cy: number, yaw: number, hx: number, hy: number, ox: number, oy: number) => {
@@ -333,6 +340,15 @@ function PushTConceptToy() {
           fillPoly(teeCorners(cx, cy, yaw, 0.015, 0.045, 0, -0.06), style);
         };
         const render = (dragging: boolean) => {
+          // Resolve the page's design tokens LIVE each frame (a canvas can't read CSS
+          // vars natively) so a post-boot theme toggle recolours the entities instead
+          // of freezing the boot-time snapshot. The arena stays a warm-light lab
+          // surface in BOTH themes — styles.css deliberately pins .ct-figure light.
+          const cs = getComputedStyle(canvas);
+          const col = (k: PaletteKey) => (cs.getPropertyValue(k).trim() || PALETTE_FALLBACK[k]);
+          const PUSHER = col("--entity-pusher"), BLOCK = col("--entity-block"),
+            TARGET = col("--entity-target"), SIGNAL = col("--signal"),
+            INK = col("--ink-mute"), RULE = col("--rule-strong");
           const w = canvas.width, h = canvas.height;
           // arena background (warm paper) + faint graph paper
           ctx.fillStyle = "#fbf9f3";
@@ -415,13 +431,14 @@ function PushTConceptToy() {
           void RULE;
         };
 
-        setBooted(true);
-        render(false);
-
-        // 2) load the REAL policy through the fail-closed contract gate
+        // 2) load the REAL policy through the fail-closed contract gate FIRST, then
+        //    reveal the canvas — load-then-boot, so a fetch/contract failure keeps
+        //    booted=false and the captioned SSR poster stays up (never a frozen canvas).
         const policy = await loadPolicy(MODEL_URL);
         assertDrivesPushT(policy.contract);
         if (disposed) return;
+        setBooted(true);
+        render(false);
 
         // --- interaction state (refs, not React state — the loop must not re-render)
         let dragging = false;
@@ -432,6 +449,9 @@ function PushTConceptToy() {
         const nearBlock = (wx: number, wy: number) =>
           Math.hypot(wx - realSim.jointQpos("tee_x"), wy - realSim.jointQpos("tee_y")) < GRAB_RADIUS;
 
+        // Handlers render on demand so direct manipulation (dragging the block) repaints
+        // even when the autonomous rAF loop is suppressed under reduced motion. In the
+        // normal loop these extra renders are idempotent (the loop repaints anyway).
         const onDown = (e: PointerEvent) => {
           const [wx, wy] = eventToWorld(canvas, e.clientX, e.clientY);
           if (!nearBlock(wx, wy)) return;
@@ -439,17 +459,20 @@ function PushTConceptToy() {
           canvas.dataset.dragging = "true";
           canvas.setPointerCapture(e.pointerId);
           setBlock(wx, wy);
+          render(true);
           e.preventDefault();
         };
         const onMove = (e: PointerEvent) => {
           if (!dragging) return;
           const [wx, wy] = eventToWorld(canvas, e.clientX, e.clientY);
           setBlock(wx, wy);
+          render(true);
         };
         const onUp = (e: PointerEvent) => {
           if (!dragging) return;
           dragging = false;
           canvas.dataset.dragging = "false";
+          render(false);
           try { canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
         };
         canvas.addEventListener("pointerdown", onDown);
@@ -459,9 +482,9 @@ function PushTConceptToy() {
 
         // button/keyboard API (the no-drag path to the same aha)
         apiRef.current = {
-          reset: () => env.reset(++seed),
-          sendOOD: () => setBlock(0.33 * Math.cos(0.7), 0.33 * Math.sin(0.7)), // r=0.33, well past the ~0.234 envelope, block stays in-frame
-          nudge: (dx, dy) => setBlock(realSim.jointQpos("tee_x") + dx, realSim.jointQpos("tee_y") + dy),
+          reset: () => { env.reset(++seed); render(false); },
+          sendOOD: () => { setBlock(0.33 * Math.cos(0.7), 0.33 * Math.sin(0.7)); render(false); }, // r=0.33, well past the ~0.234 envelope, block stays in-frame
+          nudge: (dx, dy) => { setBlock(realSim.jointQpos("tee_x") + dx, realSim.jointQpos("tee_y") + dy); render(false); },
         };
 
         // 3) headless-verification hooks (mirror playground's window.__policy) so a
@@ -498,6 +521,10 @@ function PushTConceptToy() {
         const startPusher: [number, number] = [realSim.jointQpos("pusher_x"), realSim.jointQpos("pusher_y")];
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
 
+        // Reduced motion: the in-distribution still frame is painted and drag/buttons
+        // re-render on demand (direct manipulation, not animation); don't spin the
+        // autonomous policy-driving rAF loop. Interaction + __toy hooks stay live.
+        if (prefersReducedMotion) return;
         while (!disposed) {
           await nextFrame();
           const now = performance.now();
@@ -596,44 +623,67 @@ function PushTConceptToy() {
             : ""}
         </div>
 
-        {/* live HUD (the poster ships the nominal in-distribution readout below) */}
+        {/* live HUD (the poster ships the nominal in-distribution readout below).
+            HERO variant shows exactly ONE readout — the distance-from-demos meter
+            that flips green→red plus the single in/out-of-distribution word — so the
+            landing's first impression is the aha, not a full instrument panel. The
+            CHAPTER variant keeps the complete teaching readout (numeric distance,
+            policy state, pos_err → target). */}
         {booted && !failed && (
-          <div class="ct-hud" aria-hidden="true">
-            <div class="ct-hud-row">
-              <span class="ct-k">distance from demos</span>
-              <span class={`ct-v ${hud.ood ? "ct-bad" : "ct-ok"}`}>
-                {hud.dist.toFixed(3)} m {hud.ood ? "▲" : "✓"}
-              </span>
+          isHero ? (
+            <div class="ct-hud ct-hud--hero" aria-hidden="true">
+              <div class="ct-hud-row">
+                <span class="ct-k">distance from demos</span>
+                <span class={`ct-v ${hud.ood ? "ct-bad" : "ct-ok"}`}>
+                  {hud.ood ? "out of distribution" : "in distribution"}
+                </span>
+              </div>
+              <div class="ct-meter">
+                <div class="ct-meter-fill" data-ood={hud.ood} style={`width:${meterPct}%`} />
+              </div>
             </div>
-            <div class="ct-meter">
-              <div class="ct-meter-fill" data-ood={hud.ood} style={`width:${meterPct}%`} />
+          ) : (
+            <div class="ct-hud" aria-hidden="true">
+              <div class="ct-hud-row">
+                <span class="ct-k">distance from demos</span>
+                <span class={`ct-v ${hud.ood ? "ct-bad" : "ct-ok"}`}>
+                  {hud.dist.toFixed(3)} m {hud.ood ? "▲" : "✓"}
+                </span>
+              </div>
+              <div class="ct-meter">
+                <div class="ct-meter-fill" data-ood={hud.ood} style={`width:${meterPct}%`} />
+              </div>
+              <div class="ct-hud-row">
+                <span class="ct-k">policy</span>
+                <span class={`ct-v ${hud.ood ? "ct-bad" : "ct-ok"}`}>
+                  {hud.ood ? "out of distribution" : "in distribution"}
+                </span>
+              </div>
+              <div class="ct-hud-row">
+                <span class="ct-k">pos_err → target</span>
+                <span class="ct-v">{hud.posErr.toFixed(3)} m</span>
+              </div>
             </div>
-            <div class="ct-hud-row">
-              <span class="ct-k">policy</span>
-              <span class={`ct-v ${hud.ood ? "ct-bad" : "ct-ok"}`}>
-                {hud.ood ? "out of distribution" : "in distribution"}
-              </span>
-            </div>
-            <div class="ct-hud-row">
-              <span class="ct-k">pos_err → target</span>
-              <span class="ct-v">{hud.posErr.toFixed(3)} m</span>
-            </div>
-          </div>
+          )
         )}
 
-        {/* boot / instrument status line */}
-        <div class="ct-status" data-failed={failed} aria-hidden="true">
-          {failed ? (
-            <span>sim failed — the Colab path covers this without WASM</span>
-          ) : booted ? (
-            <>
-              <span>real bc_policy.onnx · pusher moved {hud.pusherMoved.toFixed(2)} m</span>
-              <span>{hud.fps.toFixed(0)} fps · {hud.latMs.toFixed(2)} ms/call</span>
-            </>
-          ) : (
-            <span>booting MuJoCo-WASM + policy…</span>
-          )}
-        </div>
+        {/* boot / instrument status line. HERO suppresses the credential + fps/latency
+            lines once booted (canvas + drag + the one meter carry the first impression);
+            it still shows the booting + failed states so the poster fallback narrates. */}
+        {!(isHero && booted && !failed) && (
+          <div class="ct-status" data-failed={failed} aria-hidden="true">
+            {failed ? (
+              <span>sim failed — the Colab path covers this without WASM</span>
+            ) : booted ? (
+              <>
+                <span>real bc_policy.onnx · pusher moved {hud.pusherMoved.toFixed(2)} m</span>
+                <span>{hud.fps.toFixed(0)} fps · {hud.latMs.toFixed(2)} ms/call</span>
+              </>
+            ) : (
+              <span>booting MuJoCo-WASM + policy…</span>
+            )}
+          </div>
+        )}
       </figure>
 
       <div class="ct-controls">
@@ -725,10 +775,21 @@ function GenericPoster({ demo, task }: { demo?: string | null; task?: string | n
   );
 }
 
-export default function PlateIsland({ demo, task }: Props) {
+export default function PlateIsland({ demo, task, variant }: Props) {
   // Each chapter's "See it work" hero dispatches to its concept-tuned toy by
-  // demo id; unknown demos fall back to the static poster.
-  if (demo === "pusht_bc_recovery") return <PushTConceptToy />;      // ch1.1 covariate shift (flagship)
+  // demo id; unknown demos fall back to the static poster. Every non-flagship
+  // toy is lazy() so a page ships only the ONE toy it renders (task-scoped code
+  // split); the flagship stays inline (it drives both this landing hero and
+  // ch1.1). renderToStringAsync resolves each lazy toy's SSR poster server-side,
+  // so JS-off pages still get the poster; a single <Suspense> wraps the dispatch
+  // so preact preserves that SSR poster while the toy chunk loads on hydration.
+  if (demo === "pusht_bc_recovery") return <PushTConceptToy variant={variant} />;  // ch1.1 covariate shift (flagship)
+  const toy = pickToy(demo, task);
+  return <Suspense fallback={null}>{toy}</Suspense>;
+}
+
+/** Resolve a demo id to its (lazy) toy element, or the static generic poster. */
+function pickToy(demo?: string | null, task?: string | null) {
   if (demo === "sim-loop-perturb") return <SimLoopPerturb />;        // ch0.1 timestep instability
   if (demo === "pusht-scene-build") return <PushTSceneBuild />;      // ch0.2 weld vs two bodies
   if (demo === "frames-drag") return <FramesDrag />;                 // ch0.3 frames / quaternion convention

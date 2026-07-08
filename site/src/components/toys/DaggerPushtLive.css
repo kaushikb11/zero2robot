@@ -83,6 +83,16 @@
 .dg-v.dg-ok { color: var(--entity-target, #0c7d5f); }
 .dg-v.dg-bad { color: var(--alert, #c0362a); }
 
+/* the recovery banner: held on the frozen final frame of a far-start recovery */
+.dg-outcome {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(200, 188, 158, 0.6);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem;
+}
+.dg-outcome-tag { font-weight: 700; color: var(--entity-target, #0c7d5f); letter-spacing: 0.02em; }
+.dg-outcome-sub { font-weight: 400; color: var(--ink-mute, #6d6252); font-size: 0.86em; text-align: right; }
+
 /* the start-distance meter — fills as the block is dragged past the BC region */
 .dg-meter { height: 5px; border-radius: 100px; background: rgba(200, 188, 158, 0.4); overflow: hidden; }
 .dg-meter-fill { height: 100%; background: var(--entity-target, #0c7d5f); transition: width 0.12s linear; }

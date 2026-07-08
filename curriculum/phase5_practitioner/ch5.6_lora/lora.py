@@ -365,7 +365,8 @@ if args.rerun:
     rr.log("sweep/trainable_pct", rr.BarChart(np.array([r["trainable_pct"] for r in viz_rows])))
     rr.log("forgetting/task_a_r2", rr.BarChart(np.array([frozen["task_a_r2"], lora["task_a_r2"], full["task_a_r2"]])))
 
-print(f"\nheadline: rank-{HEADLINE_RANK} LoRA trains {lora['trainable_pct']:.2f}% of the weights and recovers "
+print(f"\n{'smoke (hermetic mini-run, NOT the lesson result)' if args.smoke else 'headline'}: "
+      f"rank-{HEADLINE_RANK} LoRA trains {lora['trainable_pct']:.2f}% of the weights and recovers "
       f"{recovered * 100:.0f}% of full-FT's held-out gain ({frozen['held_out_r2']:.2f} -> "
       f"{lora['held_out_r2']:.2f} vs full {full['held_out_r2']:.2f}).")
 print(f"forgetting (the honest twist): task_A R^2  frozen {frozen['task_a_r2']:.2f}  ->  LoRA "

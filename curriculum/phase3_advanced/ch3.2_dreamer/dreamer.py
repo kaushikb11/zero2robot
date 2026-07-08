@@ -374,13 +374,15 @@ for ep in range(args.eval_episodes):
     with torch.no_grad():   # IMAGINED rollout: one-frame warm, then dream forward
         h, z = wm._init(1)
         z = wm.posterior(torch.cat([h, wm.encoder(norm0)], dim=-1))
-        dream_r, dream_pos = [], None
+        dream_r = []
         for _ in range(args.eval_horizon):
+            # Score the CURRENT decoded state BEFORE stepping, the SAME index
+            # convention the real rollout uses (score the state you are in, THEN act),
+            # so both returns average the same states (0..H-1): an honest gap, not a shift.
+            dream_r.append(reward_from_obs(wm.decoder(torch.cat([h, z], dim=-1)))[0].item())
             action, _ = agent.act(torch.cat([h, z], dim=-1), sample=False)
-            h, z, obs_pred = wm.step(h, z, action)
-            r, pos_err, _ = reward_from_obs(obs_pred)
-            dream_r.append(r.item())
-            dream_pos = pos_err.item()
+            h, z, _ = wm.step(h, z, action)
+        dream_pos = reward_from_obs(wm.decoder(torch.cat([h, z], dim=-1)))[1].item()  # final dreamed tee-dist
     imag_returns.append(float(np.mean(dream_r)))
     imag_final_pos.append(dream_pos)
 

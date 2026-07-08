@@ -4,8 +4,8 @@ artifact: diffusion.py       # target ~380 LOC (built to 449: a 2D denoising toy
 task: pusht                  # push the T to a target pose (curriculum/common/envs/pusht); multimodality shown on a self-contained 2D toy
 objectives:
   - Explain why a squared/absolute-error regressor mode-collapses on multimodal targets, and how diffusion (learn to denoise into a SAMPLE) escapes it
-  - Build DDPM from scratch in torch — cosine noise schedule, forward noising, an epsilon-prediction denoiser MLP, and the reverse posterior sampling loop — with no diffusers/einops
-  - Measure multimodality on a 2D ring toy: diffusion covers all angular modes, a same-width MSE regressor collapses to the dead center (the collapse is objective-driven — robust to capacity)
+  - Build DDPM from scratch in torch (cosine noise schedule, forward noising, an epsilon-prediction denoiser MLP, and the reverse posterior sampling loop) with no diffusers/einops
+  - Measure multimodality on a 2D ring toy: diffusion covers all angular modes, a same-width MSE regressor collapses to the dead center (the collapse is objective-driven, robust to capacity)
   - Condition the denoiser on the PushT observation and sample an action per step; name what this teaching version drops from real Diffusion Policy (action-horizon chunk, U-Net, images)
 
 scale_lab: false
@@ -42,15 +42,15 @@ demo: diffusion_multimodality   # 2D toy panel (ring: diffusion vs regression); 
 # PushT policy is a working generative policy that beats the untrained baseline;
 # its absolute success is modest (single-action MLP denoiser, brief CPU training),
 # so the lesson there is the DELTA over baseline and the Break-It signatures, not
-# the headline number — same honest framing as ch1.1/1.3.
+# the headline number, same honest framing as ch1.1/1.3.
 reference_run:
   provenance: "seed 0 on cpu; default config (denoising_steps 100, model_dim 128, num_demos 100, epochs 300, eval_episodes 20); measured 2026-07-06"
-  # --- the multimodality proof (2D toy) — the decisive, reproducible result ---
-  toy_diffusion_modes_covered: 8      # of 8 angular sectors — diffusion covers the whole ring
+  # --- the multimodality proof (2D toy): the decisive, reproducible result ---
+  toy_diffusion_modes_covered: 8      # of 8 angular sectors: diffusion covers the whole ring
   toy_diffusion_mean_radius: 0.870782 # samples sit ON the ring (target radius 1.0)
   toy_diffusion_ring_hit: 0.3035      # fraction within 0.2 of radius 1 (secondary; mode coverage is the headline)
   toy_regress_modes_covered: 0        # the MSE regressor covers NO modes
-  toy_regress_mean_radius: 0.057346   # it collapses to the dead center — the average of every direction
+  toy_regress_mean_radius: 0.057346   # it collapses to the dead center, the average of every direction
   toy_final_loss: 0.392179
   # --- the policy (working generative policy, beats the untrained baseline) ---
   success_rate: 0.25                  # trained diffusion policy, held-out seeds
@@ -59,7 +59,7 @@ reference_run:
   baseline_mean_return: -120.254784
   final_train_loss: 0.317269
   # Seed robustness (no-scheduler config, cpu, eval_episodes 20): seed0 0.25/-112,
-  # seed1 0.25/-107, seed2 0.15/-115 — trained beats baseline (0.0/-120..-126) on
+  # seed1 0.25/-107, seed2 0.15/-115: trained beats baseline (0.0/-120..-126) on
   # BOTH success and return across seeds. The success MARGIN is the robust signal.
   # Break-It signatures (same seed 0, measured 2026-07-06 cpu):
   break_few_steps_success_rate: 0.0        # denoising_steps forced to 2: under-denoised actions -> policy collapses
@@ -67,22 +67,22 @@ reference_run:
   break_few_steps_train_loss: 0.139824     # NOTE the trap: training loss is LOWER (a 2-step schedule is easier to fit) yet SAMPLES are worse
   break_wrong_schedule_success_rate: 0.0   # near-zero betas: the model never learns the trip back from noise
   break_wrong_schedule_toy_radius: 1.213139 # toy overshoots the ring (radius 1.21) and train_loss stays ~1.0 (never learns)
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing, it is the measured truth):
   #  * The TOY multimodality result is the chapter's rock: 8/8 vs 0/8 modes,
   #    radius 0.87 vs 0.06, reproducible across seeds. Lead with it.
   #  * The POLICY beats the untrained baseline reliably (success 0.15-0.25 vs 0.0),
-  #    but it does NOT beat ch1.1 BC (~0.3) — single-action diffusion's sampling
+  #    but it does NOT beat ch1.1 BC (~0.3): single-action diffusion's sampling
   #    noise is a liability on this mildly-multimodal task, where BC's mean is a
   #    fine controller. That is honest and is the setup for ch1.5 (flow matching)
   #    and for real Diffusion Policy's action-horizon (see "What we cut").
   #  * We DON'T cosine-decay the lr (BC/ACT do): a decayed diffusion run drops
-  #    BELOW the untrained baseline — the denoiser must keep fitting noise at all
+  #    BELOW the untrained baseline: the denoiser must keep fitting noise at all
   #    levels. Measured, and narrated inline; do not "restore" the scheduler.
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band
 # with provenance, not a bare magic number). checks.py reads these instead of
 # inlining tolerances. The reproduce checks train (~minutes on CPU) and are
-# @pytest.mark.slow — excluded from `make check`, which runs only the fast
+# @pytest.mark.slow, excluded from `make check`, which runs only the fast
 # math/prediction gates (ex3 forward-noise bug-hunt, ex4 reverse-step completion).
 exercise_checks:
   exercise_config:                 # shared reduced config for the slow reproduce checks (kept small so a check trains in a few minutes)
@@ -97,7 +97,7 @@ exercise_checks:
   ex1:                             # ex1_predict_multimodality.py (predict-then-run)
     answer: "B"                    # diffusion covers all modes; regression collapses to the empty center
   ex2:                             # ex2_predict_denoising_steps.py (predict-then-run)
-    answer: "B"                    # 2 denoising steps under-denoise the ring — worse, not better
+    answer: "B"                    # 2 denoising steps under-denoise the ring: worse, not better
   ex3:                             # ex3_bughunt_forward_noise.py (bug-hunt, fast)
     provenance: "self-contained numpy fixture; the fix restores the variance-preserving sqrt(1-acp) noise coefficient"
   ex4:                             # ex4_completion_reverse_step.py (code-completion, fast)
@@ -106,7 +106,7 @@ exercise_checks:
 # region_hashes: sha256 of each region's exact body (infra/ci/lib/regions.py);
 # check_prose_code_drift recomputes them against diffusion.py. Verified current.
 notebook_hash: 3f29c9a5d1a7948d81d92e997903b71beeddfdd70fa688a1d6a9e71e2d132fa0        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: c719632f2d66841c1cc30795082b473a2b72c92e2b2c7a480d6152155ca4ed3d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 0b2ee4049a1951812e4802605cc1b3013e8ce9122bd950ace11eac1e5ba9cbcf   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 37ee3522eca22a35ae3db13ea9d401990505ed72eeb8b6dcfb9c86aedc345066

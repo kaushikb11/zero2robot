@@ -10,20 +10,65 @@
 // The prose is rendered by lib/prose.ts (renderModuleProse) — the same marked +
 // heading-id pipeline the chapter pages use, minus the code-panel machinery.
 import ChapterLayout from "../../../layouts/ChapterLayout.astro";
-import { discoverFurther, readProse, type FurtherModule } from "../../../lib/curriculum.ts";
+import PrevNext from "../../../components/PrevNext.astro";
+import {
+  discoverChapters,
+  discoverFurther,
+  readProse,
+  type ChapterInfo,
+  type FurtherModule,
+} from "../../../lib/curriculum.ts";
 import { renderModuleProse } from "../../../lib/prose.ts";
 
+// The further modules continue the one journey, so each carries prev/next like a
+// chapter: p1's "Previous" reaches back to the last chapter (5.8), the modules
+// chain p1→p2→p3→g1→g2→g3, and G3 — the finale — ends with a "go build" send-off
+// (finish) instead of a bare dead-end. Links are generic {href,label,kicker}.
+interface NavLink {
+  href: string;
+  label: string;
+  kicker?: string;
+}
+
 export function getStaticPaths() {
-  return discoverFurther().map((m) => ({
-    params: { track: m.track, module: m.slug },
-    props: { module: m },
-  }));
+  // Helpers live INSIDE getStaticPaths (Astro hoists it above the frontmatter
+  // consts, so module-scope consts would be in their temporal dead zone here).
+  const chapterLink = (c: ChapterInfo): NavLink => ({
+    href: `/${c.slug}/`,
+    label: `${c.number} · ${c.title}`,
+    kicker: c.phaseLabel,
+  });
+  const moduleLink = (m: FurtherModule): NavLink => ({
+    href: `/further/${m.track}/${m.slug}/`,
+    label: m.badge ? `${m.badge} · ${m.title}` : m.title,
+    kicker: m.trackLabel,
+  });
+
+  const chapters = discoverChapters();
+  const further = discoverFurther(); // [p1,p2,p3,g1,g2,g3]
+  return further.map((m, i) => {
+    const prev: NavLink | null =
+      i > 0
+        ? moduleLink(further[i - 1])
+        : chapters.length > 0
+          ? chapterLink(chapters[chapters.length - 1]) // p1 → back to the last chapter (5.8)
+          : null;
+    const next: NavLink | null =
+      i < further.length - 1 ? moduleLink(further[i + 1]) : null;
+    return {
+      params: { track: m.track, module: m.slug },
+      props: { module: m, prev, next, finish: i === further.length - 1 },
+    };
+  });
 }
 
 interface Props {
   module: FurtherModule;
+  prev: NavLink | null;
+  next: NavLink | null;
+  finish: boolean;
 }
-const { module } = Astro.props;
+const { module, prev, next, finish } = Astro.props;
 const bodyHtml = renderModuleProse(readProse(module.proseRel));
 ---
 
@@ -37,4 +82,6 @@ const bodyHtml = renderModuleProse(readProse(module.proseRel));
   </div>
 
   <article class="bk-prose" set:html={bodyHtml} />
+
+  <PrevNext slot="prevnext" prev={prev} next={next} finish={finish} />
 </ChapterLayout>

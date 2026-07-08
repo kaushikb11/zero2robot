@@ -409,7 +409,7 @@ gap = diff_ci(hil_pk, n_pool, scr_pk, n_pool)  # HIL - scratch
 gap_real = gap[0] > 0 or gap[1] < 0
 
 print(f"\n[headline: sample-efficiency] samples-to-threshold (eval_dist < {args.threshold}m):")
-print(f"  HIL-SERL (primed) : {hil_sts if hil_sts is not None else '>' + str(args.hil_steps)} online samples  (prior clears it at 0; best {hil_best:.4f}m)")
+print(f"  HIL-SERL (primed) : {hil_sts if hil_sts is not None else '>' + str(args.hil_steps)} online samples  ({'prior clears it at 0; ' if hil_sts == 0 else ''}best {hil_best:.4f}m)")
 print(f"  SAC from scratch  : {scr_sts if scr_sts is not None else '>' + str(args.scratch_steps)} online samples  (best {scr_best:.4f}m)")
 if hil_sts == 0 and scr_sts:
     print(f"  -> corrections-as-prior clear the bar with ZERO online samples; scratch needs ~{scr_sts}. That gap IS the sample efficiency.")

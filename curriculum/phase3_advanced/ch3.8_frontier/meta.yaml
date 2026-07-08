@@ -1,7 +1,7 @@
 id: ch3.8-frontier
 title: "Reading the Frontier"
-track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
-artifact: probe.py           # target ~150 LOC (built to 296: one tiny-policy definition + the four probing moves — load, inspect, hook, linear-probe — plus a random-init control, one file)
+track: elective            # off the main line (0→1→2→4→5). Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: probe.py           # target ~150 LOC (built to 296: one tiny-policy definition + the four probing moves (load, inspect, hook, linear-probe) plus a random-init control, one file)
 task: checkpoint-probe       # no env rollout: the subject is a CHECKPOINT, probed offline; the synthetic routing task is generated in-file
 
 # THE FORBIDDEN-IMPORTS DECISION (deliberate, and the honest core of the chapter):
@@ -9,13 +9,13 @@ task: checkpoint-probe       # no env rollout: the subject is a CHECKPOINT, prob
 # 1.8 fusion mechanism: token-embed + from-scratch attention -> a fused CLS token -> a
 # small action head), trains it once, saves it, and RELOADS + probes it. So
 # `allow_transformers` stays UNSET and the forbidden-imports gate runs at full
-# strictness — the same call ch1.8 made. We do this because a REAL pi0 / openpi / GR00T
+# strictness. The same call ch1.8 made. We do this because a REAL pi0 / openpi / GR00T
 # checkpoint is multi-GB and NOT offline-probeable on the free tier: loading one would
 # blow the free-tier floor and require a network fetch (HF_HUB_OFFLINE=1 forbids it).
 # The frontier is READ (the prose's STUDY-tier guided reading), not imported. The
 # probing MECHANICS transfer 1:1 from our 20-KB checkpoint to a 14-GB one.
 
-# WHICH CHECKPOINT WE PROBE, AND WHY (the honest feasibility call — author: keep this):
+# WHICH CHECKPOINT WE PROBE, AND WHY (the honest feasibility call, author: keep this):
 #   * We probe a tiny language-conditioned policy that probe.py TRAINS ITSELF, once,
 #     deterministically, on a synthetic routing task (an instruction token selects which
 #     state coordinate drives the action), then reloads from disk. It is a stand-in for a
@@ -23,18 +23,18 @@ task: checkpoint-probe       # no env rollout: the subject is a CHECKPOINT, prob
 #   * We do NOT probe the learner's ch1.8 VLA: ch1.8's vla.py serializes metrics.json but
 #     NOT a checkpoint (no torch.save), so there is nothing on disk to load. (Author: if
 #     ch1.8 later grows a `--save-checkpoint`, a `--checkpoint PATH` on probe.py that reads
-#     the real TinyVLA is the natural upgrade — the probing code is checkpoint-agnostic.)
+#     the real TinyVLA is the natural upgrade; the probing code is checkpoint-agnostic.)
 #   * We do NOT probe a real pi0 / GR00T checkpoint: multi-GB, not offline/free-tier
 #     feasible. The prose reads those by REFERENCE; probe.py makes the mechanics concrete.
 
 objectives:
-  - Read a released checkpoint the way you would read any frontier model, via the four moves this file makes explicit — LOAD a saved state_dict into an architecture skeleton you hold, INSPECT the modules / shapes / parameter counts, HOOK a hidden layer to capture its activations on a forward pass (you cannot edit a released forward()), and PROBE those activations with a linear map — on an accessible tiny checkpoint that stands in for pi0 / GR00T.
-  - Fit a LINEAR PROBE of the fused layer against a KNOWN factor and read its score, then guard the read honestly against the "the probe just recovered an input" trap — task-id is decodable from EVEN a random-init checkpoint (the instruction token is right there in the sequence), so the readout that MEANS something is the COMPUTED quantity (the routed coordinate's value), where training shows up as R^2 ~0.90 trained vs ~0.16 random.
-  - Read the real frontier as a STUDY-tier guided reading (the "you can now read any robot-learning paper" chapter) — openpi / pi0's flow-matching VLA (the ch1.5 action head + the ch1.8 fusion, at scale and pretrained) and GR00T N1's dual-system split (a slow System-2 VLM feeding a fast System-1 action head) — recognizing in each the from-scratch pieces you built across Phases 1 and 3.
+  - Read a released checkpoint the way you would read any frontier model, via the four moves this file makes explicit: LOAD a saved state_dict into an architecture skeleton you hold, INSPECT the modules / shapes / parameter counts, HOOK a hidden layer to capture its activations on a forward pass (you cannot edit a released forward()), and PROBE those activations with a linear map, on an accessible tiny checkpoint that stands in for pi0 / GR00T.
+  - Fit a LINEAR PROBE of the fused layer against a KNOWN factor and read its score, then guard the read honestly against the "the probe just recovered an input" trap: task-id is decodable from EVEN a random-init checkpoint (the instruction token is right there in the sequence), so the readout that MEANS something is the COMPUTED quantity (the routed coordinate's value), where training shows up as R^2 ~0.90 trained vs ~0.16 random.
+  - Read the real frontier as a STUDY-tier guided reading (the "you can now read any robot-learning paper" chapter): openpi / pi0's flow-matching VLA (the ch1.5 action head + the ch1.8 fusion, at scale and pretrained) and GR00T N1's dual-system split (a slow System-2 VLM feeding a fast System-1 action head), recognizing in each the from-scratch pieces you built across Phases 1 and 3.
 
 scale_lab: false
 # The map's ch3.8 row is T4 and names no distinct Scale Lab. This chapter is prose-led:
-# the free-tier core (probe.py) runs in well under a minute on a CPU laptop — it trains a
+# the free-tier core (probe.py) runs in well under a minute on a CPU laptop: it trains a
 # ~7K-param policy for 400 steps and fits a closed-form linear probe. There is no scaling
 # claim to make. The honest "scale" story is the OPPOSITE of a Scale Lab: the whole point
 # is that the MECHANICS of reading a checkpoint are size-invariant, so the frontier's
@@ -42,29 +42,29 @@ scale_lab: false
 # with a GPU + a token later wants a Scale Lab that loads a REAL small released VLA
 # offline and runs the identical probe, that is a clean addition (set scale_lab: true +
 # a ref, add `allow_transformers` IF it imports a HF loader, and have wallclock-bench
-# MEASURE the GPU tier) — but it must not become a free-tier requirement.
+# MEASURE the GPU tier), but it must not become a free-tier requirement.
 
 # READ-THE-REAL-THING: the map pairs this chapter with openpi / pi0 (STUDY tier) and
 # GR00T dual-system architecture concepts. This is THE rtrt-defining chapter of Phase 3.
-# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# The rtrt: block is LEFT FOR THE AUTHOR to pin: I did not have a verified offline commit
 # sha and must never invent one. Honest candidates for the author to choose and pin (repo
 # + a REAL commit); site RTRT.astro renders nothing until repo + commit both exist:
-#   * Physical-Intelligence/openpi — pi0: a flow-matching VLA. The action head is the ch1.5
+#   * Physical-Intelligence/openpi, pi0: a flow-matching VLA. The action head is the ch1.5
 #     flow-matching mechanism (velocity of the noise->action line, integrated at inference);
 #     the conditioning is the ch1.7/1.8 VLM fusion (a pretrained VLM's tokens condition the
 #     action expert). Reading target: where the fused VLM representation meets the action
-#     expert, and where flow-matching sampling happens — the two pieces you built by hand.
-#   * NVIDIA/Isaac-GR00T — GR00T N1: the dual-system split. System 2 (a slow VLM) produces a
+#     expert, and where flow-matching sampling happens: the two pieces you built by hand.
+#   * NVIDIA/Isaac-GR00T, GR00T N1: the dual-system split. System 2 (a slow VLM) produces a
 #     latent that conditions System 1 (a fast diffusion/flow action head running at control
-#     rate). Reading target: the interface BETWEEN the two systems — which is exactly the
+#     rate). Reading target: the interface BETWEEN the two systems, which is exactly the
 #     "fused token -> action head" boundary probe.py hooks and probes.
 read_the_real_thing: true
 rtrt:
   repo: Physical-Intelligence/openpi
   commit: 15a9616a00943ada6c20a0f158e3adb39df2ccac   # pi0; default-branch HEAD; pinned 2026-07-07 (API-verified). Secondary anchor NVIDIA/Isaac-GR00T @ 23ace64f17aa5015259b8609d371eb61a357c776 (tag n1.7-release) for the dual-system split.
   focus:
-    - "the action expert's conditioning interface (real: a pretrained VLM's fused tokens; ours: the fused CLS the probe hooks) — the boundary you would probe first"
-    - "the flow-matching / diffusion action head (real: pi0's flow matching, GR00T's System-1; ours: the ch1.5 head — READ how sampling is wired, we do not re-run it here)"
+    - "the action expert's conditioning interface (real: a pretrained VLM's fused tokens; ours: the fused CLS the probe hooks), the boundary you would probe first"
+    - "the flow-matching / diffusion action head (real: pi0's flow matching, GR00T's System-1; ours: the ch1.5 head; READ how sampling is wired, we do not re-run it here)"
     - "the dual-system split (GR00T System-2 VLM -> System-1 action head): where the slow-fast boundary sits, and why it looks like our fused-token -> head boundary"
 
 demo: checkpoint_probe        # a static/2D checkpoint-inspection panel set (architecture table + probe bars + CLS-attention bar); no MuJoCo/WASM, nothing blocked on a sampler runtime
@@ -72,37 +72,38 @@ demo: checkpoint_probe        # a static/2D checkpoint-inspection panel set (arc
 # All reference metrics: seed 0, cpu, torch 2.10.0 / numpy 2.4.6. CPU is the determinism
 # tier: probe.py's metrics.json is BYTE-IDENTICAL twice-run on cpu (verified: fresh-train
 # AND reload-existing-checkpoint paths both reproduce). Training on MPS/CUDA is only
-# STATISTICALLY reproducible (invariant 2) — the default device is auto-detected, so quote
+# STATISTICALLY reproducible (invariant 2). The default device is auto-detected, so quote
 # these numbers as the CPU tier. THE HEADLINE is a METHOD, not a score: the four moves that
 # read any checkpoint, plus the honest caveat that a probe recovering an INPUT proves
 # nothing.
 reference_run:
   provenance: "seed 0 on cpu; default config (model_dim 32, heads 4, hidden 64, train_examples 2048, steps 400, probe_examples 512, probe_ridge 1.0, lr 1e-2); measured 2026-07-06"
   total_params: 7266                 # the tiny probed checkpoint (a stand-in for a released VLA)
-  cls_attends_to_index: 3            # CLS attends most to seq index 3 = the TASK token ([CLS,state,BOS,task,EOS,PAD]) — the fusion looks at the instruction word, an interpretable read
+  cls_attends_to_index: 3            # CLS attends most to seq index 3 = the TASK token ([CLS,state,BOS,task,EOS,PAD]), the fusion looks at the instruction word, an interpretable read
   # --- the linear probe of the fused layer (held-out 50/50 split) ---
   chance_task_acc: 0.25              # 1/NUM_TASKS
   trained_task_acc: 1.0              # task-id: perfectly decodable...
-  control_task_acc: 1.0              # ...but ALSO from a random-init checkpoint — the token is an INPUT, so this probe proves little (the honest twist)
-  trained_coord_r2: 0.903798        # routed-coordinate VALUE: the REAL readout — high only after training
+  control_task_acc: 1.0              # ...but ALSO from a random-init checkpoint: the token is an INPUT, so this probe proves little (the honest twist)
+  trained_coord_r2: 0.903798        # routed-coordinate VALUE: the REAL readout, high only after training
   control_coord_r2: 0.161236        # random-init control: the fused token does NOT encode the computed value
   # Seed robustness (default config, cpu, measured 2026-07-06): trained coord R^2
-  # seed0 0.90 / seed1 0.81 / seed2 0.77, random control 0.16 / 0.23 / 0.20 — trained >>
+  # seed0 0.90 / seed1 0.81 / seed2 0.77, random control 0.16 / 0.23 / 0.20. Trained >>
   # random on EVERY seed (gap >= 0.55). task-id is 1.0 vs 1.0 on every seed. The DIRECTION
   # (trained coord R^2 >> random; task-id decodable from both) is the rock; the exact R^2 is
   # a continuous readout of the trained weights (report the direction, not the third decimal).
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * The DELIVERABLE is a METHOD (load / inspect / hook / probe), not a number. Lead with
   #    "you can now open any checkpoint and interrogate it", not with an R^2.
-  #  * The task-id probe hitting 1.0 on the RANDOM control is not a bug — it is the lesson.
+  #  * The task-id probe hitting 1.0 on the RANDOM control is not a bug. It is the lesson.
   #    A linear read of almost any projection recovers a distinct input token. NEVER present
   #    "the fused layer knows the task (1.0!)" as evidence of learning; the honest evidence
   #    is the routed-coordinate R^2 gap (0.90 vs 0.16), a quantity the model had to COMPUTE.
   #    This is the transferable caveat for reading probing claims about real VLAs.
   #  * The checkpoint is one probe.py TRAINS ITSELF (ch1.8 saves no weights). It is a
-  #    stand-in, framed as such — do NOT let the prose imply we probed pi0 or a real VLA.
-  #  * Wall-clock is PENDING (see wallclock.csv). Do not quote a number until wallclock-bench
-  #    measures it. The banner prints "not yet measured" — that is correct, not a gap to fill.
+  #    stand-in, framed as such. Do NOT let the prose imply we probed pi0 or a real VLA.
+  #  * Wall-clock: cpu-laptop is MEASURED at 0.14 min (wallclock.csv, 2026-07-07); the t4 row is
+  #    still PENDING. Quote the CSV, never an estimate; do not quote a t4 number until
+  #    wallclock-bench measures it.
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
 # provenance, not a bare magic number). checks.py reads these. The two fast, self-contained
@@ -113,28 +114,28 @@ exercise_checks:
   exercise_config:                 # ex1 reproduce runs probe.py at DEFAULTS on cpu (the trained>>random coord-R^2 gap is a default-config, cpu-deterministic result)
     provenance: "measured 2026-07-06, seed 0, cpu at default config: trained coord R^2 0.90 vs random 0.16 (gap 0.74); seed-robust (0.77-0.90 trained vs 0.16-0.23 random, gap >= 0.55 across seeds 0/1/2). task-id 1.0 for BOTH. The check asserts the DIRECTION (trained coord R^2 beats random by a margin), which is seed-robust; CPU training is deterministic so seed 0 reproduces byte-for-byte."
     min_coord_r2_gap: 0.4          # ex1: trained routed-coord R^2 must beat the random control's by >= this (measured seed-0 gap 0.74; seed-robust >= 0.55)
-    max_task_acc_gap: 0.1          # ex1: task-id accuracy is ~equal trained vs random (both ~1.0) — the "recovered an input" control; assert they are within this
-  ex1:                             # ex1_predict_probe.py (predict-then-run; SLOW — runs probe.py)
+    max_task_acc_gap: 0.1          # ex1: task-id accuracy is ~equal trained vs random (both ~1.0), the "recovered an input" control; assert they are within this
+  ex1:                             # ex1_predict_probe.py (predict-then-run; SLOW, runs probe.py)
     answer: "B"                    # the routed-coordinate R^2 separates trained from random; task-id does not (decodable from both)
   ex2:                             # ex2_bughunt_probe_leakage.py (bug-hunt, fast)
-    provenance: "self-contained numpy fixture; the fix EVALUATES the probe on a held-out split instead of the training rows it was fit on — leakage inflates the score toward 1.0 and would make a random layer look informative"
+    provenance: "self-contained numpy fixture; the fix EVALUATES the probe on a held-out split instead of the training rows it was fit on; leakage inflates the score toward 1.0 and would make a random layer look informative"
   ex3:                             # ex3_completion_linear_probe.py (code-completion, fast)
     abs_tol: 1.0e-6             # a correct closed-form ridge probe matches the reference R^2 within this
   ex4:                             # ex4_read_dual_system.py (reading/investigation; recorded choice)
-    answer: "C"                    # GR00T's System-2 VLM conditions System-1's fast action head — the same fused-token -> action-head boundary probe.py hooks
+    answer: "C"                    # GR00T's System-2 VLM conditions System-1's fast action head, the same fused-token -> action-head boundary probe.py hooks
 
 
-# notebook_hash / notebook_file_hash: recorded — the notebook-tier-test skill generated
+# notebook_hash / notebook_file_hash: recorded. The notebook-tier-test skill generated
 # the Colab variant (notebooks/ch3.8-frontier.ipynb) and both hashes below match the
 # current probe.py + notebook bytes. Any edit to probe.py drifts notebook_hash: regenerate
 # via notebook-tier-test (do not hand-edit the .ipynb, or notebook_file_hash mismatches).
 
-notebook_hash: cfe027d5e13a23a7199f2b5412e06a639c75e0eda24f0b6cce392ec60fae6631        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 293a32404e7ec7a486fbba4f211bdc514db06f4ca9bc0693e661db583852d6e0   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: e257d09e703dbf1849129e0c36ad7544d98ad8d8da530a8924225807789816d6        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 771576d5c3c3690abba63c9e2f0bf3f800af8ba43ff3d4ae2d55d49ebded60ab   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: ce2a4727013ae16431158148bc77141878c0002a932c79bea2e3eb5796365a9f
-  checkpoint: a67a1d6ac65e2c6146897bd4c5432d6d008d82aae60227a3bdabda9e644ebf87
+  setup: 7f09cd5e0570f044eb01d0363e9eb37d254ae68149a21d1432f944a5dfeb391a
+  checkpoint: 72c6fb934855f6fb43ded9638c61484b9aa97cc1c57a107c495567fba55f6438
   inspect: 8896960f23c0f4368591ffe7f02f083ab3b19df983f0feb3fa252fe51569ed27
   forward: f412ea13d80708fafcac2ca06a6c216c8e010795930fd5f0bf4e653fe65a7710
   probe: fb7b43463513cab36e0542251c2cc91a1b1537eaf9f0bf482f4348f87198c98f

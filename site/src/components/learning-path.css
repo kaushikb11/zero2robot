@@ -21,6 +21,97 @@
   margin: 2.4rem 0 1rem;
 }
 
+/* ===========================================================================
+   "START HERE" — the path-chooser strip above the graph. The map is a graph
+   (a reference for how it connects); a newcomer needs a door first. Three
+   derived entry points; the graph below is the "how it connects" reference.
+   Fully server-rendered + keyboard-navigable; no JS.
+   ======================================================================== */
+.lp-start {
+  margin: 0 0 2rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.lp-start__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 0.85rem;
+}
+.lp-start__opts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+.lp-start__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  height: 100%;
+  padding: 0.8rem 0.9rem;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 0 1px 0 var(--paper-edge);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-start__link {
+    transition:
+      border-color 0.14s ease,
+      transform 0.14s ease;
+  }
+}
+.lp-start__link:hover {
+  border-color: var(--signal);
+}
+.lp-start__link:hover .lp-start__arrow {
+  transform: translateX(2px);
+}
+.lp-start__link:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-color: var(--signal);
+}
+.lp-start__lead {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--book);
+}
+.lp-start__rest {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.18;
+  color: var(--ink);
+}
+.lp-start__arrow {
+  display: inline-block;
+  color: var(--signal);
+}
+.lp-start__note {
+  font-size: 0.82rem;
+  color: var(--ink-mute);
+}
+.lp-start__ref {
+  margin: 0.9rem 0 0;
+  font-size: 0.84rem;
+  color: var(--ink-mute);
+}
+@media (max-width: 40rem) {
+  .lp-start__opts {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lp-kicker {
   font-family: var(--font-mono);
   font-size: var(--step--1);
@@ -265,28 +356,6 @@
   color: var(--signal);
 }
 
-/* gated marker — not a link, honestly "coming" */
-.lp-node--gated {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--paper-2),
-    var(--paper-2) 6px,
-    var(--paper-3) 6px,
-    var(--paper-3) 12px
-  );
-  border-style: dashed;
-  border-color: var(--rule-strong);
-  color: var(--ink-mute);
-  cursor: default;
-}
-.lp-node--gated .lp-node__num,
-.lp-node--gated .lp-node__title {
-  color: var(--ink-mute);
-}
-.lp-node__wire--gated {
-  color: var(--book-soft);
-}
-
 /* focus/hover emphasis (JS) */
 .lp--focused .lp-node {
   opacity: 0.34;
@@ -409,30 +478,6 @@
   letter-spacing: 0.04em;
   color: var(--ink-soft);
 }
-.lp-outline__phase--gated .lp-outline__gate {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0.8rem 1rem;
-  background: var(--paper-2);
-  border: 1px dashed var(--rule-strong);
-  border-radius: 8px;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-}
-.lp-outline__gatetag {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--book);
-  border: 1px solid var(--rule-strong);
-  border-radius: 999px;
-  padding: 0.1rem 0.55rem;
-}
-
 /* --- flat thread table ----------------------------------------------------- */
 .lp-threadlist {
   list-style: none;

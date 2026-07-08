@@ -3,8 +3,8 @@ title: "Teleoperation & Your First Dataset"
 artifact: record.py         # target ~200 LOC, CPU/browser; two inputs, one canonical writer
 task: pusht                 # PushT teleop -> LeRobot v3 episodes (ALOHA-sim teleop arrives in a later phase)
 objectives:
-  - Understand what an episode IS — a list of (observation, action) pairs — and what your first dataset physically is on disk (LeRobot v3: parquet data + meta/info/stats/episodes/tasks)
-  - Record PushT episodes two ways — local scripted teleop and ingest of the browser's z2r-teleop-1 interchange — through the SAME canonical lerobot writer, so both are format-identical to gen_demos by construction
+  - Understand what an episode IS, a list of (observation, action) pairs, and what your first dataset physically is on disk (LeRobot v3: parquet data + meta/info/stats/episodes/tasks)
+  - Record PushT episodes two ways (local scripted teleop and ingest of the browser's z2r-teleop-1 interchange) through the SAME canonical lerobot writer, so both are format-identical to gen_demos by construction
   - Hold the obs[10]/action[2] layout that chapter 1.1's BC trains on, and see why the feature schema (dtypes, shapes, names) is the contract that must not drift
   - Recognize this dataset as the artifact-continuity anchor: it follows you to 0.5 (inspect), 1.1 (behavior cloning), and 1.2 (curation)
 scale_lab: false
@@ -28,11 +28,11 @@ exercise_checks:
     provenance: "a synthetic 2-episode set (3 + 2 frames) written via the completed writer, checked vs a gen_demos golden schema"
     expected_frames: 5          # 3 + 2 frames across the two synthetic episodes
 
-notebook_hash: aadd25575e22310dd838beabe27534b5bdd6d6938efe5f3bf408817fbb4d1349        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 3cd59d3824900db4b1c69f5ccc5bfa844f8c441fbefb92ec5d3b19b7008622f9   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 654646c6e26773fbbbb96501d4e4029110660793f72891925360cdc51707ec16        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 417c5e371c6c390bdfa51e401f77714702140007b21fb915088bfda679936ea2   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: 382d940f72caab4b6493dfd87366dd2d1d3e6ec3749df349228d8f5201c9f6f9
+  setup: 135e5450db8ae4ba20d02c1b55e8ba29f32654e8925944d476bff2765cb5d5cf
   features: adb3b7b64cefb1e0d5394f0003aa5f703625030ddcb0f2542b876582e34d43cf
   teleop: bc41e68d445c5080b969890317d6fd4ad421639c7f1358fceea6314e593ef3b5
   ingest: f9c4926ea9f7291e911a9fd553a6101d08840dec2a4c66112165b91df9542b0d

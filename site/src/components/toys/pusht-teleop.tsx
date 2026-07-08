@@ -214,6 +214,7 @@ export default function PushTTeleopToy() {
   const [episode, setEpisode] = useState<Frame[]>([]);
   const [scrubIndex, setScrubIndex] = useState(0);
   const [liveCount, setLiveCount] = useState(0);
+  const [liveFrame, setLiveFrame] = useState<Frame | null>(null); // newest (obs,action) captured while recording
   const [isDemo, setIsDemo] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -248,11 +249,6 @@ export default function PushTTeleopToy() {
         const ctx = canvas.getContext("2d")!;
         controllerRef.current = new DragController(canvas);
 
-        // resolve the page's design tokens once (canvas can't read CSS vars live)
-        const cs = getComputedStyle(canvas);
-        const col = (k: PaletteKey) => cs.getPropertyValue(k).trim() || PALETTE_FALLBACK[k];
-        const PUSHER = col("--entity-pusher"), BLOCK = col("--entity-block"),
-          TARGET = col("--entity-target"), SIGNAL = col("--signal");
         const pxPerM = worldToPx(canvas, 1, 0)[0] - worldToPx(canvas, 0, 0)[0];
 
         // --- bespoke top-down renderer (entities in the page's --entity-* hues) --
@@ -280,6 +276,14 @@ export default function PushTTeleopToy() {
           action: [number, number] | null, showGrab: boolean,
         ) => {
           const w = canvas.width, h = canvas.height;
+          // Resolve the page's design tokens LIVE each paint (a canvas can't read CSS
+          // vars natively) so a post-boot theme toggle recolours the entities instead
+          // of freezing the boot-time snapshot. The arena stays a warm-light lab
+          // surface in both themes.
+          const cs = getComputedStyle(canvas);
+          const col = (k: PaletteKey) => cs.getPropertyValue(k).trim() || PALETTE_FALLBACK[k];
+          const PUSHER = col("--entity-pusher"), BLOCK = col("--entity-block"),
+            TARGET = col("--entity-target"), SIGNAL = col("--signal");
           ctx.fillStyle = "#fbf9f3";
           ctx.fillRect(0, 0, w, h);
           ctx.strokeStyle = "rgba(200,188,158,0.5)";
@@ -358,6 +362,9 @@ export default function PushTTeleopToy() {
         setIsDemo(true);
         setMode("review");
         setBooted(true);
+        // Reduced motion: the toy boots to a single still demo frame and never starts
+        // an autonomous rAF loop — the only loop (startRecording) is gated behind the
+        // explicit Record control, so there is no auto-motion to suppress here.
         paintFrameRef.current(demo[0] ?? null);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -413,6 +420,7 @@ export default function PushTTeleopToy() {
     keysRef.current.clear();
     recordingRef.current = true;
     setLiveCount(0);
+    setLiveFrame(null);
     setMode("recording");
     figureRef.current?.focus();
 
@@ -438,7 +446,13 @@ export default function PushTTeleopToy() {
       }
       if (n === MAX_CONTROL_STEPS_PER_FRAME) acc = 0;
       paintLiveRef.current?.();
-      if (now - hudMark >= 100) { hudMark = now; setLiveCount(bufRef.current.length); }
+      if (now - hudMark >= 100) {
+        hudMark = now;
+        setLiveCount(bufRef.current.length);
+        // surface the newest captured (obs, action) so the arrays panel updates live
+        // while recording — bufRef alone is a ref, so the readout would look frozen.
+        setLiveFrame(bufRef.current[bufRef.current.length - 1] ?? null);
+      }
       if (ended) stopRecording();
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -468,7 +482,9 @@ export default function PushTTeleopToy() {
   };
 
   const recording = mode === "recording";
-  const frame = booted ? episode[scrubIndex] ?? null : null;
+  // While recording, show the live-captured frame (updated ~10 Hz from the record
+  // loop) so the (obs, action) arrays fill in as you drive — not a stale review frame.
+  const frame = booted ? (recording ? liveFrame : episode[scrubIndex] ?? null) : null;
   const nFrames = episode.length;
 
   return (
@@ -513,6 +529,20 @@ export default function PushTTeleopToy() {
               : "booting MuJoCo-WASM…"}
         </div>
       </figure>
+
+      {/* Non-visual path to the same aha (this toy previously had no aria-live region):
+          announce mode transitions + the episode under review. Per-frame numbers stay
+          in the visual arrays panel + the scrubber's native value announcement, so this
+          stays qualitative and does not spam the screen reader as frames stream in. */}
+      <div class="bk-sr" aria-live="polite">
+        {!booted || error
+          ? ""
+          : recording
+            ? "Recording your episode — drive the pusher with a drag or the arrow keys; each control step is captured as one observation-and-action frame. Press R or space to stop."
+            : nFrames
+              ? `Reviewing the ${isDemo ? "demo" : "recorded"} episode — ${nFrames} frames of observation.state[10] and action[2]. Scrub to replay; the action row is your motion, the label behaviour cloning imitates.`
+              : ""}
+      </div>
 
       {/* the timeline scrubber — the one live control (signal blue). Native range
           input = keyboard-accessible drag + arrow-step for free. */}

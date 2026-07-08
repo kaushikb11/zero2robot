@@ -8,11 +8,16 @@
  * site's flipping design tokens and is genuinely theme-aware in BOTH light and dark.
  * Every var carries a light fallback so it still renders if mounted outside the shell.
  *
- * Colour by MEANING (the gap is the whole point):
- *   - --signal blue   → IMAGINATION (the dream: the rosy-but-DELUDED return + curve).
- *                       Blue is NOT an endorsement here — the badges/labels say deluded.
- *   - --alert red     → REALITY (the honest floor: real return, 0% success, the block
- *                       that never parks).
+ * Colour by MEANING (the gap is the whole point) — colours chosen so the hue matches
+ * how much you should TRUST each series, not just to tell them apart:
+ *   - --alert red     → IMAGINATION (the dream: the rosy-but-DELUDED return + curve).
+ *                       Red reads "caution — do not trust this rosy number"; the dream
+ *                       is the misleading series, so it wears the cautionary hue.
+ *   - --signal blue   → REALITY (the honest ground truth: the real return + floor + the
+ *                       real block-distance). Blue is the site's trust hue — reality is
+ *                       the series you should believe, even though its news is bad.
+ *   - --alert red     → ALSO the standalone 0%-real-success alarm card (the punchline
+ *                       failure) — the one place red means "this genuinely fails".
  *   - --ink-mute grey → neutral instrument (axes, grid, ticks).
  */
 
@@ -69,8 +74,8 @@
   border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
   background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
 }
-.ig-tee--imag { border-left: 3px solid var(--signal, #1f56de); }
-.ig-tee--real { border-left: 3px solid var(--alert, #c0362a); }
+.ig-tee--imag { border-left: 3px solid var(--alert, #c0362a); }
+.ig-tee--real { border-left: 3px solid var(--signal, #1f56de); }
 .ig-tee-k {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.6rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-mute, #6d6252);
@@ -79,8 +84,8 @@
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 1rem; font-weight: 700; color: var(--ink, #23201b); font-variant-numeric: tabular-nums;
 }
-.ig-tee--imag .ig-tee-v { color: var(--signal, #1f56de); }
-.ig-tee--real .ig-tee-v { color: var(--alert, #c0362a); }
+.ig-tee--imag .ig-tee-v { color: var(--alert, #c0362a); }
+.ig-tee--real .ig-tee-v { color: var(--signal, #1f56de); }
 .ig-tee-note { font-size: 0.62rem; line-height: 1.3; color: var(--ink-mute, #6d6252); }
 .ig-tee-note b { color: var(--ink, #23201b); font-weight: 600; }
 
@@ -89,8 +94,8 @@
   font-size: 0.86rem; line-height: 1.5; color: var(--ink, #23201b);
 }
 .ig-headline-note b { font-weight: 700; }
-.ig-headline-note .ig-imag { color: var(--signal, #1f56de); }
-.ig-headline-note .ig-real { color: var(--alert, #c0362a); }
+.ig-headline-note .ig-imag { color: var(--alert, #c0362a); }
+.ig-headline-note .ig-real { color: var(--signal, #1f56de); }
 
 /* ============================ the two lower panels ========================= */
 .ig-panel {
@@ -127,14 +132,14 @@
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 9px; font-weight: 600;
 }
-.ig-v--imag { color: var(--signal, #1f56de); fill: var(--signal, #1f56de); }
-.ig-v--real { color: var(--alert, #c0362a); fill: var(--alert, #c0362a); }
+.ig-v--imag { color: var(--alert, #c0362a); fill: var(--alert, #c0362a); }
+.ig-v--real { color: var(--signal, #1f56de); fill: var(--signal, #1f56de); }
 
 /* --- panel 1: the two return bars + the delusion bracket --- */
 .ig-bars { max-width: 340px; margin: 0 auto; }
 .ig-bar { }
-.ig-bar--imag { fill: var(--signal, #1f56de); }
-.ig-bar--real { fill: var(--alert, #c0362a); }
+.ig-bar--imag { fill: var(--alert, #c0362a); }
+.ig-bar--real { fill: var(--signal, #1f56de); }
 .ig-bar-val {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
@@ -156,11 +161,11 @@
 
 /* --- panel 2: the imagined-return curve vs the flat real floor --- */
 .ig-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
-.ig-line--imag { stroke: var(--signal, #1f56de); }
-.ig-real-floor { stroke: var(--alert, #c0362a); stroke-width: 1.8; stroke-dasharray: 5 4; }
+.ig-line--imag { stroke: var(--alert, #c0362a); }
+.ig-real-floor { stroke: var(--signal, #1f56de); stroke-width: 1.8; stroke-dasharray: 5 4; }
 .ig-real-lab {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 9px; font-weight: 600; fill: var(--alert, #c0362a);
+  font-size: 9px; font-weight: 600; fill: var(--signal, #1f56de);
 }
 .ig-cursor { stroke: color-mix(in srgb, var(--ink, #23201b) 40%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
 .ig-dot { stroke: var(--paper, #f7f3ea); stroke-width: 1.2; }

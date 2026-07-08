@@ -6,9 +6,9 @@ dataset:
   reference: lerobot/pusht
   learner_path: true       # curates the learner's own ch0.4 teleop session
 objectives:
-  - Score demonstration quality with dataset-ONLY signals — episode outcome, demonstrator disagreement, coverage — never touching the environment
+  - Score demonstration quality with dataset-ONLY signals (episode outcome, demonstrator disagreement, coverage), never touching the environment
   - Filter bad episodes and show curated data beats raw on held-out success despite training on FEWER episodes
-  - Explain why demonstrator disagreement measures task difficulty, not label noise — and why optimizing it as a quality proxy backfires (Break It)
+  - Explain why demonstrator disagreement measures task difficulty, not label noise, and why optimizing it as a quality proxy backfires (Break It)
   - Re-train chapter 1.1's behavior cloning on the curated dataset and measure the jump
 scale_lab: false
 read_the_real_thing: false
@@ -25,24 +25,24 @@ reference_run:
   n_reached_goal: 288
   raw_success_rate: 0.08
   curated_success_rate: 0.22
-  delta_success_rate: 0.14        # curated wins on 288 episodes vs raw's 500 — quality beats quantity
+  delta_success_rate: 0.14        # curated wins on 288 episodes vs raw's 500: quality beats quantity
   mean_disagreement_raw: 0.442585
   mean_disagreement_curated: 0.380268    # kept set (outcome filter); population std
-  break_low_disagreement_success: 0.12   # keeps lowest-disagreement demos: below curated (0.22), above raw (0.08) — the Break It that HURTS
-  break_low_disagreement_disagreement: 0.378111  # LOWER than honest curation's 0.380 — yet a worse policy (the trap)
-  break_low_disagreement_far_success: "5/31"     # vs curated 8/31 and raw 2/31 — the hard starts are where it gives up
-  break_shortest_success: 0.22           # NOTE honest: on this stand-in shortest COINCIDES with outcome (careful demos are both short and successful), so it does NOT hurt here — kept as a second, weaker illustration that a proxy can happen to align with truth
+  break_low_disagreement_success: 0.12   # keeps lowest-disagreement demos: below curated (0.22), above raw (0.08), the Break It that HURTS
+  break_low_disagreement_disagreement: 0.378111  # LOWER than honest curation's 0.380, yet a worse policy (the trap)
+  break_low_disagreement_far_success: "5/31"     # vs curated 8/31 and raw 2/31: the hard starts are where it gives up
+  break_shortest_success: 0.22           # NOTE honest: on this stand-in shortest COINCIDES with outcome (careful demos are both short and successful), so it does NOT hurt here. Kept as a second, weaker illustration that a proxy can happen to align with truth
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
 # "seeded-run band with provenance", not a bare magic number). checks.py reads
 # these instead of hardcoding tolerances. IMPORTANT: the exercises run at the
-# chapter's DEFAULT config, not a reduced one — the Break It trap (low
+# chapter's DEFAULT config, not a reduced one: the Break It trap (low
 # disagreement -> worse policy) only reproduces at full scale; at 40 eval
 # episodes evaluation noise swamps it (measured: reduced-config break 0.15 vs
-# curated 0.125 — the trap VANISHES). That fragility is itself chapter 1.6's
+# curated 0.125, the trap VANISHES). That fragility is itself chapter 1.6's
 # thesis, and the reason these checks are @slow (each trains 2 policies, ~5 min).
 exercise_checks:
-  exercise_config:                # shared by ex1/ex2/ex3 — passed to curate.py (== chapter default)
+  exercise_config:                # shared by ex1/ex2/ex3, passed to curate.py (== chapter default)
     careful: 250
     sloppy: 250
     epochs: 300
@@ -69,7 +69,7 @@ exercise_checks:
 # generation (notebooks/ch1.2-curate.ipynb); drift => regenerate.
 
 notebook_hash: 0fcc62f5f0f660eba45f4adae197cef51be1325485e16a4ed042285818ce0fd7        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 4fe47e80f2b24e760321ebbd3ef2d6d11d53cd49b6c8c65e3cb3bab6523188c0   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 4c8f13b955eaa0f4b1fd88e7db67d9ee0c0a92293626ee2f35755fc8a61fcea5   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: d5f4efa450247cfdccbbf6188583a3207771009bcb42b7d67c647eff78609165

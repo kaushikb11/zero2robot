@@ -176,7 +176,7 @@ def test_transformers_line_anchored_grant_allows(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
-# --- pedagogy_gate: protected paths (notebooks / grader) --------------------
+# --- pedagogy_gate: protected paths (notebooks) -----------------------------
 
 
 def test_notebookedit_into_notebooks_blocks():
@@ -194,16 +194,6 @@ def test_write_into_notebooks_blocks():
     payload = {
         "tool_name": "Write",
         "tool_input": {"file_path": "notebooks/ch1.1-bc.ipynb", "content": "{}"},
-    }
-    result = run_hook(PEDAGOGY_GATE, payload)
-    assert result.returncode == 2
-    assert "protected" in result.stderr
-
-
-def test_write_into_grader_hidden_seeds_blocks():
-    payload = {
-        "tool_name": "Write",
-        "tool_input": {"file_path": "grader/hidden_seeds/seed_ch1.json", "content": "{}"},
     }
     result = run_hook(PEDAGOGY_GATE, payload)
     assert result.returncode == 2

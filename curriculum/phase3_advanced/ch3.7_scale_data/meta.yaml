@@ -1,56 +1,57 @@
 id: ch3.7-scale-data
 title: "Datasets at Scale"
-track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+track: elective            # off the main line (0→1→2→4→5); Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
 artifact: scale_data.py       # 363 LOC (measured); target ~250, hard cap 450
 task: cross-embodiment        # learner's own PushT (2-D pusher) + ALOHA (6-D bimanual) LeRobot demos
 dataset:
   reference: null             # NO external download: OXE/DROID are discussed as the scaled-up concept, never fetched
   learner_path: true          # the learner's ch0.4 / gen_demos PushT + ALOHA demos ARE the dataset; augmented demos -> --out (gitignored)
 objectives:
-  - Wrangle a CROSS-EMBODIMENT pile from your own demos — PushT (2-D) + ALOHA (6-D) — and hit the exact problems OXE/DROID hit at scale: heterogeneous action dims, per-embodiment normalization, a shared 10-number state whose numbers MEAN different things (zero-pad + action_mask, the ch1.7 trick)
-  - Explain what a shared policy can and cannot transfer across embodiments (structure — a small MLP, an action head — yes; the semantics of a raw state dimension — no), using OXE/DROID as the scaled-up version of this exact problem
-  - Grow your PushT set MimicGen-style — perturb each source demo's object/pusher pose, drop the env into that start, and RE-SOLVE with the scripted expert — and keep ONLY the demos the solver still finishes (the success filter is the honesty gate: no fabricated actions)
-  - MEASURE the data-scale effect: train the ch1.1 BC policy on N source demos vs N + augmented, roll both out, and read the success delta — "data is the policy" (ch1.2), scaled
+  - "Wrangle a CROSS-EMBODIMENT pile from your own demos, PushT (2-D) + ALOHA (6-D), and hit the exact problems OXE/DROID hit at scale: heterogeneous action dims, per-embodiment normalization, a shared 10-number state whose numbers MEAN different things (zero-pad + action_mask, the ch1.7 trick)"
+  - "Explain what a shared policy can and cannot transfer across embodiments (structure (a small MLP, an action head): yes; the semantics of a raw state dimension: no), using OXE/DROID as the scaled-up version of this exact problem"
+  - "Grow your PushT set MimicGen-style (perturb each source demo's object/pusher pose, drop the env into that start, and RE-SOLVE with the scripted expert) and keep ONLY the demos the solver still finishes (the success filter is the honesty gate: no fabricated actions)"
+  - "MEASURE the data-scale effect: train the ch1.1 BC policy on N source demos vs N + augmented, roll both out, and read the success delta: \"data is the policy\" (ch1.2), scaled"
 
 scale_lab: false
-# The Scale Lab for this chapter is OXE/DROID at TRUE scale — REFERENCED, not built.
+# The Scale Lab for this chapter is OXE/DROID at TRUE scale: REFERENCED, not built.
 # Building it would violate the free-tier + no-binaries floor (OXE is >1M trajectories /
 # multi-TB; DROID is 76k trajectories). The chapter deliberately reproduces every hard
 # problem OXE/DROID pose (heterogeneous embodiments, per-dataset normalization, what
 # transfers, data-engine augmentation) on the two tiny datasets the learner already made,
 # fully offline. The scale knobs (--source_episodes, --aug_per_demo, --aug_pos_sigma) are
-# the lesson: grow the augmented set and watch coverage — and success — climb. The true SL
+# the lesson: grow the augmented set and watch coverage (and success) climb. The true SL
 # (stream a real OXE subset from the Hub on a bigger tier) is a future add; a `scale_lab_ref`
 # lands when the author designs and wallclock-benches it. Do not assert a scaled claim here.
+scale_lab_ref: "infra/scale_labs/ch3.7_scale_data_scale.py (optional Modal runner; needs a Modal account and may cost; the free CPU/Colab default is the required path)."
 
 read_the_real_thing: true
 # READ-THE-REAL-THING left for the AUTHOR to pin (I have no verified offline commit sha and
 # must never invent one). The map calls this out; the natural anchors are the primary sources
 # for the two ideas this chapter builds:
 #   - Open X-Embodiment (Padalkar et al. 2023, "Open X-Embodiment: Robotic Learning Datasets
-#     and RT-X Models") — the cross-embodiment data reality: heterogeneous action spaces, the
+#     and RT-X Models"), the cross-embodiment data reality: heterogeneous action spaces, the
 #     normalization + padding this chapter reproduces by hand.
-#   - DROID (Khazatsky et al. 2024) — a large in-the-wild manipulation dataset; the format /
+#   - DROID (Khazatsky et al. 2024), a large in-the-wild manipulation dataset; the format /
 #     scene-diversity story.
-#   - MimicGen (Mandlekar et al. 2023) — the data-engine this chapter's augmentation is a
+#   - MimicGen (Mandlekar et al. 2023), the data-engine this chapter's augmentation is a
 #     from-scratch, single-env analog of (object-centric perturb + re-solve, success-filtered).
-#   - LeRobot dataset format (v3) — the on-disk schema load_lerobot() reads; the wrangling
+#   - LeRobot dataset format (v3), the on-disk schema load_lerobot() reads; the wrangling
 #     surface the chapter makes concrete.
 rtrt:
   repo: NVlabs/mimicgen
   commit: ea0988523f468ccf7570475f1906023f854962e9   # tag v1.0.0; pinned 2026-07-07 (API-verified). Dataset-format reads live in huggingface/lerobot (v0.4.4).
   focus:
-    - "MimicGen's object-centric subtrajectory transform + success filter — this chapter's perturb-and-re-solve, kept only on expert success, is the single-env analog"
-    - "cross-embodiment normalization + action-space handling — the scaled version of the per-embodiment stats + zero-pad + action_mask this chapter builds"
+    - "MimicGen's object-centric subtrajectory transform + success filter: this chapter's perturb-and-re-solve, kept only on expert success, is the single-env analog"
+    - "cross-embodiment normalization + action-space handling: the scaled version of the per-embodiment stats + zero-pad + action_mask this chapter builds"
 
 demo: scale_data_coverage
-# hero: the augmentation coverage map — source demo starts (few) vs the re-solved augmented
+# hero: the augmentation coverage map: source demo starts (few) vs the re-solved augmented
 # starts (many) tiling the PushT spawn annulus, with the two BC success rates side by side.
 
 # Reference run: FULL default (--source_episodes 12 --aug_per_demo 8 --aug_pos_sigma 0.08
 # --aug_yaw_sigma 0.5 --hidden_dim 512 --epochs 500 --eval_episodes 50), forced --device cpu.
 # Seed sweep 0-2; torch 2.x / mujoco 3.x / numpy 2.x; measured 2026-07-07. This is the DATA-SCALE
-# HEADLINE — stated so the source << augmented ordering is unmissable, and honestly (the absolute
+# HEADLINE: stated so the source << augmented ordering is unmissable, and honestly (the absolute
 # numbers are modest at free-tier; the LESSON is the ordering + the mechanism, not a huge win).
 # Both arms share IDENTICAL weight init (train_and_eval re-seeds torch), so the DATA is the only
 # variable and --aug_per_demo 0 reproduces the source-only arm exactly.
@@ -63,16 +64,16 @@ reference_run:
   mean_source_success: 0.08          # coverage-starved: 12 demos tile little of the spawn annulus
   mean_augmented_success: 0.253      # 8x re-solved perturbations broaden coverage
   mean_scale_effect: 0.173           # augmentation helps every seed
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * The ORDERING is the rock and is seed-robust: augmented > source on EVERY seed (deltas
   #    +0.28 / +0.12 / +0.12). Lead with it, not the exact number.
   #  * The ABSOLUTE success is deliberately modest (~2-30%): 12 source demos is a coverage-starved
   #    regime chosen so the DATA effect is visible and not drowned by a saturated policy. This is
-  #    the free-tier reality — the point is "more effective data -> more success", the ch1.2 thesis
+  #    the free-tier reality: the point is "more effective data -> more success", the ch1.2 thesis
   #    scaled, NOT a state-of-the-art number. Do not oversell it.
   #  * The augmentation is HONEST: every kept demo is a real scripted-expert solution of a real
   #    perturbed start (success-filtered, ~96-99% yield). No actions are fabricated.
-  #  * Cross-embodiment is the OTHER half and carries no success number — it is the format/normalize/
+  #  * Cross-embodiment is the OTHER half and carries no success number: it is the format/normalize/
   #    transfer reality (pusht act_dim 2 vs aloha 6; a shared policy transfers structure, not raw-dim
   #    semantics). OXE/DROID are the scaled-up version, discussed, never downloaded.
 
@@ -80,16 +81,16 @@ reference_run:
 # not a bare magic number). checks.py reads these instead of inlining tolerances.
 exercise_checks:
   ex1:                             # ex1_predict_scale.py (predict-then-run: does augmentation help?)
-    answer: "A"                    # A = augmentation HELPS (augmented > source, every seed) — the data-scale thesis
+    answer: "A"                    # A = augmentation HELPS (augmented > source, every seed): the data-scale thesis
     provenance: "scale_data.py --seed 0 default config on cpu; measured 2026-07-07: source 0.02 -> augmented 0.30"
     scale_effect_min: 0.05         # measured +0.28 at seed 0; 0.05 is the seed-robust floor (min observed +0.12)
-  ex2:                             # ex2_completion_wrangle.py (code-completion: zero-pad + action_mask) — DETERMINISTIC, no training
+  ex2:                             # ex2_completion_wrangle.py (code-completion: zero-pad + action_mask); DETERMINISTIC, no training
     provenance: "pure-function mix of toy pusht(2-d)+aloha(6-d) actions; no variance; deterministic (checks.py reference_mix)"
     pusht_mask_density: 0.3333333  # a pusht row uses 2 of 6 dims -> mask mean 1/3; the padding cost made numeric
   ex3:                             # ex3_hparam_aug_amount.py (hyperparameter-investigation: how MUCH augmentation)
     answer: "A"                    # A = success keeps CLIMBING across {0,4,8}: coverage-starved, so more
                                    #     augmentation keeps buying success. Steps are ~equal at seed 0
-                                   #     (0.02 -> 0.16 -> 0.30, +0.14 each) — NO plateau in the free-tier
+                                   #     (0.02 -> 0.16 -> 0.30, +0.14 each): NO plateau in the free-tier
                                    #     range; diminishing returns is the asymptote past aug<=8, not visible here.
     provenance: "scale_data.py --seed 0 on cpu, aug_per_demo in {0,4,8}; measured 2026-07-07: 0.02 (none, == source-only) -> 0.16 (aug 4) -> 0.30 (aug 8)"
     monotone_min: 0.03             # success(aug_per_demo 8) - success(aug_per_demo 0) >= this at seed 0 (measured +0.28)
@@ -97,12 +98,12 @@ exercise_checks:
 # notebook_hash / notebook_file_hash below record the LAST notebook generation. The final-edit pass
 # (2026-07-07) changed scale_data.py bytes, so these are now STALE and the notebook must be
 # REGENERATED via the notebook-tier-test skill (which rewrites both keys); do not hand-edit either
-# the notebook or these hashes. check_notebook_hashes will fail until the regen lands — that is the
+# the notebook or these hashes. check_notebook_hashes will fail until the regen lands; that is the
 # intended signal, not a value to patch by hand.
 
 
 notebook_hash: c43ba99ce3f3bbe53993b202255112cd1d9ba225adf39630ae5628b8f3f6f1a5        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: e0c6bf079ff44cb97d4b847fc5e95436f582417682e07aaea164fe3ce9c2e3f7   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 1228b0ba9f2de147132d67d7d6740530dce5fea1a311f6190cfe50b096d33841   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 3e7d8c7947b9682a32f28a5a7ff90a2311e64e7f83372475ade08f3f38744346

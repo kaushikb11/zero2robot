@@ -75,7 +75,7 @@ ch3.5-contact,l40s,0.05,7c0ec03ce636,a7a88c6,2026-07-06,MEASURED
 ch3.6-compare,cpu-laptop,0.12,4d20147498c1,ddd0d96,2026-07-06,MEASURED
 ch3.6-compare,t4,0.44,d6078eade6c8,a7a88c6,2026-07-06,MEASURED
 ch3.6-compare,l40s,0.29,24c9e9c2a52a,a7a88c6,2026-07-06,MEASURED
-ch2.7-dr,cpu-laptop,,,,,PENDING
+ch2.7-dr,cpu-laptop,1.38,aa6689949d11,6e48a97,2026-07-09,MEASURED
 ch2.7-dr,t4,5.63,e6cc43644d1a,7efdeff,2026-07-06,MEASURED
 ch2.7-dr,l40s,2.86,897a18adae43,1aa98e7,2026-07-06,MEASURED
 ch2.3-mjx,cpu-laptop,0.49,d8641a537ce0,20d92da,2026-07-06,MEASURED

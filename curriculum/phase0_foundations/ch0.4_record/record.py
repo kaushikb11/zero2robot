@@ -57,7 +57,7 @@ parser.add_argument("--rerun", dest="rerun", action="store_true", default=True) 
 parser.add_argument("--no-rerun", dest="rerun", action="store_false", help="skip the .rrd (CI smoke)")
 args = parser.parse_args()
 
-banner("ch0.4-record")  # startup contract: tier + measured wall-clock to stdout, not metrics.json
+banner("ch0.4-record", device="cpu")  # pure-numpy/mujoco-CPU: honest cpu tier, never the host's mps/cuda. startup contract: tier + measured wall-clock to stdout, not metrics.json
 rng = np.random.default_rng(args.seed)  # PCG64 — the only source of randomness in this file
 # --- endregion ---
 

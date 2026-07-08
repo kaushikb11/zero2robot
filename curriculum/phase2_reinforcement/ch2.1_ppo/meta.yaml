@@ -1,12 +1,12 @@
 id: ch2.1-ppo
 title: "PPO: The Policy That Acts and Sees the Consequences"
 artifact: ppo.py           # 349 LOC (measured); target ~380, hard cap 450
-task: cartpole             # curriculum/common/envs/cartpole — continuous force, reward +1/step
+task: cartpole             # curriculum/common/envs/cartpole: continuous force, reward +1/step
 dataset:
   reference: null          # RL generates its own data by acting; no demo dataset
   learner_path: false
 objectives:
-  - Implement PPO from scratch in one file — Gaussian policy, value net, GAE, clipped surrogate
+  - Implement PPO from scratch in one file: Gaussian policy, value net, GAE, clipped surrogate
   - Explain why acting-and-observing escapes the covariate shift that killed behavior cloning (ch1.1)
   - Bootstrap correctly on truncation vs termination, and measure what conflating them costs
   - Ablate the standard PPO tricks (advantage norm, value clipping, GAE-lambda, lr anneal) via flags
@@ -16,7 +16,7 @@ rtrt:
   repo: vwxyzjn/cleanrl
   commit: c37a3ec4ef8d33ab7c8a69d4d2714e3817739365   # tag v1.0.0; pinned 2026-07-07 (API-verified)
   focus:
-    - ppo_continuous_action.py   # the single-file (~330 LOC) PPO this chapter mirrors — the LOC sanity check + the GAE/clipped-surrogate idiom
+    - ppo_continuous_action.py   # the single-file (~330 LOC) PPO this chapter mirrors: the LOC sanity check + the GAE/clipped-surrogate idiom
 demo: cartpole_ppo_balance   # hero: trained PPO balances live; visitor nudges the cart, policy recovers
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
@@ -25,10 +25,10 @@ demo: cartpole_ppo_balance   # hero: trained PPO balances live; visitor nudges t
 # PROVENANCE: seed sweep 0-4 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6;
 # DEFAULT config (total_steps 200000, num_envs 8, num_steps 256); measured 2026-07-06.
 exercise_checks:
-  ex1:                     # ex1_completion_gae.py — DETERMINISTIC (toy arrays, no training)
+  ex1:                     # ex1_completion_gae.py: DETERMINISTIC (toy arrays, no training)
     provenance: "pure-function GAE on a fixed 6-step toy rollout; no RL variance; deterministic (checks.py reference_gae)"
     truncated_minus_terminated_adv_min: 5.0   # measured 8.9 on the toy rollout; margin below it
-  ex2:                     # ex2_predict_ablation.py — trains PPO, multi-seed, seeded => reproducible
+  ex2:                     # ex2_predict_ablation.py: trains PPO, multi-seed, seeded => reproducible
     provenance: "cpu, default config (total_steps 200000), seeds 0-2; measured 2026-07-06: ref [500,500,500], no-norm-adv [332,500,500]"
     ref_eval_min: 450.0                        # reference reliably SOLVES (mean over seeds 0-2 = 500; min seed 465 at N=5)
 
@@ -36,7 +36,7 @@ exercise_checks:
 # check_prose_code_drift recomputes each region's sha256 and gates on drift).
 
 notebook_hash: 6afba6e3f82f4c57345fdcf8c9c3e3f14f743df8c9a5eb474502d71fe1b88236        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 11865b9f36ecf4fd7910b97c526169d5a0e859fcebb611df7640e42ffe2bda41   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: ae5ef423278160e0cebb021c1b35f59197e0b68f212815edf67fd034fec9d3d0   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 9b8667423907f5cfe2a0b5cd66333060594f116a9133228af18b116b7024b226

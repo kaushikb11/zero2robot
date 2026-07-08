@@ -23,19 +23,15 @@ const first = chapters[0] ?? null;
 const flagship = chapters.find((c) => c.demo === "pusht_bc_recovery") ?? null;
 
 const startHref = first ? `/${first.slug}/` : "#curriculum";
-const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
 
-// The toy's "See it work" caption. Instructional + factual, in the house voice:
-// it describes exactly what the real toy demonstrates, no marketing.
+// The toy's "See it work" caption. On the landing this is ONE sentence — the
+// first impression is the toy itself, not the copy — with a link into ch1.1 for
+// the "why". Instructional + factual, in the house voice; no marketing.
 const heroLedeHtml = `
-  <p>This is the real behavior-cloning policy from Chapter 1.1, running in your
-  browser on a MuJoCo-WASM simulation — the same <code>bc.py</code> you'll
-  train. Drag the block out of the region the demonstrations covered, and watch
-  a confident policy fail. That failure has a name, and the whole course is
-  built around understanding it.</p>
+  <p>Drag the block out of the region the demos covered, and watch a confident
+  policy fail. <a href="/ch1.1-bc/">Why it fails &rarr;</a></p>
 `;
 
-const hasProgress = Astro.slots.has("progress");
 ---
 
 <section class="ln-hero" aria-labelledby="ln-hero-title">
@@ -44,42 +40,33 @@ const hasProgress = Astro.slots.has("progress");
       <p class="ln-kicker">Interactive textbook · embodied AI, from scratch</p>
 
       <h1 class="ln-title" id="ln-hero-title">
-        Read robotics like a book.
-        <span class="ln-title__accent">Run every page like a lab.</span>
+        Build a robot brain.
+        <span class="ln-title__accent">No robot required.</span>
       </h1>
 
       <p class="ln-subhead">
-        Minimal, real, readable code — one runnable file per chapter, from a
-        bare simulation loop to a policy you train, export, and drive in your
-        browser. No framework to excavate, no black boxes. The code is the
-        product, and it all runs on a free Colab T4 or a CPU laptop.
+        Embodied AI from scratch, one runnable file per chapter, from a bare
+        simulation loop to a policy you train, export, and drive in your browser.
+        No framework to excavate, no black boxes. Free on a Colab T4 or your laptop.
       </p>
 
+      <!-- ONE primary action. The landing used to offer three competing entry
+           points (two hero buttons, a progress "start", a sidebar "start here");
+           the whole point of the declutter is a single obvious thing to do. -->
       <div class="ln-cta">
         <a class="ln-btn ln-btn--primary" href={startHref}>
           Start from the first page
           {first && <span class="ln-btn__sub">{first.number} · {first.artifactBasename}</span>}
         </a>
-        <a class="ln-btn" href={flagshipHref}>
-          Jump to the flagship chapter →
-        </a>
       </div>
 
-      <!-- Progress-aware "continue" widget (F2's ProgressOverview) mounts here.
-           F2 owns the widget; F3 owns only this labelled slot. Static fallback
-           reads fine JS-off and when no progress island is wired. -->
-      <div class="ln-hero__continue" data-has-progress={hasProgress ? "true" : "false"}>
-        <slot name="progress">
-          <p class="ln-continue-fallback">
-            No account, no setup — progress is remembered locally in your browser.
-            Everything runs on a free Colab T4 or a CPU laptop.
-          </p>
-        </slot>
-      </div>
+      <p class="ln-hero__reassure">
+        No account, no setup, and your place is remembered locally in your browser.
+      </p>
     </div>
 
     <div class="ln-hero__demo">
-      <HeroDemo demo="pusht_bc_recovery" task="pusht" ledeHtml={heroLedeHtml} />
+      <HeroDemo demo="pusht_bc_recovery" task="pusht" variant="hero" ledeHtml={heroLedeHtml} />
     </div>
   </div>
 </section>

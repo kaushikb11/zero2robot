@@ -13,14 +13,14 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install -e ".[dev,export]" --quiet   # export: onnx for tests/common/test_export_parity.py
-      - name: Lint + pedagogy gates
-        run: |
-          ruff check .
-          python infra/ci/check_loc_caps.py          # 450 cap on chapter artifacts
-          python infra/ci/check_forbidden_imports.py
-          python infra/ci/check_prose_code_drift.py  # region checksums vs site includes
-          python infra/ci/check_wallclock_provenance.py
-      - name: Unit tests
-        run: pytest curriculum tests infra grader -m "not gpu and not slow" -q   # paths per infra/decisions/005; grader is infra (013)
+      - name: Lint + ALL pedagogy gates + unit (identical to `make check`)
+        # Single source of truth: invoke `make check` so this per-PR lane can never
+        # drift from the local pre-PR gate. PY/PYTEST/RUFF point at the CI system
+        # interpreter (the Makefile defaults to .venv/bin/*). `make check` runs ruff
+        # + all seven pedagogy gates (loc caps, forbidden imports, prose-code drift,
+        # prose includes, demo assets, draft scaffolding, wallclock provenance) +
+        # the notebook-hash static check + unit tests (paths per infra/decisions/005;
+        # grader is infra per 013).
+        run: make check PY=python PYTEST=pytest RUFF=ruff
       - name: Chapter smoke (CPU, tiny steps; bitwise determinism x2 — CPU lane only)
         run: python infra/ci/smoke_chapters.py --changed-only --seed 0 --verify-determinism --python python

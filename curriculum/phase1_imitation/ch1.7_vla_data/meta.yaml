@@ -10,10 +10,10 @@ task: multi-task             # BOTH curriculum/common/envs/pusht AND aloha_cube,
 # ch1.8, where allow_transformers may finally be granted.
 
 objectives:
-  - Build the DATA side of a vision-language-action policy end to end — turn multi-task demos + language instructions + camera frames into the (instruction_tokens, image_features, state) -> action examples a language-conditioned policy consumes. No policy is trained here (that is ch1.8); the lesson is how the examples are made.
-  - Assemble a MULTI-TASK dataset from two different tasks AND embodiments (PushT's 2-D pusher, ALOHA's 6-D bimanual handoff) into one pile — including the honest cost of mixing embodiments (heterogeneous action dims -> zero-pad + an action_mask).
-  - Attach language via INSTRUCTION TEMPLATES with paraphrase variations, and tokenize it with a from-scratch WORD-LEVEL tokenizer (fixed vocab, special ids, pad/truncate) — no HF tokenizers, no BPE.
-  - Encode frames with a FROZEN, random-init, from-scratch tiny CNN, and be honest about what a frozen random encoder captures (coarse spatial layout, a usable fixed projection) versus what a PRETRAINED backbone (DINOv2/SigLIP in OpenVLA/SmolVLA) adds (object- and language-aligned, transferable features) — the gap ch1.8 closes.
+  - Build the DATA side of a vision-language-action policy end to end: turn multi-task demos + language instructions + camera frames into the (instruction_tokens, image_features, state) -> action examples a language-conditioned policy consumes. No policy is trained here (that is ch1.8); the lesson is how the examples are made.
+  - Assemble a MULTI-TASK dataset from two different tasks AND embodiments (PushT's 2-D pusher, ALOHA's 6-D bimanual handoff) into one pile, including the honest cost of mixing embodiments (heterogeneous action dims -> zero-pad + an action_mask).
+  - Attach language via INSTRUCTION TEMPLATES with paraphrase variations, and tokenize it with a from-scratch WORD-LEVEL tokenizer (fixed vocab, special ids, pad/truncate): no HF tokenizers, no BPE.
+  - Encode frames with a FROZEN, random-init, from-scratch tiny CNN, and be honest about what a frozen random encoder captures (coarse spatial layout, a usable fixed projection) versus what a PRETRAINED backbone (DINOv2/SigLIP in OpenVLA/SmolVLA) adds (object- and language-aligned, transferable features): the gap ch1.8 closes.
   - Measure instruction LEAKAGE: a template that names the action direction makes the action linearly decodable from language alone (a probe R^2 that jumps ~0.006 -> ~0.71), which is exactly how a VLA learns to ignore its camera.
 
 scale_lab: false
@@ -22,15 +22,15 @@ scale_lab: false
 # ch1.8's job). scale_lab stays false; the scale knobs (--episodes_per_task,
 # --frame_stride, --feature_dim, --conv_width) are the on-ramp. If the author later
 # designs a 4090 study (many tasks, a bigger encoder, a real image dataset), set
-# scale_lab: true + a ref and have wallclock-bench MEASURE it — do not assert a claim.
+# scale_lab: true + a ref and have wallclock-bench MEASURE it. Do not assert a claim.
 
 # READ-THE-REAL-THING: the map pairs this chapter with a real VLA-data reference. The
-# rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
+# rtrt: block is LEFT FOR THE AUTHOR to pin. I did not have a verified offline commit
 # sha and must never invent one. Two honest candidates for the author to choose and
 # pin (name the repo + a REAL commit):
-#   * huggingface/lerobot — the LeRobotDataset v3 format + the multi-task/language
+#   * huggingface/lerobot: the LeRobotDataset v3 format + the multi-task/language
 #     annotation path our .npz is a stripped-down stand-in for.
-#   * openvla/openvla (or huggingface/lerobot's SmolVLA) — a real VLA data stack: a
+#   * openvla/openvla (or huggingface/lerobot's SmolVLA), a real VLA data stack: a
 #     pretrained vision backbone + subword tokenizer + the (image, instruction, state)
 #     -> action example our pipeline mirrors with frozen/from-scratch parts.
 # site RTRT.astro renders nothing until repo + commit both exist.
@@ -48,11 +48,11 @@ demo: vla_dataset_browser    # a data-inspection panel (frame + instruction + fr
 
 # All reference metrics: seed 0, cpu, mujoco 3.10.0 / torch 2.10.0 / lerobot 0.4.4
 # / numpy 2.4.6. There is NO trained policy in this chapter, so the "results" are
-# DATASET statistics and the leakage-probe signature — all deterministic (env resets
+# DATASET statistics and the leakage-probe signature, all deterministic (env resets
 # + rendering are bitwise-reproducible on CPU; the frozen CNN init is seeded; the probe
 # is a closed-form least-squares). The headline is the LEAKAGE PROBE: with clean
 # task-level templates the action is essentially UN-decodable from language (R^2 ~ 0.006),
-# and --break leak (templates that name the move) sends it to R^2 ~ 0.71 — seed-robust.
+# and --break leak (templates that name the move) sends it to R^2 ~ 0.71, seed-robust.
 reference_run:
   provenance: "seed 0 on cpu; default config (episodes_per_task 12, frame_stride 2, feature_dim 64, conv_width 16); measured 2026-07-06"
   # --- the multi-task dataset (deterministic: env resets + render are bitwise on CPU) ---
@@ -60,7 +60,7 @@ reference_run:
   num_examples_pusht: 309           # PushT frames (2-D action, padded to 6)
   num_examples_aloha: 170           # ALOHA cube-handoff frames (6-D action)
   vocab_size: 46                    # from-scratch word-level vocab (4 specials + template/compass words)
-  feature_dim: 64                   # frozen CNN output width — the visual feature a policy conditions on
+  feature_dim: 64                   # frozen CNN output width: the visual feature a policy conditions on
   max_tokens: 16                    # fixed instruction length after [BOS]/[EOS]/pad
   oov_rate: 0.0                     # every content token is in-vocab by construction (the vocab is closed)
   image_feature_mean: 0.010075      # frozen-encoder fingerprint (seed-0 init); makes the determinism check bite
@@ -75,12 +75,12 @@ reference_run:
   # Seed robustness (default config, cpu, measured 2026-07-06): normal R^2 seed0 0.0061,
   # seed1 0.0060, seed2 0.0046; leak R^2 seed0 0.713, seed1 0.712, seed2 0.710. The gap
   # (clean ~0.006 vs leak ~0.71) is decisive and seed-robust; that is the chapter's rock.
-  # HONESTY (author MUST keep this framing — it is the measured truth):
-  #  * NO policy is trained here. Do NOT report a success rate — there is none. The
+  # HONESTY (author MUST keep this framing, it is the measured truth):
+  #  * NO policy is trained here. Do NOT report a success rate. There is none. The
   #    results are dataset stats + the leakage probe. ch1.8 trains the policy.
   #  * The vision encoder is a FROZEN, RANDOM-INIT, from-scratch conv stack. Do NOT
   #    claim it rivals a real VLM backbone. It is a fixed nonlinear projection that
-  #    preserves coarse spatial layout — a usable feature, and the pedagogical STAND-IN.
+  #    preserves coarse spatial layout, a usable feature, and the pedagogical STAND-IN.
   #    A PRETRAINED backbone (DINOv2/SigLIP) adds object/language alignment; that is the
   #    whole reason ch1.8 exists. Frame the encoder as "what a policy conditions on,"
   #    not "good perception."
@@ -97,7 +97,7 @@ reference_run:
 # tolerances. Everything here is FAST and deterministic (no training in this chapter):
 # the reproduce checks run vla_data.py at a reduced config (seconds on CPU) and the two
 # self-contained gates (ex3 tokenizer bug-hunt, ex4 bag-of-words completion) are pure
-# numpy. `make check` runs them all — none are @pytest.mark.slow because none train.
+# numpy. `make check` runs them all: none are @pytest.mark.slow because none train.
 exercise_checks:
   exercise_config:                 # shared reduced config for the reproduce checks (kept tiny)
     episodes_per_task: 3
@@ -121,7 +121,7 @@ exercise_checks:
 # check_prose_code_drift recomputes these against vla_data.py; regenerate any that
 # change when the code inside a region is edited.
 notebook_hash: 1aaadf36b60f7ce2d343817c081b03522ff57136dfef9a225a535e97338623ed        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 823df1ae3d2c23b6af8812ca57362c5604fbba200455ab02f0504cfa71094889   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 9f82094a932b9ee7e9175ccf60ee122fc407dd41338634817cacefda46741184   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 68126c054d7154a245d9fb8815810e4cdf31b8501309496fde6b21e06d478616

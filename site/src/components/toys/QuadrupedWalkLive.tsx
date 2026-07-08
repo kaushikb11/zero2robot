@@ -41,7 +41,7 @@ function Poster() {
   const torsoY = groundY - 0.257 * 170;
   return (
     <svg
-      class="qw-poster-svg"
+      class="ql-poster-svg"
       viewBox="0 0 520 340"
       role="img"
       aria-label="Side view of a four-legged robot standing on the ground in a gentle crouch. With JavaScript on, a trained policy makes it walk forward — an emergent gait nobody scripted — and, at the free-tier budget, it sprints and then falls before the full ten-second horizon."
@@ -52,19 +52,19 @@ function Poster() {
         its eight leg joints into a repeating stride that carries the torso forward;
         the gait is fast but not yet robust, so it falls before ten seconds.
       </desc>
-      <rect class="qw-arena" x={1} y={1} width={518} height={338} rx={6} />
-      <line class="qw-ground" x1={0} y1={groundY} x2={520} y2={groundY} />
+      <rect class="ql-arena" x={1} y={1} width={518} height={338} rx={6} />
+      <line class="ql-ground" x1={0} y1={groundY} x2={520} y2={groundY} />
       {/* torso */}
-      <rect class="qw-torso" x={200} y={torsoY - 12} width={122} height={24} rx={4} />
-      <circle class="qw-head" cx={328} cy={torsoY} r={5} />
+      <rect class="ql-torso" x={200} y={torsoY - 12} width={122} height={24} rx={4} />
+      <circle class="ql-head" cx={328} cy={torsoY} r={5} />
       {/* four bent legs (near pair solid, far pair faint) */}
-      <polyline class="qw-leg" points={`306,${torsoY + 8} 322,${groundY - 30} 314,${groundY}`} />
-      <polyline class="qw-leg" points={`214,${torsoY + 8} 198,${groundY - 30} 206,${groundY}`} />
-      <polyline class="qw-leg qw-leg--far" points={`300,${torsoY + 8} 316,${groundY - 30} 308,${groundY}`} />
-      <polyline class="qw-leg qw-leg--far" points={`220,${torsoY + 8} 204,${groundY - 30} 212,${groundY}`} />
-      <circle class="qw-foot" cx={314} cy={groundY} r={5} />
-      <circle class="qw-foot" cx={206} cy={groundY} r={5} />
-      <text class="qw-poster-lbl" x={16} y={26}>walk_actor.onnx · press play with JS on →</text>
+      <polyline class="ql-leg" points={`306,${torsoY + 8} 322,${groundY - 30} 314,${groundY}`} />
+      <polyline class="ql-leg" points={`214,${torsoY + 8} 198,${groundY - 30} 206,${groundY}`} />
+      <polyline class="ql-leg ql-leg--far" points={`300,${torsoY + 8} 316,${groundY - 30} 308,${groundY}`} />
+      <polyline class="ql-leg ql-leg--far" points={`220,${torsoY + 8} 204,${groundY - 30} 212,${groundY}`} />
+      <circle class="ql-foot" cx={314} cy={groundY} r={5} />
+      <circle class="ql-foot" cx={206} cy={groundY} r={5} />
+      <text class="ql-poster-lbl" x={16} y={26}>walk_actor.onnx · press play with JS on →</text>
     </svg>
   );
 }
@@ -98,6 +98,10 @@ function WalkToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         const [simMod, sceneMod, envMod, obsMod, inferMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
           import("../../../../playground/src/sim/scene"),
@@ -143,9 +147,6 @@ function WalkToy() {
         };
         startX = realSim.qposAt(realSim.jointQposAdr("root"));
 
-        setBooted(true);
-        render();
-
         const policy = await loadPolicy(MODEL_URL);
         if (policy.contract.obsDim !== 23 || policy.contract.actDim !== 8) {
           throw new Error(
@@ -154,6 +155,12 @@ function WalkToy() {
           );
         }
         if (disposed) return;
+
+        // load-then-boot: reveal the live canvas only after the policy loads and its
+        // obs[23]/act[8] contract verifies — a fetch/contract failure keeps booted=false
+        // so the captioned SSR poster stays up (fail-closed), never a frozen canvas.
+        setBooted(true);
+        render();
 
         apiRef.current = { reset: doReset };
 
@@ -184,6 +191,9 @@ function WalkToy() {
         // outcome, and resumes only on reset.
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
 
+        // Reduced motion: the emergent-gait still frame is painted and the reset control
+        // + __toy hooks stay live; don't spin the auto-driving rAF loop.
+        if (prefersReducedMotion) return;
         while (!disposed) {
           await nextFrame();
           const now = performance.now();
@@ -239,14 +249,14 @@ function WalkToy() {
     <div class="qw">
       <figure
         ref={figureRef}
-        class="qw-figure"
+        class="ql-figure"
         tabIndex={0}
         role="application"
         aria-label="Interactive quadruped-walk toy. A trained policy drives a four-legged robot into an emergent walking gait. Focus here and press R, or use the reset button, to start a fresh episode. The robot sprints forward and then falls before the full horizon."
         onKeyDown={onKeyDown}
       >
-        <div class="qw-poster" hidden={booted}><Poster /></div>
-        <canvas ref={canvasRef} class="qw-canvas" hidden={!booted} aria-hidden="true" />
+        <div class="ql-poster" hidden={booted}><Poster /></div>
+        <canvas ref={canvasRef} class="ql-canvas" hidden={!booted} aria-hidden="true" />
 
         <div class="bk-sr" aria-live="polite">
           {booted && !failed
@@ -259,24 +269,24 @@ function WalkToy() {
         </div>
 
         {booted && !failed && (
-          <div class="qw-hud" aria-hidden="true">
-            <div class="qw-hud-row">
-              <span class="qw-k">forward distance</span>
-              <span class="qw-v">{hud.dist.toFixed(2)} m</span>
+          <div class="ql-hud" aria-hidden="true">
+            <div class="ql-hud-row">
+              <span class="ql-k">forward distance</span>
+              <span class="ql-v">{hud.dist.toFixed(2)} m</span>
             </div>
-            <div class="qw-meter"><div class="qw-meter-fill" data-fell={hud.fell} style={`width:${distPct}%`} /></div>
-            <div class="qw-hud-row">
-              <span class="qw-k">torso height</span>
-              <span class={`qw-v ${hud.fell ? "qw-bad" : ""}`}>{hud.height.toFixed(3)} m</span>
+            <div class="ql-meter"><div class="ql-meter-fill" data-fell={hud.fell} style={`width:${distPct}%`} /></div>
+            <div class="ql-hud-row">
+              <span class="ql-k">torso height</span>
+              <span class={`ql-v ${hud.fell ? "ql-bad" : ""}`}>{hud.height.toFixed(3)} m</span>
             </div>
-            <div class="qw-hud-row">
-              <span class="qw-k">step</span>
-              <span class="qw-v">{hud.step} / 500 {hud.fell ? "· fell" : hud.survived ? "· survived" : ""}</span>
+            <div class="ql-hud-row">
+              <span class="ql-k">step</span>
+              <span class="ql-v">{hud.step} / 500 {hud.fell ? "· fell" : hud.survived ? "· survived" : ""}</span>
             </div>
           </div>
         )}
 
-        <div class="qw-status" data-failed={failed} aria-hidden="true">
+        <div class="ql-status" data-failed={failed} aria-hidden="true">
           {failed ? (
             <span>sim failed — the Colab path covers this without WASM</span>
           ) : booted ? (
@@ -290,11 +300,11 @@ function WalkToy() {
         </div>
       </figure>
 
-      <div class="qw-controls">
-        <button type="button" class="qw-btn qw-btn--primary" onClick={() => apiRef.current?.reset()} disabled={!booted || failed}>
+      <div class="ql-controls">
+        <button type="button" class="ql-btn ql-btn--primary" onClick={() => apiRef.current?.reset()} disabled={!booted || failed}>
           {hud.fell || hud.survived ? "walk again →" : "restart episode →"}
         </button>
-        <span class="qw-control-note">
+        <span class="ql-control-note">
           emergent gait, honest ceiling: it sprints then falls · poster reads with JS off
         </span>
       </div>

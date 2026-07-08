@@ -941,15 +941,30 @@ body.book > * { position: relative; z-index: 1; }
   padding: 0.02rem 0.34rem;
 }
 
-/* quick links (start here / progress) */
-.sidebar__quicklinks { list-style: none; margin: 0 0 1.4rem; padding: 0; display: flex; gap: 0.9rem; }
+/* quick links (start here / progress) — each label stays on one line; the row
+   wraps whole labels to the next line rather than breaking a phrase mid-word. */
+.sidebar__quicklinks {
+  list-style: none; margin: 0 0 1.4rem; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 0.45rem 0.9rem;
+}
+.sidebar__quicklinks li { min-width: 0; }
 .sidebar__quicklinks a {
   font-size: 0.82rem; color: var(--ink-soft); text-decoration: none;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule); white-space: nowrap;
 }
 .sidebar__quicklinks a:hover { color: var(--book); border-color: var(--book-soft); }
 .sidebar__quicklinks a:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .sidebar__quicklinks a[aria-current="page"] { color: var(--book); }
+
+/* --- chapter-index disclosure (native <details>) ------------------------- */
+/* Above the mobile breakpoint the disclosure "dissolves": the summary is hidden
+   and the groups render as the plain vertical index. It ships `open`, and with
+   the summary hidden there is no control to close it, so the full index is
+   always visible on desktop (JS on OR off). The ≤62rem block below re-introduces
+   the summary as a tappable bar. */
+.sidebar__disclosure { margin: 0; }
+.sidebar__disclosure-summary { display: none; }
+.sidebar__groups { display: block; }
 
 .sidebar__phase { margin-bottom: 1.5rem; }
 .sidebar__phase-label {
@@ -1120,14 +1135,94 @@ body.book > * { position: relative; z-index: 1; }
   }
   .sidebar {
     position: static; max-height: none;
-    display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; align-items: baseline;
-    padding: 1rem 1.5rem;
+    display: block;
+    padding: 0.8rem 1.5rem 1rem;
   }
-  .sidebar__top { width: 100%; margin-bottom: 0.8rem; }
-  .sidebar__util, .sidebar__quicklinks { width: 100%; margin-bottom: 0.4rem; }
-  .sidebar__phase { margin-bottom: 0; }
-  /* ≥44px tap targets on the collapsed horizontal nav (WCAG 2.5.5) */
+  .sidebar__top { margin-bottom: 0.8rem; }
+  .sidebar__util, .sidebar__quicklinks { margin-bottom: 0.6rem; }
+
+  /* The 43-chapter index collapses into a tappable "Chapters" disclosure so it
+     no longer dumps ~47 links above the content. Native <details>: works with no
+     JS, keyboard-toggles, no focus trap. The SidebarNav script closes it on load
+     under this breakpoint (it ships `open` for desktop / JS-off desktop). */
+  .sidebar__disclosure { margin: 0; }
+  .sidebar__disclosure-summary {
+    display: flex; align-items: center; gap: 0.5rem;
+    min-height: 44px; padding: 0.4rem 0.5rem;
+    list-style: none; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 7px;
+    background: var(--paper-2);
+    font-family: var(--font-mono);
+  }
+  .sidebar__disclosure-summary::-webkit-details-marker { display: none; }
+  /* chevron (rotates open); marks the control as a disclosure without a marker */
+  .sidebar__disclosure-summary::after {
+    content: ""; margin-left: auto; flex: none;
+    width: 0.5rem; height: 0.5rem;
+    border-right: 2px solid var(--ink-mute); border-bottom: 2px solid var(--ink-mute);
+    transform: rotate(45deg); transition: transform 0.15s ease;
+  }
+  .sidebar__disclosure[open] .sidebar__disclosure-summary::after { transform: rotate(-135deg); }
+  .sidebar__disclosure-summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .sidebar__disclosure-label {
+    font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-mute); flex: none;
+  }
+  .sidebar__disclosure-current {
+    font-family: var(--font-body); font-size: 0.85rem; color: var(--ink);
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar__groups { padding-top: 0.7rem; }
+  .sidebar__phase { margin-bottom: 1.1rem; }
+  /* ≥44px tap targets on the expanded index (WCAG 2.5.5) */
   .sidebar__link { min-height: 44px; align-items: center; }
+}
+
+/* --- on-this-page section TOC (right rail) ------------------------------- */
+/* Hidden by default: renders only when the JS enhancer finds real sections and
+   adds .shell--has-toc (JS-off → stays two-column, no empty rail). It's a rail
+   only on wide screens; below that there isn't room beside the reading column
+   and the left sidebar already navigates, so it stays hidden. */
+.on-this-page { display: none; }
+
+@media (min-width: 78rem) {
+  /* widen the frame and open a third column for the rail — only once populated */
+  .shell--has-toc {
+    grid-template-columns: 15.5rem minmax(0, 1fr) 13.5rem;
+    max-width: 85rem;
+  }
+  .shell--has-toc .on-this-page:not([hidden]) { display: block; }
+
+  .on-this-page {
+    position: sticky; top: 0;
+    align-self: start;
+    max-height: 100vh; overflow-y: auto;
+    padding: 1.9rem 1.15rem 2.4rem 0.9rem;
+    border-left: 1px solid var(--rule);
+  }
+  .on-this-page__label {
+    font-family: var(--font-mono);
+    font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-mute);
+    margin: 0 0 0.7rem; padding: 0 0.3rem;
+  }
+  .on-this-page__list { list-style: none; margin: 0; padding: 0; }
+  .on-this-page__item { margin: 0; }
+  .on-this-page__item--sub { padding-left: 0.9rem; }
+  .on-this-page__link {
+    display: block; padding: 0.28rem 0.5rem;
+    border-left: 2px solid transparent; margin-left: -1px;
+    color: var(--ink-soft); text-decoration: none;
+    font-size: 0.84rem; line-height: 1.3;
+  }
+  .on-this-page__item--sub .on-this-page__link { font-size: 0.8rem; color: var(--ink-mute); }
+  .on-this-page__link:hover { color: var(--ink); }
+  .on-this-page__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  /* scroll-spy: the section nearest the top gets an oxblood marker + weight */
+  .on-this-page__link[aria-current="location"] {
+    color: var(--book); font-weight: 600;
+    border-left-color: var(--book);
+  }
 }
 
 /* ===========================================================================

@@ -1,0 +1,59 @@
+name: ci-playground
+# CI gate for the MuJoCo-WASM teleop playground (playground/). deploy-playground.yml
+# only *builds* on push:main; this workflow additionally type-checks and runs the
+# full TypeScript test suite on every push, PR, and manual dispatch — so a contract
+# drift between curriculum/common/export_onnx.py and src/policy/contracts.ts that
+# still type-checks is caught by test:contract, and the sampler/obs/golden/telemetry/
+# quality parity checks gate every change. Pure Node (tsc + vite), no Python step.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-playground-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: playground
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: playground/package-lock.json
+
+      - name: Install playground deps
+        run: npm ci
+
+      - name: Build playground (tsc --noEmit && vite build)
+        run: npm run build
+
+      - name: Contract gate (export_onnx.py <-> contracts.ts drift)
+        run: npm run test:contract
+
+      - name: Flow sampler parity
+        run: npm run test:sampler
+
+      - name: DDPM sampler parity
+        run: npm run test:ddpm
+
+      - name: Golden interchange schema
+        run: npm run test:golden
+
+      - name: Observation parity
+        run: npm run test:obs
+
+      - name: Telemetry whitelist
+        run: npm run test:telemetry
+
+      - name: Quality-degrade ladder
+        run: npm run test:quality

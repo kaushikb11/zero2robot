@@ -33,6 +33,9 @@
 @media (max-width: 46rem) {
   .fd-stage { grid-template-columns: 1fr; }
 }
+/* progressive-disclosure: with the advanced column folded, the beginner sees just
+   the frame + HUD, so hold the square to a comfortable size rather than full width */
+.fd-stage--simple { grid-template-columns: minmax(0, 33rem); justify-content: start; }
 
 .fd-figure {
   position: relative;
@@ -93,9 +96,18 @@
 /* the one LIVE handle — signal blue. The dashed halo = "grab here to move";
    the small knob at the x-axis tip = "grab here to rotate". */
 .fd-halo { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.85; }
-.fd-knob { fill: color-mix(in srgb, var(--signal) 18%, #fdfbf6); stroke: var(--signal); stroke-width: 1.5; }
+.fd-knob { fill: color-mix(in srgb, var(--signal) 30%, #fdfbf6); stroke: var(--signal); stroke-width: 2; }
 .fd-handles[data-mode="translate"] .fd-halo { opacity: 1; stroke-dasharray: none; }
 .fd-handles[data-mode="rotate"] .fd-knob { fill: var(--signal); }
+
+/* the rotate handle, made discoverable: a grab ring sized to the real hit target,
+   a curved-arrow arc, and a small legible hint — not a bare 6 px dot */
+.fd-rotate { cursor: grab; }
+.fd-figure[data-mode="rotate"] .fd-rotate { cursor: grabbing; }
+.fd-knob-ring { fill: color-mix(in srgb, var(--signal) 8%, transparent); stroke: var(--signal); stroke-width: 1.3; stroke-dasharray: 3 3; opacity: 0.65; }
+.fd-knob-arc { fill: none; stroke: var(--signal); stroke-width: 2; stroke-linecap: round; opacity: 0.9; }
+.fd-knob-lbl { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; fill: var(--signal); }
+.fd-rotate:hover .fd-knob-ring, .fd-handles[data-mode="rotate"] .fd-knob-ring { opacity: 1; stroke-dasharray: none; }
 @media (prefers-reduced-motion: no-preference) {
   .fd-halo { animation: fd-halo-spin 14s linear infinite; transform-box: fill-box; transform-origin: center; }
 }
@@ -252,6 +264,11 @@
   box-shadow: 0 1px 4px -1px color-mix(in srgb, var(--alert) 50%, transparent);
 }
 .fd-btn--alert:hover { color: #fff; background: color-mix(in srgb, var(--alert) 90%, #000); }
+/* the progressive-disclosure reveal toggle */
+.fd-btn--reveal { border-style: dashed; }
+.fd-btn--on {
+  background: var(--signal-soft); color: var(--signal); border-color: var(--signal); border-style: solid;
+}
 .fd-btn[disabled] { opacity: 0.5; cursor: default; }
 .fd-control-note {
   font-family: var(--font-mono); font-size: 0.66rem;

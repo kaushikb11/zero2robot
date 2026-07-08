@@ -1,6 +1,6 @@
 id: ch4.3-serl
 title: "RL Post-Training: HIL-SERL in Sim"
-# THE CAPSTONE ALGORITHM (map 4.3). This is the last agent-buildable chapter —
+# THE POST-TRAINING ENDPOINT (map 4.3). This is the last agent-buildable chapter,
 # where BC (1.1), corrections (4.2), the offline prior (the primer), and SAC (2.2)
 # converge. Map row: "RL fine-tuning of the learner's VLA with their correction
 # data as prior; sample-efficiency the whole point." Phase 4 requires 1.8 + 2.1 +
@@ -8,35 +8,34 @@ title: "RL Post-Training: HIL-SERL in Sim"
 # supplies the offline-prior substrate.
 artifact: serl.py          # 446 LOC; hard cap 450. This is the convergence chapter (AWAC prior + SAC online
                            # + the from-scratch comparison in one file), so it runs long but stays under the cap.
-task: pusher_reach         # curriculum/common/envs/pusher_reach — dense reward (-distance), continuous torque (ch2.2's env)
+task: pusher_reach         # curriculum/common/envs/pusher_reach, dense reward (-distance), continuous torque (ch2.2's env)
 dataset:
   reference: null          # the "dataset" is the CORRECTIONS: scripted-expert transitions collected in-file (ch4.2's mechanism, the teleop stand-in); no external demos
   learner_path: false      # the browser-teleop corrections path is ch4.2; here the scripted expert is the offline stand-in
 
 phase_requires: [ch1.8, ch2.1, ch2.2, ch1.6]
 # and the offline primer (corrections -> AWAC prior). 1.8 = the learner's VLA (the
-# base policy this post-trains in the real capstone); 2.2 = SAC (the online
+# base policy this post-trains); 2.2 = SAC (the online
 # substrate); 1.6 = the eval harness (Wilson/Newcombe CIs); 2.1 = PPO (the RL
 # on-ramp). The offline primer is the direct algorithmic parent (its AWAC IS the
-# prior here) — the author wires that map edge when the primer's number lands.
+# prior here), the author wires that map edge when the primer's number lands.
 
-# PUBLIC TASK, GATED LEADERBOARD (honest framing). The map's capstone SUITE is
-# HIDDEN-SEED graded (grader/hidden_seeds, off-limits). This chapter runs the SAME
-# HIL-SERL algorithm on the PUBLIC pusher_reach env so the mechanism is fully
-# readable and reproducible on a laptop; the graded leaderboard number is the
-# gated capstone (ch4.4). The chapter never claims to reproduce the graded score.
+# PUBLIC TASK, HONEST SCALE. This chapter runs the HIL-SERL algorithm on the
+# PUBLIC pusher_reach env so the mechanism is fully readable and reproducible on a
+# laptop. It teaches the mechanism at free-tier scale; it never claims a strong
+# trained robot.
 
 objectives:
   - "Assemble HIL-SERL from the pieces the learner already built: corrections (ch4.2) -> an AWAC offline prior (the primer, reusing ch2.2's twin-Q) -> online SAC fine-tuning (ch2.2) with the corrections kept in the replay (RLPD-style)"
   - "Explain WHY corrections-as-prior buy sample efficiency: an offline prior extracted from the corrections starts the policy at a good return with ZERO online interaction, so online RL needs far fewer environment samples than starting from scratch"
-  - "Measure, don't assert, the sample efficiency: samples-to-threshold for HIL-SERL (primed) vs SAC-from-scratch (cold), with ch1.6 error bars (Wilson CI + a difference CI) — HIL-SERL clears the bar at ~0 online samples, scratch needs thousands"
-  - "Run the honest ablation (prior-alone vs from-scratch-online vs HIL-SERL) and read what each piece buys — on this free-tier task the corrections/prior deliver essentially all the efficiency and online fine-tuning HOLDS the prior; report that truthfully rather than overclaiming"
-  - "Tie the mechanism to the real thing: the same corrections->prior->online-fine-tune loop is how HIL-SERL/RLPD post-train real robot policies, and where the online phase pays off (harder tasks, the gated capstone suite)"
+  - "Measure, don't assert, the sample efficiency: samples-to-threshold for HIL-SERL (primed) vs SAC-from-scratch (cold), with ch1.6 error bars (Wilson CI + a difference CI): HIL-SERL clears the bar at ~0 online samples, scratch needs thousands"
+  - "Run the honest ablation (prior-alone vs from-scratch-online vs HIL-SERL) and read what each piece buys: on this free-tier task the corrections/prior deliver essentially all the efficiency and online fine-tuning HOLDS the prior; report that truthfully rather than overclaiming"
+  - "Tie the mechanism to the real thing: the same corrections->prior->online-fine-tune loop is how HIL-SERL/RLPD post-train real robot policies, and where the online phase pays off (harder tasks)"
 
 # MEASURED reference run. PROVENANCE: cpu (forced), torch 2.10.0 / mujoco 3.10.0 /
 # numpy 2.4.6; DEFAULT config (corr_episodes 60, prior_steps 8000, hil_steps 6000,
 # scratch_steps 12000, threshold 0.10 m, eval n_seeds 3 x eval_episodes 10 = 30
-# pooled rollouts); seeds 0,1,2; measured 2026-07-07; ~2.7 min/seed on cpu-laptop.
+# pooled rollouts); seeds 0,1,2; measured 2026-07-07; 9.67 min on cpu-laptop (wallclock.csv).
 reference_run:
   headline: "HIL-SERL clears the reach threshold in ~0 online samples (the corrections-as-prior put it there); from-scratch SAC needs ~10,000-11,000 online samples to reach the same bar. Seed-robust."
   samples_to_threshold_hil: [0, 0, 0]            # prior clears <0.10 m at zero online samples on every seed
@@ -50,7 +49,7 @@ reference_run:
   diff_ci_hil_minus_scratch: "seed0 +0.05..+0.46 (SIG), seed1 +0.06..+0.45 (SIG), seed2 -0.16..+0.28 (ns; scratch got luckier at 0.267). HIL-SERL success >= scratch on all 3 seeds."
   random_baseline_dist: 0.176
   honest_framing: >
-    The sample-efficiency win is large, real, and seed-robust — and it comes from
+    The sample-efficiency win is large, real, and seed-robust, and it comes from
     the CORRECTIONS-AS-PRIOR, not from online fine-tuning. The offline prior (AWAC
     on the corrections, ZERO env interaction) already clears the threshold, so
     HIL-SERL's samples-to-threshold is 0 while from-scratch SAC needs ~10k. On this
@@ -59,43 +58,43 @@ reference_run:
     HOLDS the prior rather than beating it (best-checkpoint = prior on 2/3 seeds;
     on seed 2 online nudged 0.069 -> 0.052). We report that honestly: the mechanism
     (corrections -> prior -> online) is the lesson; the online-RL-pays-off story is
-    on harder tasks and the GATED capstone suite. Do NOT re-frame this as "online
-    RL solves what the prior can't" — the measured win is on the SAMPLE AXIS.
+    on harder tasks. Do NOT re-frame this as "online
+    RL solves what the prior can't": the measured win is on the SAMPLE AXIS.
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec: seeded-
 # run band with provenance, not a bare magic number). checks.py reads these. Bands
 # assert the STRONG, seed-robust signal (ch2.1 spike H1/H2), never a flaky effect.
 exercise_checks:
-  ex1:                     # ex1_predict_sample_efficiency.py — HIL vs scratch samples-to-threshold, seeds 0-2, DEFAULT config
+  ex1:                     # ex1_predict_sample_efficiency.py: HIL vs scratch samples-to-threshold, seeds 0-2, DEFAULT config
     provenance: "cpu, seeds 0-2, default config; measured 2026-07-07: HIL samples-to-threshold [0,0,0], scratch [10000,11000,10000]"
     hil_sts_max: 2000        # HIL clears the threshold within this many online samples (measured 0 on every seed); assert <= this AND strictly fewer than scratch
-  ex2:                     # ex2_investigate_corrections.py — starved(15) vs default(60) correction episodes, seeds 0-1
-    provenance: "cpu, seeds 0-1; measured 2026-07-07: default(60) prior_dist [0.061,0.074] (clears the 0.10 m threshold, HIL sts [0,0]); starved(15) prior_dist [0.117,0.111] (FAILS the threshold, HIL sts [6000,None]). The starvation effect is clean here but left OBSERVATIONAL — the learner reads the direction/size; only the default arm is gated."
+  ex2:                     # ex2_investigate_corrections.py: starved(15) vs default(60) correction episodes, seeds 0-1
+    provenance: "cpu, seeds 0-1; measured 2026-07-07: default(60) prior_dist [0.061,0.074] (clears the 0.10 m threshold, HIL sts [0,0]); starved(15) prior_dist [0.117,0.111] (FAILS the threshold, HIL sts [6000,None]). The starvation effect is clean here but left OBSERVATIONAL: the learner reads the direction/size; only the default arm is gated."
     default_prior_dist_max: 0.095   # the default corrections build a prior that clears the threshold on every seed (measured max 0.074 m); the starvation trend is left observational (ch2.1-spike honesty)
 
 # read_the_real_thing: TRUE. Anchors: the HIL-SERL paper (Luo et al., "Precise and
 # Dexterous Robotic Manipulation via Human-in-the-Loop RL") and RLPD (Ball et al.,
-# "Efficient Online RL with Offline Data" — corrections-in-replay / symmetric
+# "Efficient Online RL with Offline Data": corrections-in-replay / symmetric
 # sampling / LayerNorm critics). The point of the reading: what the grown-up
-# version does that this file does not — a real human teleoperator in the loop
+# version does that this file does not: a real human teleoperator in the loop
 # online (not a scripted stand-in), a learned reward classifier instead of a dense
 # analytic reward, and the RLPD stabilizers that let online fine-tuning genuinely
 # IMPROVE the prior on hard tasks (here the prior is near-ceiling, so online holds).
 # The pinned upstream commits are wired by the read-the-real-thing build step.
 read_the_real_thing: true
 
-scale_lab: false           # free-tier CPU config measured (~2.7 min/seed). A GPU Scale Lab (bigger correction sets, a harder contact-rich task, RLPD stabilizers so online fine-tuning has headroom to improve the prior, and the graded suite) is a future add, not this draft.
+scale_lab: false           # free-tier CPU config measured (9.67 min, wallclock.csv). A GPU Scale Lab (bigger correction sets, a harder contact-rich task, RLPD stabilizers so online fine-tuning has headroom to improve the prior) is a future add, not this draft.
 demo: serl_sample_efficiency   # hero: the sample-efficiency CURVE (eval dist vs online samples), HIL-SERL vs scratch. See demo/embed.yaml.
 
-# region_hashes: omitted — the site build has not rendered this draft chapter yet
+# region_hashes: omitted. The site build has not rendered this draft chapter yet
 # (check_prose_code_drift passes chapters with no region_hashes); they are added when
 # the chapter graduates from draft to drop.
 # notebook_hash / notebook_file_hash: sha256 of the artifact at generation and of the
 # generated notebook bytes, written by notebook-tier-test. Drift => regenerate;
 # a file-hash mismatch => the notebook was hand-edited.
 
-notebook_hash: 3e588c1afe4d70c16dae55a8beca6832dfe110c5b67c6c5fc585ec04080ac144        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 26d8226fe3cd6693e8fa5a6cbb5d0d8d97475389f7c96d7f226d6c68caedaa47   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: ca5ba93b5d1a31b62d796d9c7d085ceb928f142bd2a945ef36df69d267f96f12        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: bae1f5d59f1a953769d76a63d4f37aef43180832ef423f7045dd362bcf0ac4c1   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 986219171467d0ff2c1a8ab11d613d382a947245a2fafd762b39e7cf324c0595
@@ -106,4 +105,4 @@ region_hashes:
   prior: 7a2a96fc154c3bc6845c49fd2bcfcf01067bff78a9e78f2f2f46974843f36641
   online: 2fe6c52ac76d1e6807a8ebb70956a53d71f7f191297e6c5958e7c1f7e29383b3
   eval: 7aef2649da3e1aa397ec18a23c53c00bfdcba1e340c31bd24e94a6cf326ec212
-  report: 35d82e158be9eb6d0cc3db40d5b58c7a858a08703c451656fcd0157a7f15d57d
+  report: 3acdcdcb595fad2edd04b16b95008d4131ddca36398fa0661d0c853e4045e3ce

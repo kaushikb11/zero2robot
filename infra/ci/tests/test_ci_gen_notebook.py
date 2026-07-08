@@ -7,8 +7,15 @@ execute them (the ci-notebook lane does that).
 
 import hashlib
 
-import gen_notebook
-import nbformat
+import pytest
+
+# ci-cpu installs only [dev,export]; nbformat lives in the [notebooks] extra. Skip
+# this module cleanly there (the ci-notebook lane installs [notebooks] and runs it),
+# mirroring grader/tests/test_api.py's fastapi importorskip (decision 013).
+pytest.importorskip("nbformat")
+
+import gen_notebook  # noqa: E402  (after importorskip)
+import nbformat  # noqa: E402  (after importorskip)
 
 
 def _run(tmp_path, *chapters):

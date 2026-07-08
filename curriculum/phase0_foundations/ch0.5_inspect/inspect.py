@@ -69,7 +69,7 @@ parser.add_argument("--rerun", dest="rerun", action="store_true", default=True) 
 parser.add_argument("--no-rerun", dest="rerun", action="store_false", help="skip the .rrd (CI smoke)")
 args = parser.parse_args()
 
-banner("ch0.5-inspect")  # startup contract: tier + measured wall-clock to stdout
+banner("ch0.5-inspect", device="cpu")  # pure-numpy/mujoco-CPU: honest cpu tier, never the host's mps/cuda. startup contract: tier + measured wall-clock to stdout
 rng = np.random.default_rng(args.seed)  # PCG64 — only used by the stand-in generator
 # --- endregion ---
 

@@ -1,25 +1,25 @@
 id: ch2.8-runtime
 title: "Concepts of ROS, Without ROS: a Pub-Sub Control Runtime"
-artifact: runtime.py       # 416 LOC (measured); target ~300, hard cap 450
-task: cartpole             # curriculum/common/envs/cartpole — the plant the node graph controls
+artifact: runtime.py       # 422 LOC (measured); target ~300, hard cap 450
+task: cartpole             # curriculum/common/envs/cartpole: the plant the node graph controls
 dataset:
   reference: null          # no dataset: the runtime RUNS a policy, it does not train one
   learner_path: false
 policy_reused: ch2.1-ppo   # OPTIONAL brain: --policy outputs/ch2.1-ppo/ppo_agent.pt runs the TRAINED ch2.1 PPO policy through the graph. Default (and CI/exercise reference) is the built-in checkpoint-free scripted balancer, since no checkpoint is committed (root CLAUDE.md #5: no binaries in git)
 objectives:
-  - Build the three primitives real robot middleware is made of — Node, Topic (a thread-safe pub-sub bus), Rate (a fixed-Hz loop) — from scratch in stdlib threading + queues, no ROS
+  - Build the three primitives real robot middleware is made of: Node, Topic (a thread-safe pub-sub bus), Rate (a fixed-Hz loop), from scratch in stdlib threading + queues, no ROS
   - Wire the sense -> think -> act loop as three DECOUPLED concurrent nodes (sensor / policy / actuator) exchanging messages on topics, and run a swappable balancer through it to keep the pole up (scripted by default; your ch2.1 PPO checkpoint via --policy)
-  - Explain why real robot software is a graph of nodes at fixed rates — decoupling, swappability, per-topic logging, and the zero-order hold when a consumer is slower than a producer
+  - Explain why real robot software is a graph of nodes at fixed rates: decoupling, swappability, per-topic logging, and the zero-order hold when a consumer is slower than a producer
   - Measure what degrades when the control RATE drops: message drops, sense->act latency, and the rate below which the controller can no longer keep the pole up
-  - Reason honestly about determinism in a concurrent system — why the threaded real-time graph is not bitwise reproducible, and how a virtual-clock scheduler recovers reproducibility
+  - Reason honestly about determinism in a concurrent system: why the threaded real-time graph is not bitwise reproducible, and how a virtual-clock scheduler recovers reproducibility
 scale_lab: false
 read_the_real_thing: true
 rtrt:
   repo: ros2/rclpy
-  commit: eedd8b106b7302bd46412236cda2a31a24584ce9   # tag release-latest; pinned 2026-07-07 (API-verified). The real ROS 2 Python client — your hand-rolled Node/Topic/Rate, formalized (QoS, discovery, real transports).
+  commit: eedd8b106b7302bd46412236cda2a31a24584ce9   # tag release-latest; pinned 2026-07-07 (API-verified). The real ROS 2 Python client: your hand-rolled Node/Topic/Rate, formalized (QoS, discovery, real transports).
   focus:
-    - "rclpy/node.py — the real Node: create_publisher/create_subscription/create_timer vs your from-scratch versions"
-    - "rclpy/executors.py — the executor/spin loop that replaces your virtual-clock scheduler"
+    - "rclpy/node.py. The real Node: create_publisher/create_subscription/create_timer vs your from-scratch versions"
+    - "rclpy/executors.py: the executor/spin loop that replaces your virtual-clock scheduler"
     - "what your hand-rolled runtime OMITS: QoS profiles, discovery, and a real (DDS) transport"
 demo: cartpole_runtime_graph   # hero: the live node graph balancing the pole; a rate slider shows the pole fall as control_hz drops
 
@@ -31,15 +31,15 @@ demo: cartpole_runtime_graph   # hero: the live node graph balancing the pole; a
 # (--policy scripted), the checkpoint-free reference CI and the exercises run.
 # RL-doctrine (ch2.1 spike): NO mandatory Break-It bug-hunt. The graded exercises are
 # a predict-then-run (the control-rate cliff) and a hyperparameter-investigation
-# (queue_depth vs rate) — both seed-robust and deterministic under --clock virtual.
+# (queue_depth vs rate), both seed-robust and deterministic under --clock virtual.
 exercise_checks:
-  ex1:                     # ex1_predict_control_rate.py — predict-then-run, control-rate sweep
-    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2, default 10 s run; measured 2026-07-07: BALANCES (501 control steps) at control_hz in {50,25,20,15,10} on every seed; FALLS at 5 Hz on every seed (16-102 steps, seed-dependent). While balancing the run is seed-independent too (identical steps/latency across seeds — a stable attractor). Sense->act latency climbs 0 -> ~60 ms as the rate drops from 50 to 10 Hz."
+  ex1:                     # ex1_predict_control_rate.py: predict-then-run, control-rate sweep
+    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2, default 10 s run; measured 2026-07-07: BALANCES (501 control steps) at control_hz in {50,25,20,15,10} on every seed; FALLS at 5 Hz on every seed (16-102 steps, seed-dependent). While balancing the run is seed-independent too (identical steps/latency across seeds: a stable attractor). Sense->act latency climbs 0 -> ~60 ms as the rate drops from 50 to 10 Hz."
     balances_at_hz: 10.0     # at >= this policy rate the pole survives the whole run, all seeds
     falls_at_hz: 5.0         # at this policy rate the pole falls, all seeds (rate cliff between 5 and 10 Hz)
     balanced_steps_min: 500  # a surviving run reaches ~501 control steps (10 s at the 50 Hz plant rate)
-  ex2:                     # ex2_investigate_queue_depth.py — hyperparameter-investigation, queue_depth vs rate
-    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2; measured 2026-07-07: at control_hz 5, queue_depth 1 drops 13-90 /obs messages and the pole falls (at step 16-102, seed-dependent); queue_depth 100 drops 0 messages and the pole falls at the SAME step. A deeper queue hides the dropped-message symptom but does NOT rescue a controller that is simply too slow — the RATE is the killer, not the buffer."
+  ex2:                     # ex2_investigate_queue_depth.py: hyperparameter-investigation, queue_depth vs rate
+    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2; measured 2026-07-07: at control_hz 5, queue_depth 1 drops 13-90 /obs messages and the pole falls (at step 16-102, seed-dependent); queue_depth 100 drops 0 messages and the pole falls at the SAME step. A deeper queue hides the dropped-message symptom but does NOT rescue a controller that is simply too slow: the RATE is the killer, not the buffer."
     slow_control_hz: 5.0
     shallow_queue_depth: 1
     deep_queue_depth: 100    # deep queue => obs_dropped == 0 (measured), yet balanced is UNCHANGED (still falls at the same step)
@@ -52,7 +52,7 @@ exercise_checks:
 # the Colab variant is generated.
 
 notebook_hash: e08eb5c6920d3a187ef243743fff06c9a545bbc2898890c33247b5e1fba74c89        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 0e05780b9737c8134db18516be4d3785f8e635b90d134ec9ff67b204f0d3928b   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 8f370f2f3747ed3742ccecb8d42d08f75fa7df753c68417db6781250a38b05da   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 86eebb468cea0a3d57d1fe721a91e805f66f19a95492d7af179cbf45feb0cbb4

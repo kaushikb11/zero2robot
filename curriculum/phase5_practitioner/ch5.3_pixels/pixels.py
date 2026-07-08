@@ -33,6 +33,7 @@ import argparse
 import json
 import math
 import sys
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -388,13 +389,14 @@ random_policy, bc_loss_random = build_and_train(random_enc, False, "random")
 aligned = evaluate(aligned_policy, "aligned")
 random = evaluate(random_policy, "random")
 # Export the ALIGNED policy (the deployable one) to ONNX contract v1 and prove parity.
-onnx_path = export_policy(aligned_policy, OBS_DIM, ACT_DIM, args.out / "pixels_policy.onnx")
+with warnings.catch_warnings():  # tracing the flat-image reshape is intentional (contract v1); mute only ONNX's generic TracerWarning
+    warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
+    onnx_path = export_policy(aligned_policy, OBS_DIM, ACT_DIM, args.out / "pixels_policy.onnx")
 parity_delta = assert_parity(aligned_policy, onnx_path, OBS_DIM)
 print(f"exported {onnx_path} — torch/onnx parity delta {parity_delta:.2e}")
 metrics = {
     "align_final_loss": round(align_loss, 6),
-    "aligned_ci_hi": round(aligned["ci_hi"], 6),
-    "aligned_ci_lo": round(aligned["ci_lo"], 6),
+    "aligned_ci_hi": round(aligned["ci_hi"], 6), "aligned_ci_lo": round(aligned["ci_lo"], 6),
     "aligned_mean_return": round(aligned["mean_return"], 6),
     "aligned_success_rate": round(aligned["success_rate"], 6),
     "bc_final_loss_aligned": round(bc_loss_aligned, 6),

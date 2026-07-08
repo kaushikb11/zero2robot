@@ -1,5 +1,5 @@
 # Security Policy
 
-Report vulnerabilities to security@zero2robot.dev (alias lands day 1). No public issues for security reports. Priority surfaces: the grader (executes learner-submitted ONNX — see grader/sandbox/policy.yaml), the leaderboard API, and the site.
+Report vulnerabilities to security@zero2robot.dev (alias lands day 1). No public issues for security reports. Priority surfaces: the site and the browser playground (in-page MuJoCo sim + ONNX inference).
 
-Grader threat model (non-negotiable): learner submissions are hostile by default. ONNX deserialization happens only inside the sandbox; resource caps (CPU, memory, wall-clock, no network) enforced at the container level; syscall-level isolation (gVisor-class) required before the leaderboard opens at Drop 4 — container-only isolation is NOT sufficient for internet-facing arbitrary-model execution.
+The grader is an offline exercise auto-checker: it runs a chapter's public checks on the learner's own machine (drives pytest over `exercises/suggested/checks.py`, reads the public bands from `meta.yaml`). There is no submission server, no hosted grading endpoint, and no execution of untrusted third-party models, so there is no network-facing scoring surface to secure.

@@ -37,7 +37,7 @@ parser.add_argument("--no-rerun", dest="rerun", action="store_false", help="skip
 parser.add_argument("--no-perturb", dest="perturb", action="store_false", help="skip the shove — a baseline the tests compare against")
 args = parser.parse_args()
 
-banner("ch0.1-sim-loop")  # startup contract: every artifact prints tier + measured wall-clock (to stdout, not metrics.json)
+banner("ch0.1-sim-loop", device="cpu")  # pure-numpy/mujoco-CPU: honest cpu tier, never the host's mps/cuda. startup contract prints tier + measured wall-clock (to stdout, not metrics.json)
 num_steps = 300 if args.smoke else args.steps  # smoke length is FIXED so CI can diff runs exactly
 args.out.mkdir(parents=True, exist_ok=True)
 rng = np.random.default_rng(args.seed)  # PCG64 — the only source of randomness in this file

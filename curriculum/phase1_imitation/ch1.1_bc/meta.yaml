@@ -27,7 +27,7 @@ exercise_checks:
     ref_train_loss_abs: 1.0e-4            # training was never touched, so this stays tight
 
 notebook_hash: d5d4d867a8f62ad8ed8b86683afc36090438c6afaf35b144f2b2a3e5e4ce2a10        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: b9382e330910ae3a3c296ed27163f29bcd19ac9cbbd7270720f92edc50ca9e22   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 304a4eba0ac71ba26d427ccbc95b5d0ff131eb229a7f5ce6c118247194ac8606   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 16c89e594920a1fd92da0df084644ea793fdd6431b5c79ba6a9629e65391f26e

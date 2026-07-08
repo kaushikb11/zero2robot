@@ -301,12 +301,18 @@ export default function FramesDrag() {
   const [xyzw, setXyzw] = useState(false);      // Break It #1: quaternion convention
   const [composeBA, setComposeBA] = useState(false); // Break It #2: compose order
   const [mode, setMode] = useState<DragMode>(null);
+  // Progressive disclosure: a newcomer's first load is just the frame, the drag, and
+  // the quaternion. The matrix, the composition line, and the two expert "break it"
+  // toggles stay folded behind "show advanced" until asked for.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Client-only: reveal the interactive island (the poster is the JS-off fallback).
   useEffect(() => { setBooted(true); }, []);
 
   const s = buildScene(tx, ty, yaw, xyzw);
   const q = s.renderQuat; // the quaternion actually fed to the routines
+  const [knobX, knobY] = w2s(tx + Math.cos(yaw) * AXIS_LEN, ty + Math.sin(yaw) * AXIS_LEN); // rotate-handle centre (px)
+  const KNOB_RING = GRAB_M * S * 1.5; // the grab ring == the real hit radius, so the target is visible
 
   const clamp = (v: number) => Math.max(-TRANS_BOUND, Math.min(TRANS_BOUND, v));
   const reset = () => { setTx(DEF_TX); setTy(DEF_TY); setYaw(DEF_YAW); setXyzw(false); setComposeBA(false); };
@@ -363,15 +369,15 @@ export default function FramesDrag() {
     } else if (e.key === "," || e.key === "[") { e.preventDefault(); setYaw((v) => v + YAW_STEP); setMode("rotate"); }
     else if (e.key === "." || e.key === "]") { e.preventDefault(); setYaw((v) => v - YAW_STEP); setMode("rotate"); }
     else if (e.key === "r" || e.key === "R") reset();
-    else if (e.key === "b" || e.key === "B") setXyzw((v) => !v);
-    else if (e.key === "c" || e.key === "C") setComposeBA((v) => !v);
+    else if (e.key === "b" || e.key === "B") { setShowAdvanced(true); setXyzw((v) => !v); }
+    else if (e.key === "c" || e.key === "C") { setShowAdvanced(true); setComposeBA((v) => !v); }
   };
 
   const yawDeg = ((yaw * 180) / Math.PI);
 
   return (
     <div class="fd">
-      <div class="fd-stage">
+      <div class={`fd-stage ${showAdvanced ? "" : "fd-stage--simple"}`}>
         <figure
           class={`fd-figure ${xyzw ? "fd-figure--wrong" : ""}`}
           data-mode={mode ?? "idle"}
@@ -398,16 +404,23 @@ export default function FramesDrag() {
             {!booted && <title>Coordinate frames — drag the tee frame</title>}
             <SceneGraphics s={s} xyzw={xyzw} composeBA={composeBA} />
 
-            {/* the one LIVE handle: a signal-blue grab halo on the tee origin */}
+            {/* the LIVE handles: a signal-blue grab halo on the tee origin (translate),
+                and a discoverable rotate knob at the x-axis tip. The rotate knob shows
+                its true grab radius as a ring plus a ⟳ hint so it is not a 6px mystery. */}
             {booted && (
               <g class="fd-handles" data-mode={mode ?? "idle"}>
                 <circle class="fd-halo" cx={s.origin[0]} cy={s.origin[1]} r={GRAB_M * S} />
-                <circle
-                  class="fd-knob"
-                  cx={w2s(tx + Math.cos(yaw) * AXIS_LEN, ty + Math.sin(yaw) * AXIS_LEN)[0]}
-                  cy={w2s(tx + Math.cos(yaw) * AXIS_LEN, ty + Math.sin(yaw) * AXIS_LEN)[1]}
-                  r={7}
-                />
+                <g class="fd-rotate" role="button" aria-label="Rotate handle: drag to turn the tee frame, or press comma and period.">
+                  {/* the grab ring == the real hit target (~56 px), so it is findable */}
+                  <circle class="fd-knob-ring" cx={knobX} cy={knobY} r={KNOB_RING} />
+                  {/* a curved-arrow arc hugging the knob — reads "turn me" */}
+                  <path
+                    class="fd-knob-arc"
+                    d={`M ${(knobX + 15).toFixed(1)} ${knobY.toFixed(1)} A 15 15 0 1 1 ${(knobX - 10.6).toFixed(1)} ${(knobY + 10.6).toFixed(1)}`}
+                  />
+                  <circle class="fd-knob" cx={knobX} cy={knobY} r={9} />
+                  <text class="fd-knob-lbl" x={knobX} y={(knobY - KNOB_RING - 5).toFixed(1)} text-anchor="middle">rotate ⟳</text>
+                </g>
               </g>
             )}
 
@@ -462,6 +475,8 @@ export default function FramesDrag() {
           </div>
         </figure>
 
+        {/* the advanced right column — folded on first load (progressive disclosure) */}
+        {showAdvanced && (
         <div class="fd-side">
         {/* the transform T as a homogeneous 3×3 — the second linked representation */}
         <MatrixPanel s={s} tx={tx} ty={ty} xyzw={xyzw} />
@@ -489,33 +504,51 @@ export default function FramesDrag() {
           </code>
         </pre>
         </div>
+        )}
       </div>
 
       {/* controls — JS-only (the poster reads without them) */}
       <div class="fd-controls">
         <button
           type="button"
-          class={`fd-btn ${xyzw ? "fd-btn--alert" : "fd-btn--primary"}`}
-          aria-pressed={xyzw}
-          onClick={() => setXyzw((v) => !v)}
+          class={`fd-btn fd-btn--reveal ${showAdvanced ? "fd-btn--on" : ""}`}
+          aria-pressed={showAdvanced}
+          aria-expanded={showAdvanced}
+          onClick={() => setShowAdvanced((v) => {
+            if (v) { setXyzw(false); setComposeBA(false); } // collapsing returns to the clean beginner state
+            return !v;
+          })}
           disabled={!booted}
         >
-          {xyzw ? "convention: xyzw ✗ — fix it" : "flip convention: wxyz ✓ → xyzw ✗"}
+          {showAdvanced ? "hide advanced" : "show advanced (matrix, compose, break-it)"}
         </button>
-        <button
-          type="button"
-          class={`fd-btn ${composeBA ? "fd-btn--alert" : ""}`}
-          aria-pressed={composeBA}
-          onClick={() => setComposeBA((v) => !v)}
-          disabled={!booted}
-        >
-          {composeBA ? "compose: B∘A ✗" : "compose order: A∘B → B∘A"}
-        </button>
+        {showAdvanced && (
+          <>
+            <button
+              type="button"
+              class={`fd-btn ${xyzw ? "fd-btn--alert" : "fd-btn--primary"}`}
+              aria-pressed={xyzw}
+              onClick={() => setXyzw((v) => !v)}
+              disabled={!booted}
+            >
+              {xyzw ? "convention: xyzw ✗ — fix it" : "flip convention: wxyz ✓ → xyzw ✗"}
+            </button>
+            <button
+              type="button"
+              class={`fd-btn ${composeBA ? "fd-btn--alert" : ""}`}
+              aria-pressed={composeBA}
+              onClick={() => setComposeBA((v) => !v)}
+              disabled={!booted}
+            >
+              {composeBA ? "compose: B∘A ✗" : "compose order: A∘B → B∘A"}
+            </button>
+          </>
+        )}
         <button type="button" class="fd-btn" onClick={reset} disabled={!booted}>
           reset
         </button>
         <span class="fd-control-note">
-          drag the frame · arrow-keys move · , . rotate · poster reads with JS off
+          drag the frame · grab the blue rotate knob or press , . to rotate · arrow-keys move · poster reads with JS off
         </span>
       </div>
 

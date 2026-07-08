@@ -130,6 +130,11 @@ function SacToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
         const [simMod, sceneMod, envMod, obsMod, inferMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
           import("../../../../playground/src/sim/scene"),
@@ -249,9 +254,6 @@ function SacToy() {
           void ARM_GHOST;
         };
 
-        setBooted(true);
-        render(false);
-
         // 2) load the REAL policy — fail-closed obs[8]/act[2] contract gate
         const policy = await loadPolicy(MODEL_URL);
         if (policy.contract.obsDim !== 8 || policy.contract.actDim !== 2) {
@@ -261,6 +263,13 @@ function SacToy() {
           );
         }
         if (disposed) return;
+
+        // Policy loaded + contract passed: only NOW reveal the canvas and paint the
+        // first still frame. A fetch/contract failure throws above with booted still
+        // false, so the captioned SSR poster stays visible (fail-closed) instead of a
+        // frozen canvas.
+        setBooted(true);
+        render(false);
 
         // --- interaction: drag the green target (the one live handle) -----------
         let dragging = false;
@@ -333,6 +342,8 @@ function SacToy() {
         // 4) DRIVE — real-time paced to CONTROL_HZ (mirrors sac.py eval). No reset on
         //    truncation: the arm holds at the target and re-reaches when it is dragged.
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
+
+        if (prefersReducedMotion) return; // reduced motion: one still frame already painted; do not spin the auto-driving loop. Interaction/reset handlers + __toy stay live.
 
         while (!disposed) {
           await nextFrame();

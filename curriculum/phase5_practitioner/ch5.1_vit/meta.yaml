@@ -6,44 +6,44 @@ title: "Patches & Attention: A ViT From Scratch"
 artifact: vit.py             # target ~360 LOC (built to 390, hard cap 450: patchify + a from-scratch pre-norm ViT + end-to-end train + a closed-form linear probe + attention rollout, one file)
 task: pusht                  # cached 64x64 PushT frames from the scripted expert (curriculum/common/envs/pusht); a coarse quadrant label read from sim state
 
-# NOTE (doctrine): the ViT is built FROM SCRATCH — patch-embed (nn.Linear on flattened
+# NOTE (doctrine): the ViT is built FROM SCRATCH: patch-embed (nn.Linear on flattened
 # patches), a prepended CLS token, LEARNED positional embeddings, and the SAME pre-norm
 # multi-head self-attention Block ch1.8 fused with (re-derived here). NO transformers,
 # NO einops. `allow_transformers` stays UNSET; the forbidden-imports gate runs at full
 # strictness. A real PRETRAINED SigLIP/DINOv2 tower is the read-the-real-thing + scale lab.
 
 objectives:
-  - Build a Vision Transformer from scratch over cached 64x64 PushT frames — patchify an image into an 8x8 grid of flat 8x8x3 patch vectors, embed them, prepend a CLS token, add LEARNED positional embeddings, and run a stack of pre-norm self-attention Blocks (the ch1.8 attention shape, re-derived). The CLS row after the blocks is the pooled scene representation.
-  - Measure that representation with a LINEAR PROBE — a closed-form least-squares read-out of a cheap scene fact (which quadrant the block occupies, labelled from sim state, no annotation) off the frozen CLS feature. Show the trained ViT's probe beats a random-init ViT of the SAME shape, which beats the majority guess, and report the DIRECTION (trained > random > majority), seed-robust — never an exact %, because MuJoCo rasterization is not bitwise across CPU arches and the probe is a noisy small-held-out metric (ch1.6).
-  - Feel why a from-scratch transformer needs care to train at all — a modest learning rate and a linear LR WARMUP — by breaking it (--warmup 1) and watching some seeds pin at chance for the whole run.
-  - Kill the misconception "a ViT sees the image as a picture." It sees a permutation-invariant BAG of patch vectors plus learned position TAGS. The learner writes patchify, hits the classic reshape bug (--break patch_interleave) that globally permutes the patches, and discovers it is SILENT to the coarse probe — a real footgun. Then --break shuffle_pos scrambles the position tags with pixels untouched and the trained edge nearly vanishes, while the attention map decorrelates from the image.
+  - Build a Vision Transformer from scratch over cached 64x64 PushT frames: patchify an image into an 8x8 grid of flat 8x8x3 patch vectors, embed them, prepend a CLS token, add LEARNED positional embeddings, and run a stack of pre-norm self-attention Blocks (the ch1.8 attention shape, re-derived). The CLS row after the blocks is the pooled scene representation.
+  - Measure that representation with a LINEAR PROBE: a closed-form least-squares read-out of a cheap scene fact (which quadrant the block occupies, labelled from sim state, no annotation) off the frozen CLS feature. Show the trained ViT's probe beats a random-init ViT of the SAME shape, which beats the majority guess, and report the DIRECTION (trained > random > majority), seed-robust, never an exact %, because MuJoCo rasterization is not bitwise across CPU arches and the probe is a noisy small-held-out metric (ch1.6).
+  - Feel why a from-scratch transformer needs care to train at all (a modest learning rate and a linear LR WARMUP) by breaking it (--warmup 1) and watching some seeds pin at chance for the whole run.
+  - Kill the misconception "a ViT sees the image as a picture." It sees a permutation-invariant BAG of patch vectors plus learned position TAGS. The learner writes patchify, hits the classic reshape bug (--break patch_interleave) that globally permutes the patches, and discovers it is SILENT to the coarse probe, a real footgun. Then --break shuffle_pos scrambles the position tags with pixels untouched and the trained edge nearly vanishes, while the attention map decorrelates from the image.
 
 scale_lab: true
 # The free-tier core is a DELIBERATELY tiny ViT (dim 96, depth 2) on ~740 cached 64x64
-# frames — enough to make attention + the probe + the breaks measurable on a CPU laptop in
+# frames, enough to make attention + the probe + the breaks measurable on a CPU laptop in
 # under a minute. The scale lab is the honest next step: a real PRETRAINED vision tower.
 # Author: wire scale_lab_ref to a study that adapts a pretrained SigLIP/DINOv2 backbone
 # (the SmolVLA vision tower, or big_vision's SigLIP) on a consumer GPU and compares its
-# linear-probe quality to this from-scratch ViT — then have wallclock-bench MEASURE the GPU
+# linear-probe quality to this from-scratch ViT, then have wallclock-bench MEASURE the GPU
 # tier. Do NOT assert a scaling claim here; the lesson is the same tradeoff as ch1.8
 # (from-scratch teaches the mechanism; adapt-pretrained is what performs).
 
 # READ-THE-REAL-THING: the arc pairs this chapter with a production ViT vision tower. The
-# rtrt: block is LEFT FOR THE AUTHOR to pin — I do not invent a commit sha. Two honest
+# rtrt: block is LEFT FOR THE AUTHOR to pin. I do not invent a commit sha. Two honest
 # candidates for the author to choose and pin (repo + a REAL commit):
-#   * google-research/big_vision — models/vit.py: the SigLIP ViT vision tower. Patch
+#   * google-research/big_vision, models/vit.py: the SigLIP ViT vision tower. Patch
 #     embedding (a Conv2d stride-patch, the exact same op as our Linear-on-flattened-
 #     patches), a class/pool token, learned positional embeddings, pre-norm attention
-#     blocks — the production form of every piece this chapter builds.
-#   * huggingface/lerobot — the SmolVLA vision_model (a pretrained SigLIP tower): the
+#     blocks, the production form of every piece this chapter builds.
+#   * huggingface/lerobot, the SmolVLA vision_model (a pretrained SigLIP tower): the
 #     in-ecosystem, already course-pinned option (matches the ch1.8 lerobot pin).
 # site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
 rtrt:
   repo: google-research/big_vision
-  commit: PENDING   # AMBIGUOUS repo (big_vision vs the course-pinned lerobot) — LEFT FOR THE AUTHOR, not forced. Verified-ready candidates (2026-07-08): big_vision @ 0127fb6b337ee2a27bf4e54dea79cff176527356 (big_vision/models/vit.py present — Conv patch-embed + learned posemb + pre-norm blocks) OR lerobot @ 8fff0fde7c79f23a93d845d1a50e985de01f8b8a (v0.4.4, SmolVLA vision_model). NEVER invent a sha.
+  commit: PENDING   # AMBIGUOUS repo (big_vision vs the course-pinned lerobot), LEFT FOR THE AUTHOR, not forced. Verified-ready candidates (2026-07-08): big_vision @ 0127fb6b337ee2a27bf4e54dea79cff176527356 (big_vision/models/vit.py present: Conv patch-embed + learned posemb + pre-norm blocks) OR lerobot @ 8fff0fde7c79f23a93d845d1a50e985de01f8b8a (v0.4.4, SmolVLA vision_model). NEVER invent a sha.
   focus:
-    - "patch embedding: a Conv2d(stride=patch) — mathematically the SAME as our nn.Linear on flattened 8x8x3 patches"
+    - "patch embedding: a Conv2d(stride=patch), mathematically the SAME as our nn.Linear on flattened 8x8x3 patches"
     - "the class/pool token + LEARNED positional embeddings (ours: a prepended CLS + a learned pos table)"
     - "the pre-norm attention block stack (ours: the re-derived ch1.8 Block) and how the pooled token becomes the image representation"
 
@@ -55,7 +55,7 @@ demo: vit_attention_viewer   # hover a frame, overlay the CLS attention-rollout 
 # twice-run on one machine; the full probe is a NOISY small-held-out rate, ch1.6). THE
 # HONEST HEADLINE is a DIRECTION, not a %: a trained-from-scratch ViT's linear probe
 # (~0.83-0.89 across seeds) clearly beats a random-init ViT of the same shape (~0.65-0.69),
-# which beats the majority guess (~0.33-0.45) — every seed. The exact % is platform- and
+# which beats the majority guess (~0.33-0.45), every seed. The exact % is platform- and
 # seed-sensitive (rendered images + a small held-out set); the ORDER is the rock.
 reference_run:
   provenance: "seed 0 on cpu; default config (episodes 40, frame_stride 4, dim 96, depth 2, heads 3, epochs 120, warmup 15, batch 32, lr 1e-3); measured 2026-07-08. ARCHITECTURE-SENSITIVITY (like ch1.8, unlike the state-based Phase-1 chapters): this ViT trains on rendered IMAGE features and MuJoCo rasterization is NOT bitwise across CPU architectures, so the exact probe % shifts across platforms. The ROBUST, reproducible claim the exercise gates assert is the DIRECTION (trained > random > majority, every seed), NOT the exact 0.89. Same-machine runs are byte-deterministic."
@@ -65,18 +65,18 @@ reference_run:
   train_final_ce: 0.000326            # the from-scratch ViT fits the quadrant task (100% train acc) with warmup + a modest lr
   # --- the measurement: the trained representation beats random-init, beats majority ---
   probe_acc_trained: 0.891403         # closed-form linear probe on the FROZEN trained CLS feature
-  probe_acc_random: 0.687783          # SAME-shape random-init ViT, frozen — a random projection already reads quadrant coarsely
+  probe_acc_random: 0.687783          # SAME-shape random-init ViT, frozen, a random projection already reads quadrant coarsely
   probe_gap: 0.20362                  # trained - random; the seed-robust DIRECTION (> 0 every seed)
   majority_baseline: 0.330317         # predict the most common quadrant
   chance: 0.25                        # 1 / 4 quadrants
-  attention_concentration: "trained CLS attention peaks ~10-16x over uniform on a few patches; random-init ~1.1x (uniform) — the toy's contrast"
+  attention_concentration: "trained CLS attention peaks ~10-16x over uniform on a few patches; random-init ~1.1x (uniform), the toy's contrast"
   # Seed robustness (default config, cpu, measured 2026-07-08): probe trained/random/gap
   # seed0 0.891 / 0.688 / +0.204; seed1 0.841 / 0.683 / +0.159; seed2 0.829 / 0.654 / +0.175.
   # Trained BEATS random on EVERY seed and beats majority by a wide margin; that direction is the rock.
   # --- the two --break demos (seed 0): both refute "a ViT sees a picture" ---
-  break_patch_interleave_probe_acc_trained: 0.919   # the classic patchify RESHAPE bug (patches globally permuted): SILENT — the coarse probe is UNMOVED (~= clean 0.891). The footgun.
+  break_patch_interleave_probe_acc_trained: 0.919   # the classic patchify RESHAPE bug (patches globally permuted): SILENT, the coarse probe is UNMOVED (~= clean 0.891). The footgun.
   break_shuffle_pos_probe_acc_trained: 0.729        # scramble the position TAGS, pixels untouched: the trained edge nearly vanishes (gap 0.204 -> 0.023, toward random) and the attention map decorrelates
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing, it is the measured truth):
   #  * NO policy is trained here and NO success rate exists. The result is a representation
   #    PROBE (linear decodability of a coarse scene fact) + an attention viz. Do not report a task %.
   #  * The trained ViT beats random-init, but the quadrant task is EASY: a random projection
@@ -84,14 +84,14 @@ reference_run:
   #    that TRAINING makes the scene fact MORE linearly accessible AND makes attention
   #    localize the block (10-16x concentration vs uniform). Frame it as "a trained rep is
   #    better AND interpretable," not "attention is required to read a quadrant."
-  #  * The patchify bug does NOT drop the probe to chance — it CAN'T. A shape-preserving
+  #  * The patchify bug does NOT drop the probe to chance. It CAN'T. A shape-preserving
   #    reshape bug is a global permutation of patches, and a coarse label is a permutation-
   #    invariant bag-of-patches property, so the probe is SILENT to it. That silence IS the
   #    lesson (a coarse metric can't catch a patch bug; check the attention map). Do not
   #    claim the bug tanks accuracy.
   #  * This is a from-scratch, random-then-trained tiny ViT. It is NOT a pretrained SigLIP/
   #    DINOv2 tower. A pretrained tower is what gives object/language-aligned, transferable
-  #    features — the read-the-real-thing + scale lab, and the whole reason to prefer
+  #    features, the read-the-real-thing + scale lab, and the whole reason to prefer
   #    adapt-pretrained when performance matters.
   #  * Training NEEDS a modest lr + warmup. Without warmup some seeds pin at chance. Keep
   #    the warmup lesson; it is a real, measured property of from-scratch transformers.
@@ -113,7 +113,7 @@ exercise_checks:
     provenance: "PENDING author reverification. Measured 2026-07-08, vit.py at default config, seed 0, cpu: trained probe 0.891, random 0.688, majority 0.330, gap +0.204; --break patch_interleave 0.919 (silent, ~= clean); --break shuffle_pos 0.729 (edge nearly gone). CPU training is deterministic so seed-0 reproduces; the checks assert the DIRECTION (trained>random>majority; interleave~=clean; shuffle collapses the gap), seed-robust across seeds 0/1/2."
     min_trained_over_random: 0.06     # ex1: trained probe must beat random by >= this (measured gaps +0.16..+0.20; conservative floor)
     min_trained_over_majority: 0.20   # ex1/ex2: trained probe must beat the majority guess by >= this (measured +0.56)
-    max_interleave_drop: 0.15         # ex2: the patchify bug must NOT drop the probe more than this below clean (measured: no drop — it went UP)
+    max_interleave_drop: 0.15         # ex2: the patchify bug must NOT drop the probe more than this below clean (measured: no drop, it went UP)
     max_shuffle_gap: 0.10             # ex2: shuffling position tags must shrink the trained-over-random gap to <= this (measured 0.023)
   ex1:                                # ex1_predict_probe.py (predict-then-run; SLOW)
     answer: "B"                       # a trained ViT's probe beats a same-shape random-init ViT, which still beats majority (a random projection reads quadrant coarsely)
@@ -122,12 +122,12 @@ exercise_checks:
   ex3:                                # ex3_completion_patchify.py (code-completion, fast)
     abs_tol: 1.0e-6                   # a correct patchify matches the reference exactly (and the interleave bug is detectably != reference)
 
-# region_hashes: OMITTED here — the site records them at chapter-build time (per the arc
+# region_hashes: OMITTED here, the site records them at chapter-build time (per the arc
 # contract). notebook_hash PENDING (regenerate via notebook-tier-test once code is frozen).
 notebook_hash: 46d9e7eaebd71d74bc73fa6fa766bf9aa3cfd610ea4dc0331e51176f7692f542        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: def0fb4bc0733d3d2db7f83241b566b313a1fe6caebce25c10c2c5717335e26e   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: a9e0ece6c07c4dc3c42cdf4293372a90d73a0115fe1a452d7f2acdfb3ae42f6c   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
-# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). ~40 s on the drafting CPU at default config, the banner prints it; the root invariant (never ESTIMATE) held —
+# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). ~40 s on the drafting CPU at default config, the banner prints it; the root invariant (never ESTIMATE) held:
 # wallclock-bench MEASURES it on the reference tier (root invariant: never estimate wall-clock).
 
 region_hashes:

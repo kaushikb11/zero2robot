@@ -3,10 +3,10 @@ title: "Spatial Reasoning Without Tears"
 artifact: transforms.py     # target ~180 LOC, CPU-only
 task: pusht                 # frames playground on the PushT block/pusher pose (no training this chapter)
 objectives:
-  - Build the rotation toolkit from scratch — quaternion multiply, quat<->matrix, rotate-a-vector — and trust it because it agrees with MuJoCo's mju_* functions to machine precision
+  - Build the rotation toolkit from scratch (quaternion multiply, quat<->matrix, rotate-a-vector) and trust it because it agrees with MuJoCo's mju_* functions to machine precision
   - Compose and invert rigid Frames (rotation + translation) and read a point across frames, e.g. the pusher expressed in the block's frame vs the world
   - Fix the book's quaternion convention as [w, x, y, z] and recognize the wxyz-vs-xyzw seam that pusht_env documents
-  - Diagnose the three bugs everyone writes — quaternion component order, composition order, point-vs-frame direction — by the error signature each leaves
+  - Diagnose the three bugs everyone writes (quaternion component order, composition order, point-vs-frame direction) by the error signature each leaves
 scale_lab: false
 read_the_real_thing: false
 demo: frames-drag
@@ -43,11 +43,11 @@ break_signatures:
   compose_order: 0.091
   point_vs_frame: 0.138
 
-notebook_hash: dfd9ea5dae32601b43cd042144c6f90bdf5fd8808e420a9a69ead073c872f4cc        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 35bd64af39e4c91368743e5b4f51832054d9c52137c0bc18c38544886639c28d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 0db3be1b5f1a11f3e9c5703b659d7a4ddaad22df6556e1aadfaea2d5d82df81a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: ed11aacd354796d56f50dc3014cec4fae950f0e9d5e7885842bec10620259907   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: 329dc17ab99f7cdfd96a4131643fae56326bca009dfb0d1169602b8bf2be093f
+  setup: 80f034e3055b4b1dc579f966bf253cf09034cd59b3346b1cbb83a13a5b77842d
   quaternions: 7aca30aa3a98335e6f474121848ca4a8bfada57e473213b6dd9cc9d2c0fd4613
   rotations: f72fde55d996f91d703799a91a1f78a0b3da1c7a610a1cc0088be721c64cb55a
   frames: dde9d75c80e06294f572289f7e0ec6974f6a1c5febfefdff3bd2e5c8090a5713

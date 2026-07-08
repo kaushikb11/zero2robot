@@ -13,9 +13,9 @@ dataset:
   reference: null          # RL generates its own data by acting; no demo dataset
   learner_path: false
 objectives:
-  - Re-express ch2.1's PPO functionally in JAX/MJX — the SAME algorithm (Gaussian policy, GAE, clipped surrogate, minibatch epochs), now vmapped over N parallel MJX envs and jitted into one XLA program
-  - Make the mental-model shift from torch to jax — pure functions, params-as-data pytrees, explicit PRNGKey threading, vmap/jit — without getting lost (the in-file primer)
-  - Measure the WALL-CLOCK CLIFF — throughput (env-steps/sec) vs --num_envs — and read where it plateaus on your tier
+  - Re-express ch2.1's PPO functionally in JAX/MJX: the SAME algorithm (Gaussian policy, GAE, clipped surrogate, minibatch epochs), now vmapped over N parallel MJX envs and jitted into one XLA program
+  - Make the mental-model shift from torch to jax: pure functions, params-as-data pytrees, explicit PRNGKey threading, vmap/jit, without getting lost (the in-file primer)
+  - Measure the WALL-CLOCK CLIFF: throughput (env-steps/sec) vs --num_envs, and read where it plateaus on your tier
   - Reason about the throughput-vs-gradient-quality tradeoff: more parallel envs buy more data/sec but, at a fixed env-step budget, fewer gradient updates
 
 # The 4096-robot headline needs a GPU; the free-tier config is a small env-count
@@ -24,27 +24,28 @@ objectives:
 scale_lab: true
 scale_lab_ref: >
   Scale Lab (4090 / L40S, jax[cuda]): sweep --num_envs to 4096 and chart the
-  env-count scaling law where CPU-jax cannot — on a GPU the throughput curve
+  env-count scaling law where CPU-jax cannot: on a GPU the throughput curve
   keeps climbing past the CPU plateau (~256 envs here), and 4096 envs is where
   PPO's parallel-sim throughput actually pays off. The lesson (throughput vs
   gradient quality) is measured small on CPU-jax and re-measured large on GPU.
-  PENDING a GPU runner (infra/decisions/014 Modal L40S).
+  Runner: infra/scale_labs/ch2.3_mjx_scale.py (optional; needs a Modal account
+  and may cost; the free CPU/Colab default is the required path).
 
 read_the_real_thing: true
 # RTRT prose is written (prose "Read the real thing"): anchors PureJaxRL
-# (luchris429/purejaxrl — closest to this file's single jitted-step shape), Brax PPO
+# (luchris429/purejaxrl, closest to this file's single jitted-step shape), Brax PPO
 # (google/brax, brax/training/agents/ppo), and MJX (google-deepmind/mujoco, mjx/).
-# STILL PENDING: the read-the-real-thing skill pins the exact upstream commit — do
+# STILL PENDING: the read-the-real-thing skill pins the exact upstream commit. Do
 # NOT invent a sha. The point: this file IS the from-scratch version; the learner
 # graduates to Brax/PureJaxRL.
 
 demo: mjx_parallel_training   # live parallel-training viz: many envs training at once + the throughput/return curves
 
-# MEASURED reference run — provenance for the exercise bands + the wall-clock cliff.
+# MEASURED reference run: provenance for the exercise bands + the wall-clock cliff.
 # PROVENANCE: cpu-jax (JAX_PLATFORMS=cpu), darwin/arm64; jax 0.10.2, mujoco-mjx 3.10.0,
 # flax 0.12.7, optax 0.2.8; DEFAULT config (total_steps 300000, num_envs 64, num_steps 128,
 # update_epochs 4); measured 2026-07-06. GPU numbers are STATISTICAL only (jax/XLA GPU
-# nondeterminism) and PENDING a runner — free-tier CPU-jax is BITWISE-deterministic (verified 2x).
+# nondeterminism) and PENDING a runner. Free-tier CPU-jax is BITWISE-deterministic (verified 2x).
 reference_run:
   free_tier_learning:
     config: "num_envs 64, num_steps 128, total_steps 300000 => 36 gradient updates"
@@ -55,7 +56,7 @@ reference_run:
     note: "throughput CLIMBS with parallel envs then PLATEAUS/REVERSES on CPU (~256 envs); a GPU keeps climbing to 4096"
     num_envs_16: 50154
     num_envs_64: 83638
-    num_envs_256: 104544        # CPU peak — the plateau
+    num_envs_256: 104544        # CPU peak, the plateau
     num_envs_1024: 76387        # PAST the plateau throughput FALLS on CPU (cores saturate); this is the Scale-Lab boundary
   throughput_vs_gradient_quality:
     note: "at a FIXED 300000 env-step budget, MORE envs = FEWER gradient updates => worse learning despite higher throughput"
@@ -65,21 +66,21 @@ reference_run:
 # Reference bands for the exercise checks (exercise-spec: seeded/measured band with
 # provenance, not a bare magic number). checks.py reads these.
 exercise_checks:
-  ex1:                     # ex1_predict_throughput_cliff.py — throughput sweep; TIMING, so bands are loose/qualitative
+  ex1:                     # ex1_predict_throughput_cliff.py: throughput sweep; TIMING, so bands are loose/qualitative
     provenance: "cpu-jax --sweep 16,256; measured 2026-07-06: 50154 vs 104544 env-steps/s. Timing varies by machine; the check asserts only the QUALITATIVE climb (256 clearly > 16)."
     throughput_256_over_16_min: 1.3    # parallelism must clearly raise throughput from 16->256 envs (measured ~2.08x; loose floor for slow machines)
-  ex2:                     # ex2_investigate_env_count.py — trains PPO at two num_envs, seeded => reproducible
+  ex2:                     # ex2_investigate_env_count.py: trains PPO at two num_envs, seeded => reproducible
     provenance: "cpu-jax, default total_steps 300000, seed 0: num_envs 64 (36 updates) eval 407.2; num_envs 256 (9 updates) eval 90.4. Measured 2026-07-06."
     ref_num_envs64_eval_min: 350.0     # num_envs 64 reliably solves at the default budget (seed 0 = 407, seed 1 = 500)
-    solve_over_fast_margin: 150.0      # 64-env eval must beat 256-env eval by this much (measured gap ~317) — the throughput!=learning point
+    solve_over_fast_margin: 150.0      # 64-env eval must beat 256-env eval by this much (measured gap ~317): the throughput!=learning point
 
 # region_hashes: recorded by the site build (check_prose_code_drift recomputes and
-# gates on drift). Omitted until this chapter is rendered — the site build adds them.
+# gates on drift). Omitted until this chapter is rendered. The site build adds them.
 # notebook_hash / notebook_file_hash: added by the notebook-tier-test skill when the
 # Colab variant is generated. Omitted until then.
 
 notebook_hash: ec2828358bc2b333b66392ac25bd7cea5e37f76abaeb7659a33c8d9074d3d496        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 33889bd99457d4e9ec24062447bc999f96e4f8737215c8d7bb55009b363abff4   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: fd67f178c37b181889d480a0e65b626534abd4bac01a7172805a351aca9bd0d0   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 6f31cbe1e07975a79cfb870e46945a8a0f1af380b85cdbcfb8897f80e31db5b4

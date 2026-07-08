@@ -3,10 +3,10 @@ builds_on:  # for the /map/ dependency graph (documented in the curriculum map; 
   - ch1.3   # the action chunk
   - ch1.7   # the from-scratch tokenizer idea
 title: "FAST: Turning Torques into Tokens (DCT -> Quantize -> BPE)"
-artifact: fast.py            # target ~330 LOC (built to 400, hard cap 450): a from-scratch action CODEC — orthonormal DCT matrix + integer quantizer + a minbpe-style BPE trainer/encoder/decoder + the inverse pipeline + the rate/smoothness measurements, one file. Pure numpy: no torch model, no env rollout, no policy.
+artifact: fast.py            # target ~330 LOC (built to 400, hard cap 450): a from-scratch action CODEC, orthonormal DCT matrix + integer quantizer + a minbpe-style BPE trainer/encoder/decoder + the inverse pipeline + the rate/smoothness measurements, one file. Pure numpy: no torch model, no env rollout, no policy.
 task: pusht+aloha            # ACTION CHUNKS only (no rendering): PushT + ALOHA scripted demos replayed in-process (curriculum/common/envs), sliced into non-overlapping H=24 chunks, plus a self-contained synthetic smooth chunk for the toy.
 
-# NOTE (doctrine): the whole tokenizer is FROM SCRATCH — the DCT-II is a hand-built
+# NOTE (doctrine): the whole tokenizer is FROM SCRATCH. The DCT-II is a hand-built
 # orthonormal matrix (no scipy/FFT), the quantizer is round(x/step), and the BPE is the
 # minbpe move re-derived on ACTION tokens (no `tokenizers`, no `transformers`). This is a
 # CODEC chapter in the ch1.7 mold: it trains no policy and runs no env rollout. Forbidden
@@ -19,31 +19,31 @@ objectives:
   - "Feel the fork with the continuous head (ch1.5). Flow decodes the WHOLE chunk in a few Euler steps, flat; FAST decodes ~35 tokens autoregressively via LM cross-entropy. Tokens buy language-model reuse + exact likelihood; flow buys a short constant decode. No policy is trained to make this point -- it is a decode-cost contrast."
 
 scale_lab: false
-# This is a codec, not a training run — it finishes in well under a second on a CPU laptop
+# This is a codec, not a training run. It finishes in well under a second on a CPU laptop
 # and has no GPU tier (pure numpy). The "scale" axis here is horizon and vocabulary, exposed
 # as --horizon / --q_scale / --num_merges knobs, not a compute tier. The real-system next
 # step is the read-the-real-thing below (pi0-FAST's processor), not a Scale Lab.
 
 # READ-THE-REAL-THING: pair with openpi's pi0-FAST. The rtrt: block is LEFT FOR THE AUTHOR to
-# pin — I do not invent a commit sha. Candidate (repo + a REAL commit the author verifies):
-#   * Physical-Intelligence/openpi — src/openpi/models/pi0_fast.py and the FAST action
+# pin. I do not invent a commit sha. Candidate (repo + a REAL commit the author verifies):
+#   * Physical-Intelligence/openpi: src/openpi/models/pi0_fast.py and the FAST action
 #     tokenizer/processor (DCT -> scale+round quantize -> BPE, then autoregressive decode).
 #     Every piece this chapter builds by hand appears there in production form: the cosine
 #     transform, the integer quantization, the byte-pair merges, and the AR detokenize step.
 read_the_real_thing: true
 rtrt:
   repo: Physical-Intelligence/openpi
-  commit: 15a9616a00943ada6c20a0f158e3adb39df2ccac   # openpi default-branch HEAD (matches ch3.8/5.4 pin); pinned 2026-07-08 (API-verified: src/openpi/models/pi0_fast.py present — class Pi0FAST + FAST processor). NEVER invent a sha.
+  commit: 15a9616a00943ada6c20a0f158e3adb39df2ccac   # openpi default-branch HEAD (matches ch3.8/5.4 pin); pinned 2026-07-08 (API-verified: src/openpi/models/pi0_fast.py present, class Pi0FAST + FAST processor). NEVER invent a sha.
   focus:
     - "the FAST processor: DCT along time -> scale + round to integers -> BPE over the flattened tokens (ours: dct_matrix + quantize + train_bpe/bpe_encode)"
     - "autoregressive DETOKENIZE: BPE-decode -> dequantize -> inverse DCT back to a continuous action chunk (ours: bpe_decode + dequantize + idct)"
-    - "how pi0_fast wires the tokenized action stream into an LM cross-entropy head — the fork this chapter contrasts with ch1.5's continuous flow decode"
+    - "how pi0_fast wires the tokenized action stream into an LM cross-entropy head, the fork this chapter contrasts with ch1.5's continuous flow decode"
 
 demo: fast_codec             # a live codec visualizer over demo/vizdata.json (static, no WASM, no weights): trajectory on the left; DCT spectrum with a #-coefficients slider + a quantization-step slider; the reconstruction overlaid on the original; a live token count (DCT+quant+BPE) + RMSE. Emitted by fast.py's report region for a smooth synthetic chunk.
 
 # All reference metrics: seed 0, cpu, default config; numpy 2.4.6 (course pin). The codec is
 # PURE numpy and draws NO randomness, and the env action replay is bitwise on CPU with NO
-# rendering — so unlike ch5.1/ch5.3 this chapter is fully deterministic AND platform-stable
+# rendering, so unlike ch5.1/ch5.3 this chapter is fully deterministic AND platform-stable
 # (no MuJoCo rasterization in the loop). The smoke metrics.json is byte-identical twice-run.
 # THE HONEST HEADLINE is a compression DIRECTION at comparable error, seed-robust (0/1/2).
 reference_run:
@@ -62,18 +62,18 @@ reference_run:
   # seed0 2.22 / 0.0141;  seed1 2.29 / 0.0142;  seed2 2.51 / 0.0141.
   # FAST beats naive per-step binning on tokens EVERY seed, at ~the same RMSE. That is the rock.
   # --- the --break (time_domain), seed 0: spend the budget in TIME (downsample+hold) not frequency ---
-  break_time_domain_fast_recon_rmse: 0.220434   # ~15x WORSE than clean 0.0141 — the motion falls apart
-  break_time_domain_fast_error_jerk: 0.264137   # ~220x WORSE than clean 0.00120 — a jerky staircase
+  break_time_domain_fast_recon_rmse: 0.220434   # ~15x WORSE than clean 0.0141, the motion falls apart
+  break_time_domain_fast_error_jerk: 0.264137   # ~220x WORSE than clean 0.00120, a jerky staircase
   # Seed robustness of the break (0/1/2): rmse 0.220/0.215/0.222, error_jerk 0.264/0.246/0.259.
   # The break degrades RMSE ~15x and error-jerk ~200x on EVERY seed. Robust.
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * NO policy is trained and NO env rollout runs. There is NO task-success rate. The result
   #    is a CODEC measurement (tokens, RMSE, error-jerk). Never report a task %.
   #  * REFRAME FROM THE CONTRACT (both directions, documented): the contract predicted the
   #    headline break would give "an order of magnitude MORE tokens for WORSE smoothness" via
   #    plain time-domain per-step binning. MEASURED, that is FALSE on this data: BPE compresses
   #    a slow time-domain signal fine (it can even beat DCT+BPE without truncation), and fine
-  #    per-step quant is smooth. So (a) the headline was reframed to the ROBUST claim — DCT+
+  #    per-step quant is smooth. So (a) the headline was reframed to the ROBUST claim: DCT+
   #    quantize+BPE beats per-step binning ~2.2x at comparable RMSE (Parseval + zero-run BPE),
   #    and (b) the --break was reframed to the one that DEGRADES: spend the code budget in the
   #    TIME domain (downsample + zero-order-hold) instead of dropping high-frequency coeffs.
@@ -92,7 +92,7 @@ reference_run:
 # (2026-07-08); author RE-VERIFIES and finalizes provenance before drop (per the arc contract,
 # bands land PENDING from the drafting agent). Gates assert the DIRECTION with conservative
 # margins (never an exact count), and every check runs FAST (pure-numpy codec, < 1 s) so all
-# of them run in `make check` — no @pytest.mark.slow tier here (unlike ch5.1's training gates).
+# of them run in `make check`, no @pytest.mark.slow tier here (unlike ch5.1's training gates).
 exercise_checks:
   exercise_config:
     horizon: 24
@@ -109,16 +109,16 @@ exercise_checks:
   ex2:                                # ex2_completion_idct.py (code-completion, fast, self-contained)
     abs_tol: 1.0e-9                   # a correct inverse-DCT round-trips the orthonormal transform to machine precision
   ex3:                                # ex3_predict_break.py (predict-then-run + the learner-generated failure)
-    answer: "C"                       # spending the budget in the time domain (downsample+hold) craters RMSE and smoothness — the DCT basis is load-bearing
+    answer: "C"                       # spending the budget in the time domain (downsample+hold) craters RMSE and smoothness: the DCT basis is load-bearing
 
-# region_hashes: OMITTED here — the site records them at chapter-build time (per the arc
+# region_hashes: OMITTED here. The site records them at chapter-build time (per the arc
 # contract). notebook_hash PENDING (regenerate via notebook-tier-test once code is frozen).
 notebook_hash: 4b43b359a49b8de8de095edb3e9ba28668849775acaa03b48b865b509071ef3c        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: a1e7d3b6d2ce71e19938c2c88baeac27990c399665c755d901405dd7619e8cca   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: a2d872532e8f3f550b55b9b48e00c89b1d9d7a82153cc6b1ac4bc59994797c47   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
-# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). Sub-second on the drafting CPU (a pure-numpy codec), but NO number
-# ships until wallclock-bench MEASURES it on the reference tier (root invariant: never
-# estimate wall-clock). There is no GPU tier — the artifact uses no torch and no device.
+# wall-clock: MEASURED 0.03 min (cpu-laptop; see curriculum/common/wallclock.csv, row dated 2026-07-08). Sub-second: a pure-numpy codec.
+# The banner reads that measured row at startup (root invariant: never estimate wall-clock).
+# There is no GPU tier. The artifact uses no torch and no device.
 
 region_hashes:
   setup: 000970baa0f07898e7f08dbf1d1080e462de7ffc7a99e74ddd8aff33be627081

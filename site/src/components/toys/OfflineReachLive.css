@@ -36,6 +36,22 @@
 .or-lane-dist { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; }
 .or-lane-dist.or-ok { color: #0c7d5f; }
 
+/* running tally across targets: the marginal AWAC edge, accumulated so it reads */
+.or-tally {
+  margin-top: 0.6rem;
+  display: grid; gap: 0.28rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #dcd0b6; border-radius: 5px;
+  background: #fdfbf6;
+  font-family: ui-monospace, monospace; font-size: 0.68rem;
+}
+.or-tally[hidden] { display: none; }
+.or-tally-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
+.or-tally-label { color: #6d6252; letter-spacing: 0.02em; }
+.or-tally-counts { font-variant-numeric: tabular-nums; font-weight: 700; color: #23201b; text-align: right; }
+.or-tally-n { color: #6d6252; font-weight: 400; }
+.or-tally-hint { color: #6d6252; font-weight: 400; line-height: 1.4; }
+
 .or-status {
   margin-top: 0.5rem;
   font-family: ui-monospace, monospace; font-size: 0.64rem; color: #6d6252;

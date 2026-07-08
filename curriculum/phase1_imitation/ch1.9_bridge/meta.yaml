@@ -7,33 +7,33 @@ task: aloha_cube             # the SAME bimanual task + dataset as ch1.3's from-
 # every other Phase-1 chapter is forbidden from importing frameworks that hide the
 # loop. ch1.9 is the graduation bridge, so importing `lerobot` (the pinned 0.4.4)
 # IS the lesson. The gate (infra/ci/check_forbidden_imports.py) blocks hydra/
-# omegaconf/lightning/sb3/gym[nasium]/transformers-without-grant — NOT lerobot,
-# torch, or numpy — so bridge.py passes clean. No allow_* grant is needed.
+# omegaconf/lightning/sb3/gym[nasium]/transformers-without-grant (NOT lerobot,
+# torch, or numpy), so bridge.py passes clean. No allow_* grant is needed.
 objectives:
-  - Load your ch0.4 / gen_demos LeRobot-v3 dataset into the OFFICIAL lerobot stack and train the real ACTPolicy on it in ~20 lines — and read every constructor argument, because you built each piece by hand in ch1.3
-  - Bridge the one real schema wrinkle honestly — our recorder's observation.state is ACT's observation.environment_state, a rename plus a FeatureType re-type — and pass the dataset's own normalization stats into the processor pipeline
+  - Load your ch0.4 / gen_demos LeRobot-v3 dataset into the OFFICIAL lerobot stack and train the real ACTPolicy on it in ~20 lines, and read every constructor argument, because you built each piece by hand in ch1.3
+  - Bridge the one real schema wrinkle honestly (our recorder's observation.state is ACT's observation.environment_state, a rename plus a FeatureType re-type), and pass the dataset's own normalization stats into the processor pipeline
   - COMPARE the official ACT to your from-scratch ch1.3 ACT on the SAME demos and the SAME held-out seeds, reported with the Wilson interval from ch1.6, and conclude honestly (the code shrinks ~380->~12 lines, yet the task-tuned from-scratch ACT lands OUTSIDE the official's Wilson CI at this budget => the framework buys the ecosystem, not a free higher number)
-  - Know the Hub publish path (push_to_hub for policy + dataset) and why it is HUMAN-GATED — offline/CI never needs a token, and the default run dry-runs it
+  - Know the Hub publish path (push_to_hub for policy + dataset) and why it is HUMAN-GATED: offline/CI never needs a token, and the default run dry-runs it
 
 scale_lab: false
 # The map's ch1.9 row is T4 and calls for no distinct Scale Lab. This chapter ships a
 # free-tier core: the default (50 demos, 150 epochs, dim 128) completes on cpu-laptop
 # in minutes and trains BOTH ACTs. The scale knobs (--num_demos, --epochs, --model_dim,
 # --chunk_size) are the on-ramp; the honest scaling story is that ACT wants more epochs/
-# demos than the free-tier default gives it (both policies are modest here — see the
+# demos than the free-tier default gives it (both policies are modest here; see the
 # HONESTY block). If the author later wants a T4 study (the official ACT at dim_model
 # 512 with the ResNet image path on a --video dataset), set scale_lab: true + a ref and
-# have wallclock-bench MEASURE it — do not assert a scaling claim.
+# have wallclock-bench MEASURE it; do not assert a scaling claim.
 
 # READ-THE-REAL-THING: the map pairs this chapter with LeRobot internals (the dataset
-# format + the policy registry). The rtrt: block is LEFT FOR THE AUTHOR to pin — no
+# format + the policy registry). The rtrt: block is LEFT FOR THE AUTHOR to pin. No
 # verified offline commit sha was available, and one must never be invented. The real repo is
 # huggingface/lerobot (the pinned 0.4.4; the modules bridge.py imports are the exact
 # reading list). site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
 rtrt:
   repo: huggingface/lerobot
-  commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (matches the course-pinned lerobot); pinned 2026-07-07. NOTE: at v0.4.4 the package lives under src/lerobot/... — read the focus paths below with a src/ prefix.
+  commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (matches the course-pinned lerobot); pinned 2026-07-07. NOTE: at v0.4.4 the package lives under src/lerobot/..., so read the focus paths below with a src/ prefix.
   focus:
     - "lerobot/policies/act/modeling_act.py (ACT + the CVAE + the temporal ensembler) vs ch1.3's act.py, section by section"
     - "lerobot/policies/factory.py make_policy + dataset_to_policy_features: how a dataset's features become a policy's input/output PolicyFeatures (and where our environment_state re-type slots in)"
@@ -46,7 +46,7 @@ demo: bridge_comparison       # 2D panels (the 380-vs-20 code diff + the two-ACT
 # (dataset format v3.0) / numpy 2.4.6. Demos are the deterministic scripted expert.
 # The THESIS is the BRIDGE (official ACT in ~20 lines) + an HONEST, CI'd comparison.
 # The MEASURED finding: the general official-config ACT reaches a respectable 0.55
-# [0.34, 0.74] held-out, but the task-tuned from-scratch 1.3 ACT reaches 0.95 — a
+# [0.34, 0.74] held-out, but the task-tuned from-scratch 1.3 ACT reaches 0.95, a
 # REAL gap (0.95 sits ABOVE the official Wilson interval). That is not a framework
 # defect: 1.3's ACT splits the 10-number obs into four semantic entity tokens (arms/
 # cube/target), a task-specific inductive bias the general config lacks. The Wilson
@@ -57,64 +57,64 @@ reference_run:
   official_params: 339206              # ACTConfig(dim_model=128, 1 enc + 1 dec layer, use_vae=False)
   official_final_train_loss: 0.077824  # L1 (no KL: use_vae=False), converged over 150 epochs
   official_success_rate: 0.55          # k=11 of n=20 held-out seeds (base 20000)
-  official_ci_lo: 0.342085             # Wilson 95% — WIDE at n=20 (the ch1.6 point)
+  official_ci_lo: 0.342085             # Wilson 95%: WIDE at n=20 (the ch1.6 point)
   official_ci_hi: 0.741802
   official_mean_return: -148.699271
   # --- the from-scratch ch1.3 ACT, SAME demos + SAME held-out seeds (subprocess) ---
-  scratch_success_rate: 0.95           # 1.3's act.py at matched 150 epochs / 50 demos — entity-token bias wins
+  scratch_success_rate: 0.95           # 1.3's act.py at matched 150 epochs / 50 demos: entity-token bias wins
   scratch_mean_return: -29.462377
   # --- the Break-It: --break train_dist (eval on the TRAINING seeds) ---
   break_train_dist_success_rate: 0.6       # official ACT on TRAIN seeds 0.60 [0.39, 0.78] vs held-out 0.55 [0.34, 0.74]
   # HONEST magnitude caveat (author MUST keep): the inflation is SMALL (+0.05, CIs
-  # overlap) because our held-out seeds are SAME-distribution as training — random
+  # overlap) because our held-out seeds are SAME-distribution as training: random
   # resets, just different draws. The DIRECTION (train >= held-out) is the lesson;
   # the magnitude is small here and would be far larger on a genuinely OOD held-out
   # set (ch1.6's LIBERO-style annulus). Frame it as "you still must not report the
   # train number", not "look how huge the gap is".
-  # HONESTY (author MUST keep this framing — it is the measured truth):
+  # HONESTY (author MUST keep this framing; it is the measured truth):
   #  * The HERO is the CODE RATIO, not the score: 1.3's act.py is ~380 lines of
   #    hand-rolled ACT; bridge.py's `# --- region: official ---` is ~12 lines for the
   #    SAME algorithm. That is the graduation.
   #  * The from-scratch 1.3 ACT (0.95) BEATS the general official config (0.55 [0.34,
-  #    0.74]) at matched budget — a REAL gap (from-scratch is above the CI). Do NOT
-  #    read this as "lerobot is worse". It is "your DOMAIN KNOWLEDGE — the four entity
-  #    tokens — beat a general config"; the same bias can be ported into lerobot. The
+  #    0.74]) at matched budget, a REAL gap (from-scratch is above the CI). Do NOT
+  #    read this as "lerobot is worse". It is "your DOMAIN KNOWLEDGE (the four entity
+  #    tokens) beat a general config"; the same bias can be ported into lerobot. The
   #    framework buys the ECOSYSTEM (maintained code, the Hub, real-robot deploy, other
   #    policies one import away), not a free accuracy win.
   #  * We match 1.3's choices for fairness: use_vae=False (1.3 cut the CVAE) and lr 1e-3.
-  #    use_vae=True is one flag to the full CVAE ACT — on this tiny state task it
+  #    use_vae=True is one flag to the full CVAE ACT: on this tiny state task it
   #    regularizes hard and underperforms (measured ~0.10 at the same budget); do not
   #    "restore" it as the default and call the comparison fair.
   #  * The publish step is HUMAN-GATED and DRY-RUNS offline (prints push_to_hub, saves
-  #    locally). NEVER claim a Hub artifact exists — none is committed (no binaries).
+  #    locally). NEVER claim a Hub artifact exists; none is committed (no binaries).
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
 # provenance, not a bare magic number). checks.py reads these. The two fast, self-
 # contained gates (ex3 env-state bug-hunt, ex4 chunk-timestamps completion) run in
 # `make check`; the two predict-then-run reproduce checks train the ACTs and are
-# @pytest.mark.slow — excluded from `make check`.
+# @pytest.mark.slow, excluded from `make check`.
 exercise_checks:
-  exercise_config:                 # the exercises use the DEFAULT budget: measured (seed 0, cpu) — at any SMALLER budget both ACTs tie near 0 (50/150 -> 0.55 vs 0.95; 40/100 -> 0.13 vs 0.13; 24/40 -> 0.0 vs 0.0), so the official-vs-from-scratch separation and the train_dist direction only emerge at the default budget
+  exercise_config:                 # the exercises use the DEFAULT budget: measured (seed 0, cpu). At any SMALLER budget both ACTs tie near 0 (50/150 -> 0.55 vs 0.95; 40/100 -> 0.13 vs 0.13; 24/40 -> 0.0 vs 0.0), so the official-vs-from-scratch separation and the train_dist direction only emerge at the default budget
     num_demos: 50
     epochs: 150
     model_dim: 128
     chunk_size: 8
     eval_episodes: 20
-    provenance: "measured 2026-07-06, seed 0, cpu at the default budget: official 0.55 [0.34, 0.74] vs from-scratch 0.95 (ex1 direction: scratch > official), and train_dist 0.60 vs held-out 0.55 (ex2 direction: train >= held). The checks assert the ROBUST >= directions, not the magnitudes. Each reproduce check trains ACT(s) — minutes on CPU, hence @slow."
+    provenance: "measured 2026-07-06, seed 0, cpu at the default budget: official 0.55 [0.34, 0.74] vs from-scratch 0.95 (ex1 direction: scratch > official), and train_dist 0.60 vs held-out 0.55 (ex2 direction: train >= held). The checks assert the ROBUST >= directions, not the magnitudes. Each reproduce check trains ACT(s), minutes on CPU, hence @slow."
   ex1:                             # ex1_predict_comparison.py (predict-then-run)
-    answer: "C"                    # the task-tuned from-scratch 1.3 ACT (entity tokens) beats the general official config — a real gap above the official Wilson CI
+    answer: "C"                    # the task-tuned from-scratch 1.3 ACT (entity tokens) beats the general official config, a real gap above the official Wilson CI
   ex2:                             # ex2_predict_train_dist.py (predict-then-run)
-    answer: "A"                    # evaluating on the TRAIN seeds inflates the rate above held-out — the ch1.6 sin, on the official stack
+    answer: "A"                    # evaluating on the TRAIN seeds inflates the rate above held-out: the ch1.6 sin, on the official stack
   ex3:                             # ex3_bughunt_env_state.py (bug-hunt, fast)
     provenance: "self-contained (type, shape) fixture; the fix re-TYPES the bridged feature to ENV (not just renames the key), so ACT.validate_features() accepts a state-only policy"
   ex4:                             # ex4_completion_chunk_timestamps.py (code-completion, fast)
-    provenance: "self-contained; the completed delta_timestamps for a K-frame action chunk at fps Hz is [0, 1/fps, ..., (K-1)/fps] — the chunk bookkeeping ch1.3 wrote by hand"
+    provenance: "self-contained; the completed delta_timestamps for a K-frame action chunk at fps Hz is [0, 1/fps, ..., (K-1)/fps], the chunk bookkeeping ch1.3 wrote by hand"
 
 # region_hashes: sha256 of each region body (infra/ci/lib/regions.py), recorded and
 # verified against the current bridge.py. check_prose_code_drift recomputes these on
 # render; any edit to a region body must re-record its hash.
 notebook_hash: bd1f0eb9065327709e3671e59f00d81b018673a34056d03b31f6183ebbd9faef        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 8097f9d1ea837da4760d19f53c0f2d27e584c26b3e985131d3eb15e291cf2f15   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 915916ee359ecb700cb46b74900cc32cd059ec6daf5c5e66ab2e130f44deb8f7   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 547ffbd2b54ce7432cddd59d1b7f81a4bd10d9895ef850d3772300a9528ad473

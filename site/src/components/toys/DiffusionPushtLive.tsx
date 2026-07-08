@@ -167,6 +167,11 @@ function DiffusionToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
         // --- lazy, hydration-gated: WASM + ONNX pulled only now (scrolled in) ----
         const [simMod, sceneMod, envMod, obsMod, inferMod, contractsMod, vpMod] =
           await Promise.all([
@@ -262,9 +267,6 @@ function DiffusionToy() {
           void INK;
         };
 
-        setBooted(true);
-        render();
-
         // 2) load the REAL sampler policy through the fail-closed contract gate
         const policy = await loadSamplerPolicy(MODEL_URL, seed);
         assertSamplerDrivesPushT(policy.contract);
@@ -272,6 +274,12 @@ function DiffusionToy() {
 
         // seed the sampler from the episode seed (diffusion.py rollout does this at reset)
         policy.seedNoise(seed);
+
+        // fail-closed: reveal the canvas + paint the first frame ONLY after the sampler
+        // loaded and its contract passed. A fetch/contract failure throws to catch with
+        // booted still false, so the captioned SSR poster stays up (not a frozen canvas).
+        setBooted(true);
+        render();
 
         apiRef.current = {
           setSteps: (n: number) => { stepsRef.current = n; setActiveSteps(n); },
@@ -319,6 +327,8 @@ function DiffusionToy() {
         // 4) DRIVE — real-time paced to CONTROL_HZ (mirrors diffusion.py eval: at
         //    every control step SAMPLE an action by denoising from noise).
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(), acc = 0, hudMark = 0;
+
+        if (prefersReducedMotion) return; // reduced motion: one still frame already painted; do not spin the auto-driving loop. Interaction/reset handlers + __toy stay live.
 
         while (!disposed) {
           await nextFrame();

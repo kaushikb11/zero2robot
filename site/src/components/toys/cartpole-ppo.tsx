@@ -159,6 +159,10 @@ function CartpoleToy() {
 
     (async () => {
       try {
+        const prefersReducedMotion =
+          typeof window !== "undefined" &&
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         // --- lazy, hydration-gated: the WASM modules are fetched only now ---------
         const [simMod, sceneMod, envMod, obsMod, inferMod, contractsMod] = await Promise.all([
           import("../../../../playground/src/sim/mujoco_sim"),
@@ -188,13 +192,6 @@ function CartpoleToy() {
         canvas.height = CANVAS_H;
         const ctx = canvas.getContext("2d")!;
 
-        // resolve the page's design tokens once (canvas can't read CSS vars live)
-        const cs = getComputedStyle(canvas);
-        const col = (k: Tok) => (cs.getPropertyValue(k).trim() || TOK_FALLBACK[k]);
-        const INK = col("--ink"), INK_MUTE = col("--ink-mute"), SIGNAL = col("--signal"),
-          ALERT = col("--alert"), POLE_HUE = col("--entity-pusher"),
-          RULE = col("--rule-strong");
-
         const groundY = CANVAS_H * GROUND_FRAC;
         const toPx = (wx: number, wz: number): [number, number] => [
           CANVAS_W / 2 + wx * SCALE,
@@ -206,6 +203,14 @@ function CartpoleToy() {
         let shoveFade = 0; // 0..1
 
         const render = () => {
+          // Resolve the page's design tokens LIVE each frame (a canvas can't read CSS
+          // vars natively) so a post-boot theme toggle recolours the instrument rather
+          // than freezing the boot-time snapshot. The arena itself stays a warm-light
+          // lab surface in BOTH themes — styles.css deliberately pins .cp-figure light.
+          const cs = getComputedStyle(canvas);
+          const col = (k: Tok) => (cs.getPropertyValue(k).trim() || TOK_FALLBACK[k]);
+          const INK = col("--ink"), INK_MUTE = col("--ink-mute"), SIGNAL = col("--signal"),
+            ALERT = col("--alert"), POLE_HUE = col("--entity-pusher"), RULE = col("--rule-strong");
           ctx.fillStyle = "#fbf9f3";
           ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
@@ -280,13 +285,14 @@ function CartpoleToy() {
           }
         };
 
-        setBooted(true);
-        render();
-
-        // 2) load the REAL policy through the fail-closed contract gate
+        // 2) load the REAL policy through the fail-closed contract gate FIRST, then
+        //    reveal the canvas — load-then-boot, so a fetch/contract failure keeps
+        //    booted=false and the captioned SSR poster stays up (never a frozen canvas).
         const policy = await loadPolicy(MODEL_URL);
         assertDrivesCartpole(policy.contract);
         if (disposed) return;
+        setBooted(true);
+        render();
 
         // --- interaction state (refs, not React state — the loop must not re-render)
         let epReturn = 0;
@@ -359,6 +365,9 @@ function CartpoleToy() {
         let lastFps = 0, frames = 0, fpsMark = performance.now(), last = performance.now(),
           acc = 0, hudMark = 0;
 
+        // Reduced motion: the balanced still frame is painted and the shove/reset
+        // controls + __toy hooks stay live; don't spin the auto-driving rAF loop.
+        if (prefersReducedMotion) return;
         while (!disposed) {
           await nextFrame();
           const now = performance.now();

@@ -1,21 +1,31 @@
 ---
-// PrevNext — sequential chapter navigation at the foot of a chapter. Static.
-import type { ChapterInfo } from "../lib/curriculum.ts";
-
-interface Props {
-  prev?: ChapterInfo | null;
-  next?: ChapterInfo | null;
+// PrevNext — sequential navigation at the foot of a chapter OR a further-reading
+// module. It carries GENERIC {href,label,kicker} links, not just meta.yaml
+// chapters, so the one journey does not snap at 5.8: it flows on into the
+// practitioner reading track and the graduation bridge. On the final module (G3)
+// there is no next page — instead of a bare dead-end, `finish` renders a short
+// "you finished — go build" send-off. Static; renders with JavaScript off.
+interface NavLink {
+  href: string;
+  label: string;
+  kicker?: string; // small eyebrow, e.g. "Phase 1 · Imitation" or "Graduation — go build"
 }
-const { prev, next } = Astro.props;
+interface Props {
+  prev?: NavLink | null;
+  next?: NavLink | null;
+  finish?: boolean; // true on the very last page (G3) — send-off, no "next"
+}
+const { prev, next, finish = false } = Astro.props;
 ---
 
-<nav class="prevnext" aria-label="Previous and next chapter">
+<nav class="prevnext" aria-label="Previous and next">
   {
     prev ? (
-      <a class="prevnext__link prevnext__link--prev" href={`/${prev.slug}/`} rel="prev">
+      <a class="prevnext__link prevnext__link--prev" href={prev.href} rel="prev">
         <span class="prevnext__dir">← Previous</span>
         <span class="prevnext__label">
-          {prev.number} · {prev.title}
+          {prev.kicker && <span class="prevnext__kicker">{prev.kicker}</span>}
+          {prev.label}
         </span>
       </a>
     ) : (
@@ -24,14 +34,86 @@ const { prev, next } = Astro.props;
   }
   {
     next ? (
-      <a class="prevnext__link prevnext__link--next" href={`/${next.slug}/`} rel="next">
+      <a class="prevnext__link prevnext__link--next" href={next.href} rel="next">
         <span class="prevnext__dir">Next →</span>
         <span class="prevnext__label">
-          {next.number} · {next.title}
+          {next.kicker && <span class="prevnext__kicker">{next.kicker}</span>}
+          {next.label}
         </span>
       </a>
+    ) : finish ? (
+      <aside class="prevnext__finish" aria-label="You finished the course">
+        <span class="prevnext__finish-eyebrow">You reached the end</span>
+        <strong class="prevnext__finish-title">
+          That’s the whole arc — an empty file to a policy on a real arm.
+        </strong>
+        <span class="prevnext__finish-body">
+          There is no next page on purpose: the next move is yours. Pick a task,
+          wire up a policy, put it on hardware. When you want to trace how the
+          pieces connect, <a href="/map/">wander back through the map</a>.
+        </span>
+      </aside>
     ) : (
       <span class="prevnext__spacer" />
     )
   }
 </nav>
+
+<style>
+  /* Component-scoped ONLY (the base .prevnext / __link / __dir / __label / __spacer
+     rules live in the shared stylesheet). These add the two new pieces this
+     component introduces: the small kicker line on each link, and the G3 send-off
+     card that replaces the "next" link at the finish line. */
+  .prevnext__kicker {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 0.15rem;
+  }
+
+  .prevnext__finish {
+    margin-left: auto;
+    max-width: 30rem;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 10px;
+    background: var(--paper-2);
+  }
+  .prevnext__finish-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--book);
+  }
+  .prevnext__finish-title {
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    line-height: 1.2;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .prevnext__finish-body {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .prevnext__finish-body a {
+    color: var(--book);
+    text-decoration: underline;
+  }
+
+  @media (max-width: 40rem) {
+    .prevnext__finish {
+      text-align: left;
+      max-width: none;
+    }
+  }
+</style>
