@@ -46,6 +46,14 @@ jobs:
         working-directory: site
         run: npm ci
 
+      # The site directly imports the playground's TS source (decision 011:
+      # site P2 concept-toys import playground/src/{sim,teleop,render,policy}).
+      # Those files do bare imports (@mujoco/mujoco, onnxruntime-web) that Node
+      # resolves from playground/node_modules — so the site build needs them too.
+      - name: Install playground deps (site imports playground/src)
+        working-directory: playground
+        run: npm ci
+
       - name: Build site (Astro static; prebuild syncs region hashes + fetches models)
         working-directory: site
         env:
