@@ -63,6 +63,11 @@ def fixed_reward(info, action, frac):
     height-only hack.
 
     Rough size: 1-3 lines.
+
+    Before you write the fix, say it in one sentence: why did rewarding height
+    *alone* make the policy rear up and cover zero distance, instead of walking —
+    and why is adding a forward term a change to the *specification*, not to how
+    hard you optimize?
     """
     # YOUR CODE HERE (delete the next line once you start)
     raise NotImplementedError("add a forward-progress term so the reward isn't the height-only hack")

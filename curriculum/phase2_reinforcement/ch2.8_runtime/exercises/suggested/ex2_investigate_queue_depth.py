@@ -11,12 +11,6 @@ THE INVESTIGATION. Hold --control_hz at 5 Hz (too slow to balance). Compare a
 shallow queue (--queue_depth 1) against a deep one (--queue_depth 100) across
 seeds. Watch two numbers: obs_dropped, and whether the pole balanced.
 
-You should find that the deep queue drives obs_dropped to zero — and the pole
-still falls at the exact same moment. A bigger buffer removes the dropped-message
-SYMPTOM but not the CAUSE: the policy is still acting on information that is
-~100 ms stale, because it still only decides 5 times a second. Buffering trades
-drops for latency; it never buys you a faster controller. The rate is the killer.
-
 (This is a hyperparameter-investigation, not a bug-hunt: there is no injected bug
 to find. The lesson is what the knob does and does not do — seed-robust, because
 the outcome is deterministic per seed under the virtual clock.)
@@ -30,8 +24,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Record what you EXPECT the deep queue to change (drops? balance? latency?)
-# before running — one sentence.
+# Before you run — predict both outcomes for the deep queue: what happens to
+# obs_dropped, and does the pole stay up? Write one sentence committing to both.
 PREDICTION = None
 
 METADATA = {
@@ -45,7 +39,9 @@ ARTIFACT = REPO / "curriculum/phase2_reinforcement/ch2.8_runtime/runtime.py"
 SEEDS = (0, 1, 2)
 SLOW_CONTROL_HZ = 5.0
 DEPTHS = (1, 100)  # shallow vs deep /obs and /action queues
-COMMON = ["--device", "cpu", "--clock", "virtual", "--no-rerun"]
+# Virtual clock + CPU + the checkpoint-free scripted brain, all pinned so the
+# investigation is deterministic per seed on any machine.
+COMMON = ["--device", "cpu", "--clock", "virtual", "--no-rerun", "--policy", "scripted"]
 
 
 def run_one(queue_depth: int, seed: int, workdir: Path) -> dict:
@@ -85,5 +81,7 @@ if __name__ == "__main__":
         lat = sum(r["latency_ms"]) / len(r["latency_ms"])
         print(f"{depth:>11}  {drops:>18}  {up:>18}  {lat:>15.1f}")
     print("\nReconcile: the deep queue took obs_dropped to zero. Did the pole "
-          "balance? Did the latency change? A deeper buffer moved the problem, it "
-          "did not solve it — the control rate did not change.")
+          "balance? Did the latency change? A deeper buffer removes the dropped-message "
+          "SYMPTOM but not the CAUSE — the policy still decides only 5 times a second, "
+          "so it is still acting on ~100 ms-stale state. Buffering trades drops for "
+          "latency; it never buys you a faster controller. The rate is the killer.")

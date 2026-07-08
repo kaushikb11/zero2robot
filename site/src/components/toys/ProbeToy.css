@@ -1,0 +1,222 @@
+/* ch3.8 "Reading the Frontier" concept-toy — the CHECKPOINT-PROBE toy.
+ *
+ * Co-located CSS for ProbeToy.tsx (imported at the top of that file). Namespaced
+ * `pt-*` so it never collides with the global `ct-*`/`bk-*` or the sibling toys'
+ * `ed-*`/`fr-*`/`sl-*` classes. Like ch3.3's engine-drift toy this is PURE HTML +
+ * SVG over pre-computed probe.py numbers — no WASM — so it drives every colour from
+ * the site's flipping design tokens and is genuinely theme-aware in BOTH light and
+ * dark. Every var carries a light fallback so it still renders if mounted outside
+ * the shell.
+ *
+ * Colour by MEANING (the honest story):
+ *   - --signal blue → the ONE real read: the routed-coordinate R² TRAINED bar, plus
+ *     the interactive focus toggle. Nothing that "proves nothing" wears signal blue.
+ *   - --alert red   → the CAVEAT flag: the task-id probe that saturates on both.
+ *   - --ink-mute    → every bar that proves little (both task-id bars; the random
+ *     control). Neutral by design: a probe recovering an input is not a signal.
+ */
+
+.pt { display: grid; gap: 0.7rem; }
+
+/* --- the one control: focus the caveat or the real signal ---------------- */
+.pt-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.pt-seg-label,
+.pt-seg-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252); letter-spacing: 0.01em;
+}
+.pt-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.pt-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.9rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pt-seg-btn:last-child { border-right: 0; }
+.pt-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.pt-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+/* --- panels -------------------------------------------------------------- */
+.pt-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.55rem 0.65rem 0.5rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.pt-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.4rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; flex-wrap: wrap;
+}
+.pt-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+.pt-panels-2 { display: grid; gap: 0.7rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .pt-panels-2 { grid-template-columns: 1fr 1fr; align-items: stretch; } }
+
+/* ==================== PANEL 1: the centerpiece — trained vs random ========= */
+.pt-panel--center { gap: 0.55rem; }
+
+.pt-probe {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+  transition: opacity 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.pt-probe + .pt-probe { margin-top: 0.5rem; }
+/* the signal probe carries the one blue accent border; the caveat a red flag border */
+.pt-probe--signal { border-left: 3px solid var(--signal, #1f56de); }
+.pt-probe--caveat { border-left: 3px solid var(--alert, #c0362a); }
+
+/* emphasis applies ONLY after hydration (data-mounted=true), so JS-off shows the
+   full contrast undimmed. The focused probe stands out; the other softens. */
+.pt[data-mounted="true"] .pt-probe { opacity: 0.55; }
+.pt[data-mounted="true"] .pt-probe[data-emph="true"] {
+  opacity: 1;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal, #1f56de) 22%, transparent);
+}
+.pt[data-mounted="true"] .pt-probe--caveat[data-emph="true"] {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--alert, #c0362a) 26%, transparent);
+}
+
+.pt-probe-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.pt-probe-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.82rem; font-weight: 600; color: var(--ink, #23201b);
+}
+.pt-probe-tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; letter-spacing: 0.02em; text-transform: uppercase;
+  padding: 0.12rem 0.45rem; border-radius: 100px; white-space: nowrap;
+}
+.pt-tag--signal { color: var(--signal, #1f56de); background: color-mix(in srgb, var(--signal, #1f56de) 12%, transparent); }
+.pt-tag--caveat { color: var(--alert, #c0362a); background: color-mix(in srgb, var(--alert, #c0362a) 12%, transparent); }
+
+.pt-bars { display: grid; gap: 0.3rem; }
+.pt-bar-row {
+  display: grid; grid-template-columns: 9.5rem 1fr 2.6rem; align-items: center; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem;
+}
+.pt-bar-lab { color: var(--ink-mute, #6d6252); text-align: right; }
+.pt-bar-track {
+  position: relative; height: 0.85rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.pt-bar-fill { height: 100%; border-radius: 3px 0 0 3px; transition: width 0.35s ease; }
+.pt-fill--signal { background: var(--signal, #1f56de); }
+.pt-fill--mute { background: color-mix(in srgb, var(--ink-mute, #6d6252) 62%, transparent); }
+/* chance marker (task-id only) — a dashed vertical rule at 1/NUM_TASKS */
+.pt-chance {
+  position: absolute; top: -1px; bottom: -1px; width: 0;
+  border-left: 1.5px dashed color-mix(in srgb, var(--ink, #23201b) 55%, transparent);
+}
+.pt-bar-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.pt-val--signal { color: var(--signal, #1f56de); }
+
+.pt-verdict {
+  margin-top: 0.4rem; font-size: 0.72rem; line-height: 1.45; color: var(--ink, #23201b);
+}
+.pt-verdict-sig { color: var(--signal, #1f56de); font-weight: 700; }
+.pt-verdict-cav { color: var(--alert, #c0362a); font-weight: 700; }
+
+.pt-headline {
+  margin-top: 0.15rem; font-size: 0.74rem; line-height: 1.5; color: var(--ink, #23201b);
+  padding-top: 0.45rem; border-top: 1px solid var(--paper-edge, #ded3ba);
+}
+.pt-headline b { font-weight: 700; }
+
+/* ==================== PANEL 2a: the four moves ============================= */
+.pt-moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; flex: 1 1 auto; }
+.pt-move { display: grid; grid-template-columns: 1.4rem 1fr; gap: 0.55rem; align-items: start; }
+.pt-move-i {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 700; color: #fff;
+  background: var(--signal, #1f56de);
+  width: 1.4rem; height: 1.4rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.pt-move-body { display: grid; gap: 0.05rem; }
+.pt-move-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.76rem; color: var(--ink, #23201b); text-transform: uppercase; letter-spacing: 0.03em;
+}
+.pt-move-desc { font-size: 0.72rem; line-height: 1.4; color: var(--ink-mute, #6d6252); }
+
+/* ==================== PANEL 2b: the inspect table ========================= */
+.pt-inspect { display: grid; gap: 0.22rem; margin-bottom: 0.55rem; }
+.pt-mod {
+  display: grid; grid-template-columns: 8.5rem 1fr 3rem; align-items: center; gap: 0.45rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.68rem;
+}
+.pt-mod-name { color: var(--ink, #23201b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-mod-flag { color: var(--signal, #1f56de); font-size: 0.6rem; margin-left: 0.3rem; }
+.pt-mod-direct { color: var(--ink-mute, #6d6252); font-size: 0.6rem; margin-left: 0.3rem; }
+.pt-mod-track {
+  height: 0.6rem; border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 10%, transparent);
+  overflow: hidden;
+}
+.pt-mod-fill { height: 100%; border-radius: 2px; background: color-mix(in srgb, var(--ink-mute, #6d6252) 50%, transparent); }
+.pt-mod-fill--probed { background: var(--signal, #1f56de); }
+.pt-mod--probed .pt-mod-name { color: var(--signal, #1f56de); font-weight: 700; }
+.pt-mod-p { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink, #23201b); }
+.pt-mod--total { border-top: 1px solid var(--paper-edge, #ded3ba); padding-top: 0.22rem; margin-top: 0.1rem; }
+.pt-mod--total .pt-mod-name,
+.pt-mod--total .pt-mod-p { font-weight: 700; }
+
+/* ==================== PANEL 2b: the CLS attention strip =================== */
+.pt-attn { margin-top: auto; padding-top: 0.4rem; border-top: 1px solid var(--paper-edge, #ded3ba); }
+.pt-attn-head {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.2rem;
+}
+.pt-attn-svg { display: block; width: 100%; max-width: 320px; height: auto; }
+.pt-attn-bar { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); }
+.pt-attn-bar--peak { fill: var(--signal, #1f56de); }
+.pt-attn-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; fill: var(--ink-mute, #6d6252);
+}
+.pt-attn-lab--peak { fill: var(--signal, #1f56de); font-weight: 700; }
+.pt-attn-peakword { color: var(--signal, #1f56de); font-weight: 700; }
+
+/* ==================== PANEL 3: the frontier note ========================== */
+.pt-panel--frontier {
+  border: 1px dashed color-mix(in srgb, var(--signal, #1f56de) 40%, var(--paper-edge, #ded3ba));
+  background: color-mix(in srgb, var(--signal, #1f56de) 5%, var(--paper, #f7f3ea));
+}
+.pt-frontier-p { font-size: 0.8rem; line-height: 1.5; color: var(--ink, #23201b); }
+.pt-frontier-p b { font-weight: 600; }
+
+/* the persistent honest-note lines */
+.pt-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.pt-note--tight { margin-top: 0.4rem; }
+.pt-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill the bar-grow + emphasis transitions */
+@media (prefers-reduced-motion: reduce) {
+  .pt-seg-btn, .pt-probe, .pt-bar-fill { transition: none; }
+}
+
+/* Theme-awareness comes FOR FREE from the site tokens: /styles.css flips
+   --paper / --ink / --signal / --alert on .book for both the explicit dark toggle
+   and the OS default, so these pure token-driven charts follow the page in light
+   AND dark. Like ch3.3's engine-drift toy we pin NOTHING (only WASM/canvas
+   instruments that must stay light do that); the light values above are fallbacks
+   for standalone mounts only. */
+
+@media (max-width: 30rem) {
+  .pt-bar-row { grid-template-columns: 7rem 1fr 2.4rem; font-size: 0.68rem; }
+  .pt-mod { grid-template-columns: 6.5rem 1fr 2.8rem; }
+}

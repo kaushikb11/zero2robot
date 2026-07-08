@@ -1,0 +1,220 @@
+# checkpoints/models.yaml — the model-hosting manifest (the in-repo POINTER).
+#
+# Root CLAUDE.md invariant #5: "No binaries in git." The trained .onnx policies
+# that drive the site's live demos live on the Hugging Face Hub; this manifest is
+# the pointer the doctrine calls for. It is the single source of truth that ties
+# together the TRIANGLE every live demo depends on:
+#
+#     site toy  ->  MODEL_URL "/models/<name>.onnx"          (what the browser loads)
+#         |
+#     manifest  ->  this file: name + sha256 + provenance    (the pointer + contract)
+#         |
+#     exporter  ->  the chapter .py that produces the .onnx   (where it comes from)
+#
+# infra/ci/check_demo_assets.py enforces that triangle: a toy that loads a model
+# with no manifest entry, or a manifest entry whose exporter does not exist/produce
+# it, fails CI. site/scripts/fetch_models.py reads this manifest at build time and
+# provisions site/public/models/<name>.onnx from the Hub (sha256-verified); if the
+# fetch fails the demo gracefully degrades to its poster frame (site/CLAUDE.md).
+#
+# ---------------------------------------------------------------------------
+# HOW TO REGENERATE sha256 (author, after re-exporting a model):
+#   1. run the model's exporter so site/public/models/<name>.onnx is fresh
+#   2. shasum -a 256 site/public/models/<name>.onnx
+#   3. paste the digest into that model's `sha256:` below
+#   4. python scripts/upload_models_hf.py   (uploads the .onnx + model card to HF)
+# The sha256 recorded here MUST match the bytes served from the Hub, or every
+# fetch re-downloads and the checksum gate warns. Exports are CPU-deterministic
+# (seeded), so re-running an exporter reproduces the same bytes -> same digest.
+# ---------------------------------------------------------------------------
+
+# HF repo the fetch pulls from and the upload pushes to. Files resolve at:
+#   https://huggingface.co/<hf_repo>/resolve/main/<filename>
+# The public HF repo the .onnx publish to + fetch from. NOTE: the repo is `policies`,
+# NOT `models` — HF reserves the top-level name `models`. Populated via
+# scripts/upload_models_hf.py; if a fetch can't reach it, demos degrade to posters.
+hf_repo: zero2robot/policies
+
+# Where fetch_models.py writes the provisioned files (repo-relative). A model's
+# on-disk path is <public_dir> + <site_path>, e.g. site/public + /models/bc_policy.onnx.
+public_dir: site/public
+
+# One entry per model. Add a row here the moment a new arm's exporter lands; the
+# triangle gate keys off `site_path` (matched against each toy's MODEL_URL) and
+# `exporter` (must exist and name the filename).
+models:
+  - name: bc_policy
+    filename: bc_policy.onnx
+    site_path: /models/bc_policy.onnx
+    sha256: dbfbb95a79cb3cd4c0edc73be5ef32e39c7b1c140bc7653cdf6fe8152c677daa
+    contract: v1                       # obs float32[1,10] -> action float32[1,2]
+    exporter: curriculum/phase1_imitation/ch1.1_bc/bc.py
+    chapter: ch1.1-bc
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/PlateIsland.tsx   # loads this today
+
+  - name: dagger
+    filename: dagger.onnx
+    site_path: /models/dagger.onnx
+    sha256: e898ee4d28286220f142040023cf09dc62a923da03a0d852a56c3439ccbb868d
+    contract: v1                       # obs float32[1,10] -> action float32[1,2]
+    exporter: curriculum/phase4_capstone/ch4.2_corrections/export_dagger_onnx.py
+    chapter: ch4.2-corrections
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/DaggerPushtLive.tsx   # G1 (live PushT recovery toy)
+
+  - name: ppo_agent
+    filename: ppo_agent.onnx
+    site_path: /models/ppo_agent.onnx
+    sha256: abbf577b80eef8a7f6d2df44d526720ec20a447486de45f574c2e52f2a399c69
+    contract: v1                       # obs float32[1,5] -> action float32[1,1]
+    exporter: curriculum/phase2_reinforcement/ch2.1_ppo/export_ppo_onnx.py
+    chapter: ch2.1-ppo
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/cartpole-ppo.tsx   # loads this today
+
+  - name: diffusion_denoiser
+    filename: diffusion_denoiser.onnx
+    site_path: /models/diffusion_denoiser.onnx
+    sha256: 259cc0ec2f439abe35cf9d744be33320a5b61ca8cb874c4c4441e0f1820b9d31
+    contract: v2                       # ddpm sampler; 3-input denoiser core, obs 10 / act 2
+    exporter: curriculum/phase1_imitation/ch1.4_diffusion/export_diffusion_onnx.py
+    chapter: ch1.4-diffusion
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/DiffusionPushtLive.tsx   # loads this today
+
+  - name: flow_velocity
+    filename: flow_velocity.onnx
+    site_path: /models/flow_velocity.onnx
+    sha256: 7443b65df6566b26443a51cdaa54c0f80abf4f02405330c0ada521ee2d3ea5fc
+    contract: v2                       # flow-euler sampler; 3-input velocity core, obs 10 / act 2
+    exporter: curriculum/phase1_imitation/ch1.5_flow/export_flow_onnx.py
+    chapter: ch1.5-flow
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/FlowPushtLive.tsx   # loads this today
+
+  # --- ready exports whose live toys are being wired in parallel (embed.yaml
+  # marks them PENDING today). Listed now so the fetch provisions them and the
+  # triangle gate is ready the instant a toy sets MODEL_URL to one of these. ---
+  - name: sac_actor
+    filename: sac_actor.onnx
+    site_path: /models/sac_actor.onnx
+    sha256: 3a6ebefe1a768c3918dbf32cff7b571171376a1c827dae36c24dfd17b260a18c
+    contract: v1                       # obs float32[1,8] -> action float32[1,2]
+    exporter: curriculum/phase2_reinforcement/ch2.2_sac/export_sac_onnx.py
+    chapter: ch2.2-sac
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/SacReachLive.tsx   # ch2.2 live reach + re-reach (drag the target); SacReachToy.tsx is the recorded chart it stacks under
+
+  - name: walk_actor
+    filename: walk_actor.onnx
+    site_path: /models/walk_actor.onnx
+    sha256: 8dd6524fb76c0599012c04ff50f5d71eee008b2c708dcb74c87efc47037f10c8
+    contract: v1                       # obs float32[1,23] -> action float32[1,8]; real trained export (hidden_dim 64; full 60k-step SAC — deterministic gait walks +2.55 m then falls at ~step 474, emergent != robust)
+    exporter: curriculum/phase2_reinforcement/ch2.5_walk/export_walk_onnx.py
+    chapter: ch2.5-walk
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/QuadrupedWalkLive.tsx   # ch2.5 live emergent gait (walks then falls — emergent != robust)
+
+  - name: shaped_walk
+    filename: shaped_walk.onnx
+    site_path: /models/shaped_walk.onnx
+    sha256: 2c3e5981f6eb4f86ba33eef0821b0045c5a6b3949d4cd3bb54215f941bca3f3d
+    contract: v1                       # obs float32[1,23] -> action float32[1,8]; PPO actor_mean under the dense shaped reward (walks forward +6.27 m)
+    exporter: curriculum/phase2_reinforcement/ch2.4_rewards/export_rewards_onnx.py
+    chapter: ch2.4-rewards
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/RewardHackLive.tsx   # ch2.4 live reward-hack: shaped_walk vs height_hack side-by-side
+
+  - name: height_hack
+    filename: height_hack.onnx
+    site_path: /models/height_hack.onnx
+    sha256: 442c3fe5e43eb44ea7e40c654a558782628d5133c389fd6cd5abd7e7c8715019
+    contract: v1                       # obs float32[1,23] -> action float32[1,8]; PPO actor_mean under the naive "be tall" reward (specification gaming: rears/stalls, +0.16 m, its return rose 128->841)
+    exporter: curriculum/phase2_reinforcement/ch2.4_rewards/export_rewards_onnx.py
+    chapter: ch2.4-rewards
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/RewardHackLive.tsx   # ch2.4 live reward-hack: shaped_walk vs height_hack side-by-side
+
+  - name: dr_narrow
+    filename: dr_narrow.onnx
+    site_path: /models/dr_narrow.onnx
+    sha256: ceb4cf4f2811d8dab2350aa934c105dd09ebd09e024db6722acfb7bb62cd176d
+    contract: v1                       # obs float32[1,23] -> action float32[1,8]; PPO actor_mean trained on nominal dynamics only (the width-0 policy)
+    exporter: curriculum/phase2_reinforcement/ch2.7_dr/export_dr_onnx.py
+    chapter: ch2.7-dr
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/DomainRandLive.tsx   # ch2.7 live break-the-policy: narrow vs randomized under a mass slider
+
+  - name: dr_randomized
+    filename: dr_randomized.onnx
+    site_path: /models/dr_randomized.onnx
+    sha256: beda8abccae909b89142a4063f9eb4f643912e87a18fa00820a801326c574c0a
+    contract: v1                       # obs float32[1,23] -> action float32[1,8]; PPO actor_mean trained across a randomized mass/friction/gravity band (the width-1 policy; off-nominal survival edge within the seed band)
+    exporter: curriculum/phase2_reinforcement/ch2.7_dr/export_dr_onnx.py
+    chapter: ch2.7-dr
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/DomainRandLive.tsx   # ch2.7 live break-the-policy: narrow vs randomized under a mass slider
+
+  - name: serl_actor
+    filename: serl_actor.onnx
+    site_path: /models/serl_actor.onnx
+    sha256: df33c8668ed05d095d8faf42f2eb20cce65a11d1142bb5b8800ef570f92b36e6
+    contract: v1                       # HIL-SERL prior actor; obs float32[1,8] -> action float32[1,2]
+    exporter: curriculum/phase4_capstone/ch4.3_serl/export_serl_onnx.py
+    chapter: ch4.3-serl
+    seed: 0
+    tier: cpu-laptop
+
+  - name: scratch_actor
+    filename: scratch_actor.onnx
+    site_path: /models/scratch_actor.onnx
+    sha256: e37483838052e0431d37176d4a6006df8eac7fd52949c1ad31660d74e9e7a4cd
+    contract: v1                       # from-scratch SAC baseline; obs float32[1,8] -> action float32[1,2]
+    exporter: curriculum/phase4_capstone/ch4.3_serl/export_serl_onnx.py
+    chapter: ch4.3-serl
+    seed: 0
+    tier: cpu-laptop
+
+  - name: offline_policy
+    filename: offline_policy.onnx
+    site_path: /models/offline_policy.onnx
+    sha256: c4d347b6148496a3c809e1ce1c07f3096d0d0067a04bdd97ce354ea5f017e0ce
+    contract: v1                       # AWAC policy; obs float32[1,8] -> action float32[1,2]
+    exporter: curriculum/phase4_capstone/ch4_offline_primer/export_offline_onnx.py
+    chapter: ch4-offline-primer
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/OfflineReachLive.tsx   # ch4 offline: AWAC vs BC live reach, same mixed data
+
+  - name: offline_bc
+    filename: offline_bc.onnx
+    site_path: /models/offline_bc.onnx
+    sha256: 31bf4b2d9af3e0a2e7f2bd1814e4bca87c641e7fbf8b7ac6026f108ace7c0e06
+    contract: v1                       # BC baseline arm (offline primer); obs float32[1,8] -> action float32[1,2]
+    exporter: curriculum/phase4_capstone/ch4_offline_primer/export_offline_onnx.py
+    chapter: ch4-offline-primer
+    seed: 0
+    tier: cpu-laptop
+    live_toy: site/src/components/toys/OfflineReachLive.tsx   # ch4 offline: AWAC vs BC live reach, same mixed data
+
+  - name: act_policy
+    filename: act_policy.onnx
+    site_path: /models/act_policy.onnx
+    sha256: f8c7168576f39bbfb30ae5c73e404061e0e27dbed87c84821e2d0d736d477417
+    contract: v2                       # chunk core obs[1,10] -> action_chunk[1,K,6]; ensembling in runtime, no metadata stamp
+    exporter: curriculum/phase1_imitation/ch1.3_act/act.py
+    chapter: ch1.3-act
+    seed: 0
+    tier: cpu-laptop

@@ -1,6 +1,7 @@
 id: ch3.7-scale-data
 title: "Datasets at Scale"
-artifact: scale_data.py       # 335 LOC (measured); target ~250, hard cap 450
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: scale_data.py       # 363 LOC (measured); target ~250, hard cap 450
 task: cross-embodiment        # learner's own PushT (2-D pusher) + ALOHA (6-D bimanual) LeRobot demos
 dataset:
   reference: null             # NO external download: OXE/DROID are discussed as the scaled-up concept, never fetched
@@ -35,14 +36,12 @@ read_the_real_thing: true
 #     from-scratch, single-env analog of (object-centric perturb + re-solve, success-filtered).
 #   - LeRobot dataset format (v3) — the on-disk schema load_lerobot() reads; the wrangling
 #     surface the chapter makes concrete.
-# rtrt:
-#   repo: <author pins a real org/repo>     # e.g. huggingface/lerobot for the dataset format read
-#   commit: <author pins a real sha>
-#   focus:
-#     - the cross-embodiment normalization + action-space handling (the scaled version of the
-#       per-embodiment stats + zero-pad + action_mask this chapter builds)
-#     - MimicGen's object-centric subtrajectory transform + success filter (this chapter's
-#       perturb-and-re-solve, kept only on expert success, is the single-env analog)
+rtrt:
+  repo: NVlabs/mimicgen
+  commit: ea0988523f468ccf7570475f1906023f854962e9   # tag v1.0.0; pinned 2026-07-07 (API-verified). Dataset-format reads live in huggingface/lerobot (v0.4.4).
+  focus:
+    - "MimicGen's object-centric subtrajectory transform + success filter — this chapter's perturb-and-re-solve, kept only on expert success, is the single-env analog"
+    - "cross-embodiment normalization + action-space handling — the scaled version of the per-embodiment stats + zero-pad + action_mask this chapter builds"
 
 demo: scale_data_coverage
 # hero: the augmentation coverage map — source demo starts (few) vs the re-solved augmented
@@ -50,22 +49,24 @@ demo: scale_data_coverage
 
 # Reference run: FULL default (--source_episodes 12 --aug_per_demo 8 --aug_pos_sigma 0.08
 # --aug_yaw_sigma 0.5 --hidden_dim 512 --epochs 500 --eval_episodes 50), forced --device cpu.
-# Seed sweep 0-2; torch 2.x / mujoco 3.x / numpy 2.x; measured 2026-07-06. This is the DATA-SCALE
+# Seed sweep 0-2; torch 2.x / mujoco 3.x / numpy 2.x; measured 2026-07-07. This is the DATA-SCALE
 # HEADLINE — stated so the source << augmented ordering is unmissable, and honestly (the absolute
 # numbers are modest at free-tier; the LESSON is the ordering + the mechanism, not a huge win).
+# Both arms share IDENTICAL weight init (train_and_eval re-seeds torch), so the DATA is the only
+# variable and --aug_per_demo 0 reproduces the source-only arm exactly.
 reference_run:
-  provenance: "seeds 0-2 on cpu, default config (source_episodes 12, aug_per_demo 8, pos_sigma 0.08, yaw_sigma 0.5, hidden 512, epochs 500, eval 50); measured 2026-07-06"
+  provenance: "seeds 0-2 on cpu, default config (source_episodes 12, aug_per_demo 8, pos_sigma 0.08, yaw_sigma 0.5, hidden 512, epochs 500, eval 50); measured 2026-07-07"
   # per seed: source_success -> augmented_success (delta), augmentation yield / demos kept
-  seed0: "source 0.02 -> augmented 0.14 (+0.12); yield 0.98, kept 94/96"
-  seed1: "source 0.08 -> augmented 0.16 (+0.08); yield 0.96, kept 92/96"
-  seed2: "source 0.14 -> augmented 0.32 (+0.18); yield 0.99, kept 95/96"
+  seed0: "source 0.02 -> augmented 0.30 (+0.28); yield 0.98, kept 94/96"
+  seed1: "source 0.08 -> augmented 0.20 (+0.12); yield 0.96, kept 92/96"
+  seed2: "source 0.14 -> augmented 0.26 (+0.12); yield 0.99, kept 95/96"
   mean_source_success: 0.08          # coverage-starved: 12 demos tile little of the spawn annulus
-  mean_augmented_success: 0.207      # 8x re-solved perturbations broaden coverage
-  mean_scale_effect: 0.127           # augmentation helps every seed
+  mean_augmented_success: 0.253      # 8x re-solved perturbations broaden coverage
+  mean_scale_effect: 0.173           # augmentation helps every seed
   # HONESTY (author MUST keep this framing — it is the measured truth):
   #  * The ORDERING is the rock and is seed-robust: augmented > source on EVERY seed (deltas
-  #    +0.08 / +0.12 / +0.18). Lead with it, not the exact number.
-  #  * The ABSOLUTE success is deliberately modest (~2-32%): 12 source demos is a coverage-starved
+  #    +0.28 / +0.12 / +0.12). Lead with it, not the exact number.
+  #  * The ABSOLUTE success is deliberately modest (~2-30%): 12 source demos is a coverage-starved
   #    regime chosen so the DATA effect is visible and not drowned by a saturated policy. This is
   #    the free-tier reality — the point is "more effective data -> more success", the ch1.2 thesis
   #    scaled, NOT a state-of-the-art number. Do not oversell it.
@@ -80,23 +81,32 @@ reference_run:
 exercise_checks:
   ex1:                             # ex1_predict_scale.py (predict-then-run: does augmentation help?)
     answer: "A"                    # A = augmentation HELPS (augmented > source, every seed) — the data-scale thesis
-    provenance: "scale_data.py --seed 0 default config on cpu; measured 2026-07-06: source 0.02 -> augmented 0.14"
-    scale_effect_min: 0.05         # measured +0.12 at seed 0; 0.05 is the seed-robust floor (min observed +0.08)
+    provenance: "scale_data.py --seed 0 default config on cpu; measured 2026-07-07: source 0.02 -> augmented 0.30"
+    scale_effect_min: 0.05         # measured +0.28 at seed 0; 0.05 is the seed-robust floor (min observed +0.12)
   ex2:                             # ex2_completion_wrangle.py (code-completion: zero-pad + action_mask) — DETERMINISTIC, no training
     provenance: "pure-function mix of toy pusht(2-d)+aloha(6-d) actions; no variance; deterministic (checks.py reference_mix)"
     pusht_mask_density: 0.3333333  # a pusht row uses 2 of 6 dims -> mask mean 1/3; the padding cost made numeric
   ex3:                             # ex3_hparam_aug_amount.py (hyperparameter-investigation: how MUCH augmentation)
-    answer: "B"                    # B = more augmentation helps, with DIMINISHING returns (coverage saturates)
-    provenance: "scale_data.py --seed 0 on cpu, aug_per_demo in {0,8}; measured 2026-07-06: 0.02 (none) -> 0.14 (aug_per_demo 8)"
-    monotone_min: 0.03             # success(aug_per_demo 8) - success(aug_per_demo 0) >= this at seed 0 (measured +0.12)
+    answer: "A"                    # A = success keeps CLIMBING across {0,4,8}: coverage-starved, so more
+                                   #     augmentation keeps buying success. Steps are ~equal at seed 0
+                                   #     (0.02 -> 0.16 -> 0.30, +0.14 each) — NO plateau in the free-tier
+                                   #     range; diminishing returns is the asymptote past aug<=8, not visible here.
+    provenance: "scale_data.py --seed 0 on cpu, aug_per_demo in {0,4,8}; measured 2026-07-07: 0.02 (none, == source-only) -> 0.16 (aug 4) -> 0.30 (aug 8)"
+    monotone_min: 0.03             # success(aug_per_demo 8) - success(aug_per_demo 0) >= this at seed 0 (measured +0.28)
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant is not
-# built yet (ch3.7 is an agent draft pending the teaching-pass); notebook-tier-test writes both on
-# generation, and the gate skips a chapter that carries neither key.
+# notebook_hash / notebook_file_hash below record the LAST notebook generation. The final-edit pass
+# (2026-07-07) changed scale_data.py bytes, so these are now STALE and the notebook must be
+# REGENERATED via the notebook-tier-test skill (which rewrites both keys); do not hand-edit either
+# the notebook or these hashes. check_notebook_hashes will fail until the regen lands — that is the
+# intended signal, not a value to patch by hand.
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them on first
-# render; do not hand-write them.
 
-notebook_hash: 247d37d3f75b9edee2ffa03d9b4e432bed14f145d674207a65bc8f16ebc14001        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 4196db7b0ea62d8e93d4bfe36b94abfab5340ff1cfab71620b7d795789a71399   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: c43ba99ce3f3bbe53993b202255112cd1d9ba225adf39630ae5628b8f3f6f1a5        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: e0c6bf079ff44cb97d4b847fc5e95436f582417682e07aaea164fe3ce9c2e3f7   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 3e7d8c7947b9682a32f28a5a7ff90a2311e64e7f83372475ade08f3f38744346
+  wrangle: bd1a687e05c9bba41705cc2f117c05b8e7a4d9d21051996c3b31f7f4cf02d553
+  augment: 3f278b521d21a9a72607e1ef1f3965b1897caea6bb63b5a3e68dee907ed2958b
+  measure: d3f9dd177b5e4df0b50596386d609f1bbc56b2e38a8b907b481589ee220afcbf
+  emit: 6d306e13a101937acb09c0013f62085a6f707430c4bce8757a1db78e08400544

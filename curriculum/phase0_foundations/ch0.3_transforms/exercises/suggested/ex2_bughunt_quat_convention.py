@@ -3,12 +3,18 @@
 This routine rotates the PushT block's long axis from the block's frame into
 the world, using the block's orientation quaternion. It should agree with
 MuJoCo's mju_rotVecQuat to machine precision. It doesn't — it's off by ~0.10 m,
-about the length of the bar itself, as if the block were pointed the wrong way.
+more than the 6 cm bar it's rotating, as if the block were pointed the wrong way.
 
 EXACTLY ONE conceptual bug is injected, and it's the one pusht_env warns about:
 a quaternion component-order mix-up. MuJoCo (and this book) order a quaternion
 [w, x, y, z]. Somewhere below, a quaternion is handled as if it were ordered
-[x, y, z, w]. Find it, fix it, and re-run checks.py until the error collapses
+[x, y, z, w].
+
+Before you fix anything, write one sentence: the rotation is off by more than
+the bar's own length — what does an error that large tell you the four
+quaternion components are actually doing?
+
+Find it, fix it, and re-run checks.py until the error collapses
 to ~1e-16.
 
 Run:  python ex2_bughunt_quat_convention.py
@@ -42,7 +48,6 @@ def rotate_vector(q, v):
 
 def block_quaternion(yaw):
     """The block's orientation: a yaw about +z, returned as [x, y, z, w]."""
-    # <-- the bug lives in this file's handling of THIS return value.
     return np.array([0.0, 0.0, np.sin(yaw / 2.0), np.cos(yaw / 2.0)])
 
 

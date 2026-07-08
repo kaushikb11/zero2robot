@@ -1,0 +1,35 @@
+# Demo embed stub — ch4 offline primer "offline_bc_vs_awac".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: offline.py saves a
+# torch state_dict for the offline (AWAC) policy (offline_policy.pt); the ONNX
+# export (tensor contract v1: observation float32[1,8] -> action float32[1,2]) is
+# a follow-up the author wires when this chapter graduates from draft to drop.
+# The BC baseline policy is trained in the same run but not saved by default —
+# add a torch.save(bc_policy.state_dict(), ...) + ONNX export when wiring the
+# side-by-side hero (the demo needs BOTH policies).
+demo: offline_bc_vs_awac
+scene: pusher_reach          # curriculum/common/envs/pusher_reach/pusher_reach.xml, verbatim (ch2.2's env)
+policies:                    # the HERO is a side-by-side: SAME dataset, two extraction methods
+  bc: offline_bc.onnx        # exported; trained on the mixed expert+random dataset (clones the average). NOT bc_policy.onnx — ch1.1 owns that name.
+  offline: offline_policy.onnx  # exported; AWAC — reward-aware extraction from the same data
+  contract: "obs float32[1,8] -> action float32[1,2]"
+camera:
+  lookat: [0.0, 0.0, 0.0]
+  distance: 0.6
+  azimuth: 90
+  elevation: -90             # top-down: the planar arm reads cleanest from directly above
+interaction: move-target     # visitor drags the green target; both arms re-reach to it
+layout: side-by-side         # two arms on the SAME seeded target, so the contrast is immediate
+hud:
+  - fingertip_to_target      # the distance the dense reward penalizes — watch BC's stay high, AWAC's collapse
+  - policy_label             # "BC (clones the mix)" vs "offline RL (uses the reward)"
+notes: >
+  The hero makes the headline VISIBLE: both policies were trained on the exact
+  same fixed dataset — a mix of clean expert demos and random junk — but BC
+  clones the average and flails, while AWAC used the reward to extract a policy
+  that actually reaches. Drag the target and the split stays: AWAC tracks it, BC
+  wanders. This is the whole chapter in one frame — the reward is the difference.
+  A stretch variant swaps the AWAC arm for the --naive policy trained on NARROW
+  (expert-only) data to show the extrapolation-error failure (it overestimates
+  and misses), but the primary hero is BC-vs-AWAC on the mixed set.

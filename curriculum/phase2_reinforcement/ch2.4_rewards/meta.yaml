@@ -1,6 +1,6 @@
 id: ch2.4-rewards
 title: "Reward Design Is Programming"
-artifact: rewards.py       # 386 LOC (measured); target ~200, hard cap 450 — see the H3 note below
+artifact: rewards.py       # 386 LOC (measured); under the 450 hard cap — from-scratch PPO + 4 reward designs + eval
 task: quadruped            # curriculum/common/envs/quadruped — stand -> walk; reward = 5 shapeable terms
 dataset:
   reference: null          # RL generates its own data by acting; no demo dataset
@@ -40,6 +40,14 @@ exercise_checks:
   ex2:                     # ex2_completion_fix_hack.py — add the missing term that fixes the hack
     provenance: "DETERMINISTIC pure-function property (no training, no RL variance). On two hand-built states differing only in forward_vel (0.0 vs 0.9), a correct fix that adds the env's forward term (W_FORWARD * clip(vx) = 1.0 * 0.9) makes the faster state score >= 0.9 higher. Threshold set below that measured gap."
     fixed_forward_min: 0.5         # walking-forward state must beat standing-still by >= this (measured gap 0.9)
+  ex3:                     # ex3_bughunt_gae_truncation.py — the truncation-vs-termination GAE bug
+    provenance: "DETERMINISTIC closed-form GAE (torch 2.10.0; gamma 0.99, gae_lambda 0.95) on a fixed 2-step, 2-env trajectory: env0 truncated at t=1, env1 terminated at t=1, identical otherwise (rewards=1, values=0.5, bootstrap=2.0). Measured 2026-07-08. BUGGY (delta masks the bootstrap with `1-done` instead of `1-terminated`): both envs collapse to advantages [[1.4653,1.4653],[0.5,0.5]] — the truncated episode is scored as a real terminal, discarding V(next). FIXED: env0 [3.3274, 2.4800], env1 [1.4653, 0.5000] — the truncated last step credits the future, the terminated one does not. The gate SKIPS while env0==env1 (bug present) and asserts the fixed closed-form; it also pins the terminated path unchanged so 'fixing' it by masking nothing is caught."
+    equal_atol: 0.01               # env0==env1 within this => bug still present (skip)
+    trunc_last_adv: 2.48           # env0 (truncated) last-step advantage once fixed (bootstraps V(next)=2.0)
+    trunc_first_adv: 3.3274        # env0 (truncated) t=0 advantage once fixed
+    term_last_adv: 0.5             # env1 (terminated) last-step advantage — unchanged by the fix (no bootstrap)
+    term_first_adv: 1.4653         # env1 (terminated) t=0 advantage — unchanged by the fix
+    abs: 0.001                     # tolerance on the closed-form values
 
 # region_hashes: recorded by the site build (check_prose_code_drift recomputes
 # each region's sha256 and gates on drift). Omitted until this chapter is first
@@ -47,6 +55,9 @@ exercise_checks:
 
 # notebook_hash / notebook_file_hash: added by the notebook-tier-test skill when
 # the Colab variant is generated.
+
+notebook_hash: f2f8082a327ea36068b38fa1693b7213315e604d5b35c0786034677c9b12da60        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 5d4c263dde90432e412c0cf6b507ee787b0d5574ef6cbad42486b8bf99d70e3f   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: ae0ecf7ecb12845d45f299b5cc976afa75cf1fe917f9310b0260ad969c765f1d
@@ -56,7 +67,4 @@ region_hashes:
   ppo: b7666f43e364f4f36e9c464140f0c4927498074dfb62300c07cd04bc18bb50b9
   train: 27b1caf46794550fae148966e28d98589be58d552a1426c1cb1825df254b68fa
   eval: a4388d293da8b88136b21c244a318da09f4c7da40e0f2404aeb5529f4e4a73ac
-  demos: f97f0617a0de8ec4c7982d2f22d3d7ada235822afa3d9e5e20c6f4dba3818c6f
-
-notebook_hash: 1a32b5bb14529c36fb1a9e2ca90e478f40dddc1e51b3dc2adc94f01244da4069        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: c2c500188b4be2742b495ba76ab9596634e6a40049449846a7c51ddfa1b6f78d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+  demos: 592e28e4c2a2f231dfc9b35338aead94e45b70a598f6df775c7d4fc56142ebe1

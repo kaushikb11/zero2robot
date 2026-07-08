@@ -6,6 +6,10 @@ a point estimate with a standard error of zero. That interval says you are
 CERTAIN the true success rate is exactly 0. You are not: you flipped a coin 20
 times, saw no heads, and concluded the coin never lands heads.
 
+Before you read the next two paragraphs, cover them and write one sentence: 0 of
+20 successes makes the half-width exactly zero — which factor in the Wald
+formula went to zero, and why is "certain the rate is 0" a lie from 20 flips?
+
 THE BUG. `report_ci` below computes the naive WALD interval,
 
     p_hat +- z * sqrt( p_hat * (1 - p_hat) / n )

@@ -34,13 +34,16 @@ exercise_checks:
     provenance: "the terminal-frame in-tolerance rule (PushTEnv.POS_TOL / ANG_TOL) applied to two golden trajectories"
     reached_trajectory: [true, false]   # a demo that ENDS on target reads reached; one that ends adrift does not
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/
-# Colab variant is not built yet; notebook-tier-test writes both on generation
-# (ch0.1 likewise carries neither until its notebook lands).
+# notebook_hash / notebook_file_hash: sha256 of the artifact at generation and of the
+# generated notebook bytes, written by notebook-tier-test. Drift => regenerate;
+# a file-hash mismatch => the notebook was hand-edited.
 
 # region_hashes: sha256 of each include-by-region span in inspect.py, checked by
 # check_prose_code_drift against the artifact. Populated at chapter-build time;
 # re-render (or re-run the drift gate) if the artifact's regions change.
+
+notebook_hash: 885a98cec20ffb94fada7637382f1746675851c4d77d49be487500e20a120677        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: b2b310c4f8ebdcd58d455e57e582ef69636fa793a4103f91ef7b2c15296da3de   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: ada462616687346dc771d711e01db7017ab77ff5ab203c6ec8b4199e2746bc38
@@ -50,6 +53,3 @@ region_hashes:
   inspect: 32f979f8db13273e8915ceebeb90862a3ade1bb94f5d978f2b88f81a4084f31c
   rerun: d809c72a6f837c243f621583cbb46bc3e5e35413dc1dc674a2247e9c54f1d20f
   run: 6175e60212c9eb90824fd52e2e4dd5868e9d85696d47a4942064b10b51d27277
-
-notebook_hash: 885a98cec20ffb94fada7637382f1746675851c4d77d49be487500e20a120677        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: b2b310c4f8ebdcd58d455e57e582ef69636fa793a4103f91ef7b2c15296da3de   # sha256 of the generated notebook bytes; mismatch => hand-edited

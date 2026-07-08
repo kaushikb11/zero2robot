@@ -20,6 +20,10 @@ PREDICT before you run: what does the PENALTY contact do that the LCP one does n
      table (a static sink of mg/k); the lcp ball holds on the surface
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run, write one sentence: WHY — what must a stiff spring compress to in order
+to hold a weight mg up, and where does that leave the ball resting?
+
 Estimated learner time: 10 minutes.
 """
 

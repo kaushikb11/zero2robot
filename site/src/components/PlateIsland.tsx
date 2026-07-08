@@ -63,6 +63,41 @@ import ActChunkToy from "./toys/ActChunkToy";
 import CurateQualityToy from "./toys/CurateQualityToy";
 import VlaBrowserToy from "./toys/VlaBrowserToy";
 import VlaRolloutToy from "./toys/VlaRolloutToy";
+import MjxParallelToy from "./toys/MjxParallelToy";
+import EngineDrift from "./toys/EngineDriftToy";
+import DoublePendulumToy from "./toys/DoublePendulumToy";
+import ContactToy from "./toys/ContactToy";
+import SimGapToy from "./toys/SimGapToy";
+import SacReachToy from "./toys/SacReachToy";
+import RewardHackToy from "./toys/RewardHackToy";
+import QuadrupedWalkToy from "./toys/QuadrupedWalkToy";
+import LatencyDegradeToy from "./toys/LatencyDegradeToy";
+import DomainRandToy from "./toys/DomainRandToy";
+import RuntimeGraphToy from "./toys/RuntimeGraphToy";
+import WorldModelToy from "./toys/WorldModelToy";
+import ImaginationGapToy from "./toys/ImaginationGapToy";
+import DataScale from "./toys/DataScaleToy";
+import ProbeToy from "./toys/ProbeToy";
+import MpcPlanToy from "./toys/MpcPlanToy";
+import DatasetInspectToy from "./toys/DatasetInspectToy";
+import QuickstartWinToy from "./toys/QuickstartWinToy";
+import DaggerRecovery from "./toys/DaggerRecoveryToy";
+import DaggerPushtLive from "./toys/DaggerPushtLive";
+import OfflineRLToy from "./toys/OfflineRLToy";
+import SerlSampleEfficiencyToy from "./toys/SerlSampleEfficiencyToy";
+import VitAttentionToy from "./toys/VitAttentionToy";
+import AlignRetrievalToy from "./toys/AlignRetrievalToy";
+import PixelsVisionToy from "./toys/PixelsVisionToy";
+import PrefixSuffixToy from "./toys/PrefixSuffixToy";
+import FastCodecToy from "./toys/FastCodecToy";
+import LoraRankDialToy from "./toys/LoraRankDialToy";
+import QuantizeDialToy from "./toys/QuantizeDialToy";
+import RealLoopToy from "./toys/RealLoopToy";
+import SacReachLive from "./toys/SacReachLive";
+import OfflineReachLive from "./toys/OfflineReachLive";
+import QuadrupedWalkLive from "./toys/QuadrupedWalkLive";
+import RewardHackLive from "./toys/RewardHackLive";
+import DomainRandLive from "./toys/DomainRandLive";
 
 interface Props {
   demo?: string | null;
@@ -729,5 +764,105 @@ export default function PlateIsland({ demo, task }: Props) {
   if (demo === "vla_rollout") return <VlaRolloutToy />;            // ch1.8 recorded VLA rollout + fusion attention
   if (demo === "bridge_comparison") return <BridgeCompareToy />;    // ch1.9 bridge: 380-vs-12 + two-ACT gap
   if (demo === "cartpole_ppo_balance") return <CartpolePpo />;      // ch2.1 PPO: shove the cart → it recovers
+  if (demo === "mjx_parallel_training") return <MjxParallelToy />;  // ch2.3 MJX: the wall-clock cliff + parallel training (recorded, not live)
+  if (demo === "engine_energy_drift") return <EngineDrift />;       // ch3.3 integrator energy-drift + phase-space (recorded)
+  if (demo === "constraint_drift") return <DoublePendulumToy />;    // ch3.4 double pendulum: chaotic yet deterministic + constraint drift
+  if (demo === "contact_quality") return <ContactToy />;           // ch3.5 penalty-vs-LCP drop + the dt cliff (recorded)
+  if (demo === "pusht_sim2sim") return <SimGapToy />;              // ch3.6 full circle: the sim-to-sim gap (recorded, not live)
+  // ch2.2 SAC: the recorded bargain chart (measured sample-efficiency headline)
+  // stacked with the LIVE reach panel it was blocked on (real sac_actor.onnx drives
+  // pusher-reach-WASM; drag the green target and watch the arm re-reach). The live
+  // panel is also addressable on its own id (sac_reach_live) for embeds/headless drivers.
+  if (demo === "pusher_sac_reach")
+    return (
+      <div class="sr-live-stack">
+        <SacReachToy />
+        <SacReachLive />
+      </div>
+    );
+  if (demo === "sac_reach_live") return <SacReachLive />;           // ch2.2 live SAC reach on pusher-reach-WASM
+  // ch2.4 reward hacking: the recorded specification-gaming hero stacked with the
+  // LIVE side-by-side it was blocked on (real shaped_walk.onnx + height_hack.onnx
+  // drive two quadruped-WASM panels from the same start; the hack rears/stalls while
+  // its own reward climbs). Also addressable on its own id (quadruped_reward_hack_live).
+  if (demo === "quadruped_reward_hack")
+    return (
+      <div class="rh-live-stack">
+        <RewardHackToy />
+        <RewardHackLive />
+      </div>
+    );
+  if (demo === "quadruped_reward_hack_live") return <RewardHackLive />;  // ch2.4 live reward-hack on quadruped-WASM
+  // ch2.5 locomotion: the recorded emergent-gait hero stacked with the LIVE gait it
+  // was blocked on (real walk_actor.onnx drives quadruped-WASM; it sprints forward
+  // then falls before the horizon — emergent != robust). Also addressable on its own
+  // id (quadruped_walk_live).
+  if (demo === "quadruped_walk")
+    return (
+      <div class="qw-live-stack">
+        <QuadrupedWalkToy />
+        <QuadrupedWalkLive />
+      </div>
+    );
+  if (demo === "quadruped_walk_live") return <QuadrupedWalkLive />;      // ch2.5 live emergent gait on quadruped-WASM
+  if (demo === "cartpole_latency_degrade") return <LatencyDegradeToy />;         // ch2.6 latency/noise degradation mirror (recorded)
+  // ch2.7 DR: the recorded within-band result stacked with the LIVE break-the-policy
+  // it was blocked on (real dr_narrow.onnx + dr_randomized.onnx under a runtime mass
+  // slider; across most of the range they behave alike, past ~1.2x both fall). Also
+  // addressable on its own id (narrow_vs_randomized_live).
+  if (demo === "narrow_vs_randomized_across_the_gap")
+    return (
+      <div class="dr-live-stack">
+        <DomainRandToy />
+        <DomainRandLive />
+      </div>
+    );
+  if (demo === "narrow_vs_randomized_live") return <DomainRandLive />;   // ch2.7 live DR across the gap on quadruped-WASM
+  if (demo === "cartpole_runtime_graph") return <RuntimeGraphToy />;             // ch2.8 pub-sub runtime graph (recorded, virtual clock)
+  if (demo === "world_model_prediction") return <WorldModelToy />;  // ch3.1 WM: recon-vs-prediction + the pusher-vs-object split (recorded)
+  if (demo === "imagined_vs_real") return <ImaginationGapToy />;    // ch3.2 Dreamer: the imagination gap (imagined ≫ real, 0% real success) — recorded, honest
+  if (demo === "scale_data_coverage") return <DataScale />;         // ch3.7 datasets: coverage-starved vs augmentation (recorded)
+  if (demo === "checkpoint_probe") return <ProbeToy />;             // ch3.8 reading a checkpoint: the input-recovery caveat (recorded)
+  if (demo === "mpc_fanout") return <MpcPlanToy />;                 // ch3.9 sampling-based MPC (CEM/MPPI): the fan-out + swing-up vs the --break horizon (recorded, no WASM)
+  if (demo === "pusht-inspect") return <DatasetInspectToy />;       // ch0.5 inspect a recorded dataset (recorded)
+  if (demo === "quickstart_first_win") return <QuickstartWinToy />; // ch0.0 quickstart: the trained policy's winning rollout (recorded)
+  // ch4.2 DAgger: the recorded recovery-curve (measured primary — non-monotonic +
+  // winner's-curse) stacked with the LIVE recovery panel it stubbed as a follow_up
+  // (real dagger.onnx best round drives PushT-WASM; drag the block to a far start
+  // and watch it recover where BC failed). The live panel is also addressable on
+  // its own id (dagger_pusht_live) for embeds/headless drivers.
+  if (demo === "pusht_dagger_recovery")
+    return (
+      <div class="dg-stack">
+        <DaggerRecovery />
+        <DaggerPushtLive />
+      </div>
+    );
+  if (demo === "dagger_pusht_live") return <DaggerPushtLive />;      // ch4.2 live DAgger recovery on PushT-WASM
+  // ch4 offline primer: the recorded within-band result (BC vs AWAC + the
+  // naive-diverges Break-It) stacked with the LIVE side-by-side reach it was
+  // blocked on (real offline_bc.onnx + offline_policy.onnx drive two pusher-reach-
+  // WASM arms on the SAME target). Also addressable on its own id (offline_reach_live).
+  if (demo === "offline_bc_vs_awac")
+    return (
+      <div class="or-live-stack">
+        <OfflineRLToy />
+        <OfflineReachLive />
+      </div>
+    );
+  if (demo === "offline_reach_live") return <OfflineReachLive />;   // ch4 live AWAC-vs-BC reach on pusher-reach-WASM
+  // ch4.3 HIL-SERL: the HONEST sample-efficiency CURVE (eval reach dist vs online env
+  // samples, HIL-SERL vs from-scratch) — deliberately NOT a live side-by-side reach
+  // (both arms top out near the same ceiling; the win is the SAMPLE axis, 0 vs ~10k
+  // online samples, from the corrections prior). Recorded/curve toy, no WASM.
+  if (demo === "serl_sample_efficiency") return <SerlSampleEfficiencyToy />;
+  if (demo === "vit_attention_viewer") return <VitAttentionToy />;                 // ch5.1 ViT: CLS attention — trained concentrates vs random washes out
+  if (demo === "aligned_vs_random_retrieval") return <AlignRetrievalToy />;        // ch5.2 contrastive retrieval: aligned vs random-init, side by side
+  if (demo === "pixels_load_bearing_vision") return <PixelsVisionToy />;           // ch5.3 load-bearing vision: probe-gap + recorded pixel rollout
+  if (demo === "prefix_suffix_attention") return <PrefixSuffixToy />;              // ch5.4 production VLA shape: block-attention mask + flow-MSE routing gap
+  if (demo === "fast_codec") return <FastCodecToy />;                              // ch5.5 FAST: DCT→quantize→BPE action-token codec viewer
+  if (demo === "lora_rank_dial") return <LoraRankDialToy />;                       // ch5.6 LoRA: the rank dial — params climb, held-out fit plateaus (the elbow)
+  if (demo === "quantization_dial") return <QuantizeDialToy />;                    // ch5.7 quantize: FP32→per-tensor→per-channel INT8 (size wins, latency doesn't)
+  if (demo === "so101_reach_replay") return <RealLoopToy />;                       // ch5.8 real loop: SO-101 reach replay + clone ≫ baselines (loop closes on the arm's body)
   return <GenericPoster demo={demo} task={task} />;
 }

@@ -43,7 +43,7 @@ break_signatures:
   compose_order: 0.091
   point_vs_frame: 0.138
 
-notebook_hash: df9767521183af6b8b0a204f9585bbd9286ecd6e1007146ffca65cab0642ba0e        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_hash: dfd9ea5dae32601b43cd042144c6f90bdf5fd8808e420a9a69ead073c872f4cc        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
 notebook_file_hash: 35bd64af39e4c91368743e5b4f51832054d9c52137c0bc18c38544886639c28d   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:

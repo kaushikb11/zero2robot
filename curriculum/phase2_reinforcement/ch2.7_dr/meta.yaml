@@ -1,6 +1,6 @@
 id: ch2.7-dr
 title: "Sim-to-Real Intuition Lab II: Randomize to Generalize"
-artifact: dr.py            # 383 LOC (measured); target ~250, hard cap 450 (trains TWO PPO policies + sweeps both)
+artifact: dr.py            # 390 lines (trains TWO PPO policies + sweeps both); target <=400, hard cap 450
 task: quadruped            # curriculum/common/envs/quadruped; reuses ch2.1 PPO, unchanged, on the locomotion env
 dataset:
   reference: null          # no dataset — this chapter TRAINS its policies (narrow vs randomized) from scratch
@@ -21,26 +21,22 @@ policies:
   narrow: trained in-file at --dr_width 0 (nominal dynamics every episode)
   randomized: trained in-file at --dr_width 1 (mass/friction/gravity resampled per episode)
 
-scale_lab: false           # map lists ch2.7 tier T4; free-tier CPU config measured (~1.4 min/run). See NOTE below.
-# SCALE-LAB / SCOPE NOTE (flagged for the author — this is the chapter's central
-# honesty tension): the map row implies a clean "randomize to generalize" WIN. The
-# measured reality on the free-tier quadruped STAND is a HIGH-VARIANCE result — DR
-# helps on some seeds, not others, and the mean benefit is within the seed band
-# (see reference_run). Two honest paths for the author: (a) ship this "measure it,
-# with error bars" version (defensible, ties to ch2.6/ch1.6); or (b) a Scale Lab
-# that spends the compute to make the randomized policy converge reliably (400k
-# steps/policy is not enough here), and/or re-points the chapter at a WALKING
-# policy (ch2.5 walk.py, not yet built — a gait is far more dynamics-brittle and a
-# cleaner DR substrate). Do NOT hand-wave this into a triumph the data doesn't show.
+scale_lab: false           # free-tier CPU run; GPU-tier wall-clock in wallclock.csv (T4 5.63 min, L40S 2.86 min), cpu-laptop pending.
+# Why no clean "DR wins" here: on the free-tier quadruped STAND the result is
+# high-variance — DR helps on one seed and not the others, and the mean off-nominal
+# survival edge (-0.02/+0.22/-0.09 across seeds 0-2) sits inside the seed band (see
+# reference_run). A stand is a passively stable task with weak dynamics-brittleness,
+# and 400k steps/policy is not enough to make the harder randomized problem converge
+# reliably. The chapter teaches THAT honestly (ties to ch2.6/ch1.6) rather than
+# claiming a win the data does not show; a dependable DR result would need a
+# dynamics-brittle behavior (a gait) trained with more compute — a future Scale Lab.
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR. Anchors are the domain-
-# randomization literature this chapter previews: Tobin et al. 2017 (domain
-# randomization for sim-to-real transfer), Peng et al. 2018 (dynamics
-# randomization for manipulation), OpenAI 2018/2019 (Dactyl / learning dexterity).
-# Do NOT invent a commit sha or DOI here; the read-the-real-thing skill pins the
-# real upstream source when the study segment is authored. The teaching contrast:
-# those results randomize a genuinely dynamics-brittle task AND train long — the
-# two conditions this free-tier quadruped stand does not meet.
+# Study segment previews the domain-randomization literature: Tobin et al. 2017
+# (DR for sim-to-real transfer), Peng et al. 2018 (dynamics randomization for
+# manipulation), OpenAI 2018/2019 (Dactyl / learning dexterity). The read-the-real-
+# thing skill pins the exact upstream sources; no commit sha or DOI is hand-written
+# here. Teaching contrast: those results randomize a genuinely dynamics-brittle task
+# AND train long — the two conditions this free-tier quadruped stand does not meet.
 demo: narrow_vs_randomized_across_the_gap  # hero: narrow vs randomized policy under the SAME shifted dynamics, side by side — the break-the-policy sweep
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
@@ -72,17 +68,17 @@ exercise_checks:
     provenance: "cpu, --total_steps 400000, widths {0,1,2}, seeds 0-1; measured 2026-07-06: deepest-gap (mass 1.6) survival <=0.19 at every width; nominal return ~203-207 (flat, no premium)"
     deepgap_survival_max: 0.35     # no band width lifts the deepest-gap survival off the floor (the physical ceiling)
 
-# region_hashes: NOT recorded yet — the site build records them when it first
-# renders this chapter (check_prose_code_drift only gates once they are present).
 # notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill.
+# NOTE: dr.py changed in the final editorial pass (eval + report regions) — the
+# notebook needs regeneration and these two hashes updated by that skill.
+
+notebook_hash: 3b00f21c520bd9484b1763f048dc35fbbb38e6adc1add951f9e68c331c5d59f9        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 5581d3ed0f4bd23709f3a42d6b4e54566ca1411a172c1ccaedaac2b374dd3a35   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: eab797a583729ab77f57df6371ecae8ddd9c7f9919ca29f6501590377622559b
   randomize: 415eaeb4553eb93355f226eec8fb85ac3aa4df26aacf457f68dbef3a21e0617a
   model: d5d77b08f1cd4b98c6fe31931644f38951668c799673bafe189e0c3f9b18e66b
   ppo: 69a10376befc13205b10f65403ebfe706dc6465bdf24db9f399d566c6344542a
-  eval: edc32485cedc201d12bb1c046809e24abe7658e97b7daa369be3864e34cd8ec5
-  report: 9364dda88d32bbd763017b7c3329c010a5c6753430c03c4f4ab33e193d54c986
-
-notebook_hash: 44fb1f9fea282c7bb52792ec04968abc1a71160c24b4d6430f0c4f3bf80cc76a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 5b8e76bb82ea80e9bb2ff98c044f1ed1a31b6b038b41adf77124dcd011de2024   # sha256 of the generated notebook bytes; mismatch => hand-edited
+  eval: 47d19d84383d5a558fdd7f235fa37914ecc6201adf9fa7bfdd26730dbc8deb69
+  report: 5cf5f188f05472cc27178ea3d7393129bcd27e9d2431fa39fd76849d7dd1cb9e

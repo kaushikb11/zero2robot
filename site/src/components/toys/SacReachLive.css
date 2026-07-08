@@ -1,0 +1,115 @@
+/* ch2.2 SAC — the LIVE pusher-reach toy (SacReachLive.tsx).
+ *
+ * Co-located CSS, namespaced `sl-*` so it never collides with the recorded
+ * SacReachToy's `sr-*` classes or the global `ct-*`/`fl-*`/`bk-*`. The stage is a
+ * hardcoded-LIGHT lab instrument in BOTH themes: every colour here is a literal
+ * (not a themable token), so the JS-painted canvas + the HUD read correctly on the
+ * warm paper without needing a public/styles.css dark-theme pin. Colour by meaning:
+ *   - signal blue  → the arm (the SAC policy embodied) + the draggable target halo
+ *   - green        → the target dot / success ring / reached readout
+ *   - neutral ink  → the reachable-workspace ring (a map, not an entity)
+ */
+
+/* stacked beneath the recorded bargain chart under `pusher_sac_reach` */
+.sr-live-stack { display: grid; gap: 1.6rem; }
+
+.sl { display: grid; gap: 0; }
+
+/* square top-down stage — poster and canvas share the exact box (no reflow on boot) */
+.sl-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  max-width: 30rem;
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;
+}
+.sl-figure:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+
+.sl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+.sl-canvas[hidden] { display: none; }
+
+.sl-poster { position: absolute; inset: 0; }
+.sl-poster[hidden] { display: none; }
+.sl-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* poster vector styling (static) */
+.sl-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
+.sl-grid line { stroke: rgba(200, 188, 158, 0.5); stroke-width: 1; }
+.sl-reach { fill: none; stroke: #6d6252; stroke-width: 1; stroke-dasharray: 3 5; opacity: 0.5; }
+.sl-tol { fill: none; stroke: #0c7d5f; stroke-width: 1.6; stroke-dasharray: 4 3; }
+.sl-target-dot { fill: #0c7d5f; }
+.sl-target-lbl { font-family: ui-monospace, monospace; font-size: 12px; fill: #1f56de; }
+.sl-arm { fill: none; stroke: #1f56de; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.sl-base { fill: #473f34; }
+.sl-joint { fill: #1f56de; }
+.sl-ftip { fill: #1f56de; }
+
+/* HUD — the live instrument: fingertip→target distance ticking down */
+.sl-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  width: min(15rem, 62%);
+  display: grid; gap: 0.35rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid #c8bc9e;
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.sl-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.sl-k { color: #6d6252; letter-spacing: 0.02em; }
+.sl-v { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; }
+.sl-v.sl-ok { color: #0c7d5f; }
+
+.sl-meter { height: 5px; border-radius: 100px; background: rgba(120, 108, 86, 0.2); overflow: hidden; }
+.sl-meter-fill { height: 100%; background: #1f56de; transition: width 0.12s linear; }
+.sl-meter-fill[data-reached="true"] { background: #0c7d5f; }
+
+/* boot / status line */
+.sl-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: ui-monospace, monospace; font-size: 0.64rem;
+  color: #6d6252;
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.sl-status[data-failed="true"] { color: #c0362a; }
+
+/* controls — JS-only. The ONE interaction is dragging the target. */
+.sl-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.sl-btn {
+  font-family: ui-monospace, monospace;
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid #c8bc9e;
+  border-radius: 100px;
+  background: #f7f3ea;
+  color: #473f34;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sl-btn:hover { border-color: #1f56de; color: #23201b; }
+.sl-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.sl-btn--primary {
+  background: #1f56de; color: #fff; border-color: #1f56de;
+  box-shadow: 0 1px 4px -1px rgba(31, 86, 222, 0.4);
+}
+.sl-btn--primary:hover { color: #fff; background: color-mix(in srgb, #1f56de 90%, #000); }
+.sl-btn:disabled { opacity: 0.5; cursor: default; }
+.sl-control-note {
+  font-family: ui-monospace, monospace; font-size: 0.64rem;
+  color: #6d6252; margin-left: auto;
+}
+@media (max-width: 30rem) {
+  .sl-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(14rem, 66%); }
+  .sl-control-note { display: none; }
+}

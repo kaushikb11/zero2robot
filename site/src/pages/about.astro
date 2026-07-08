@@ -8,11 +8,9 @@
 // the "?" help hint (dispatches the same z2r:help-open event the HelpOverlay
 // island listens for); strip it and the hint is still legible text.
 //
-// COPY OWNERSHIP. Marketing / voice copy is DevRel + author owned (site/CLAUDE.md
-// "treat like prose/"). So the aspirational pitch sits inside the honest .ab-draft
-// band — a galley-proof enclosure mirroring the landing draft band + the chapter
-// draft ribbon. The rest is STRUCTURAL / INSTRUCTIONAL text (how the features
-// work), which is safe for an agent to author and is kept outside the band.
+// COPY. This page's prose is FINAL (author-owned, voice-checked against the
+// ch1.1/ch1.6 exemplars). The intro is the pitch; the rest is structural /
+// instructional text describing how the features actually work.
 //
 // Links are DERIVED from the real curriculum (discoverChapters), never
 // hand-typed, so they can never point at a chapter that does not exist.
@@ -37,16 +35,8 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
     </h1>
   </div>
 
-  {/* --- voice/marketing copy: honestly behind a draft band ---------------- */}
   <div class="ab-wrap">
-    <div class="ab-draft" role="note" aria-label="Draft copy — pending DevRel and author voice pass">
-      <b>draft</b>
-      <span class="ab-draft__src">
-        pitch copy — pending DevRel/author pass
-        <span class="ab-draft__tail"> · wording is a placeholder, not final voice</span>
-      </span>
-    </div>
-    <section class="ab-intro" aria-label="What zero2robot is (draft copy)">
+    <section class="ab-intro" aria-label="What zero2robot is">
       <p>
         zero2robot is an embodied-AI course where <strong>the code is the
         product</strong>. Every chapter is one small, real, readable file you can
@@ -55,9 +45,14 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
       </p>
       <p>
         You read a chapter like a textbook, then run exactly what you read. The
-        browser demos are the same code you train locally; the numbers carry their
-        own provenance; and everything on the learner path finishes on a free
-        Colab T4 or a CPU laptop.
+        browser demos are the same code you train locally; every number carries
+        its own provenance; and everything on the learner path finishes on a free
+        Colab T4 or a CPU laptop. Forty-three chapters are built and readable
+        today, from foundations through the imitation and RL spines to a
+        from-scratch practitioner's stack and a real-arm graduation — with a
+        from-scratch physics engine waiting off the main line as optional Depth.
+        The only pieces still gated are the leaderboard capstone chapters, which
+        stay closed until the hidden-seed grading server ships.
       </p>
     </section>
   </div>
@@ -156,10 +151,10 @@ const flagshipHref = flagship ? `/${flagship.slug}/` : startHref;
 
     <h2>The honest constraints</h2>
     <p>
-      Two things are true and stated plainly rather than hidden. First, chapter
-      prose is still <strong>draft</strong>: pages you read carry a visible
-      "pending author voice pass" ribbon because the numbers and code are final but
-      the writing voice is not yet. Second, everything on the learner path is built
+      Two things are true and stated plainly rather than hidden. First, every number
+      you read is <strong>measured, not estimated</strong> — each figure traces to a
+      recorded run, and where a measurement is still pending (some laptop wall-clock
+      times) the page says so rather than guessing. Second, everything on the learner path is built
       to the <strong>free-tier floor</strong> — it completes on a free Colab T4 or a
       CPU laptop. Anything that needs more is marked as an optional Scale Lab, never
       slipped onto the required path.

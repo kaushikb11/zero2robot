@@ -23,6 +23,7 @@
 // but NO tinting is applied — never wrong tinting.
 
 import { marked } from "marked";
+import katex from "katex";
 import { Buffer } from "node:buffer";
 import type { Region, WallclockRow } from "./curriculum.ts";
 
@@ -212,6 +213,52 @@ const INCLUDE_RE =
 // before comments are stripped.
 const WALLCLOCK_PLACEHOLDER_RE = /<!--[^>]*wall-clock table[^>]*-->/i;
 
+// --- display math ($$…$$) ---------------------------------------------------
+// The ~8 load-bearing equations (Rec 4 of the structure review) are rendered
+// SERVER-SIDE with KaTeX into static HTML+MathML, so they render with JS
+// disabled (grep the built page for class="katex" / <math>). The KaTeX CSS +
+// fonts are self-hosted (bundled by Astro/Vite from node_modules — no CDN, no
+// external fetch), imported once in ChapterLayout.astro.
+//
+// Like code panels, display math is extracted to a PLACEHOLDER TOKEN *before*
+// `marked` runs, so marked never sees the raw LaTeX (its `_`, `\`, `*`, `&`
+// would otherwise be mangled into emphasis/entities). The rendered KaTeX HTML is
+// substituted back after marked, so the token protects the math end-to-end.
+const DISPLAY_MATH_RE = /\$\$([\s\S]+?)\$\$/g;
+const MATH_TOKEN_RE = /<p>\s*@@BK_MATH_(\d+)@@\s*<\/p>|@@BK_MATH_(\d+)@@/g;
+
+/** Render one display equation to a static HTML+MathML block. `throwOnError:
+ *  false` keeps a stray macro from ever failing the build; the wrapper carries
+ *  overflow-x so a wide equation scrolls inside its own box (the page body never
+ *  scrolls sideways). */
+function renderDisplayMath(tex: string): string {
+  const html = katex.renderToString(tex.trim(), {
+    displayMode: true,
+    throwOnError: false,
+    output: "htmlAndMathml",
+    strict: "ignore",
+  });
+  return `<div class="bk-math">${html}</div>`;
+}
+
+/** Pull every `$$…$$` block out of the raw markdown into a token + a parallel
+ *  array of pre-rendered KaTeX HTML. Token indices are global across the whole
+ *  source, so a token resolves the same in the lede or the body half. */
+function extractMath(src: string): { src: string; blocks: string[] } {
+  const blocks: string[] = [];
+  const out = src.replace(DISPLAY_MATH_RE, (_m, tex: string) => {
+    const i = blocks.length;
+    blocks.push(renderDisplayMath(tex));
+    return `\n\n@@BK_MATH_${i}@@\n\n`;
+  });
+  return { src: out, blocks };
+}
+
+/** Substitute the pre-rendered KaTeX blocks back in after marked has run. */
+function injectMath(html: string, blocks: string[]): string {
+  return html.replace(MATH_TOKEN_RE, (_m, a, b) => blocks[Number(a ?? b)] ?? "");
+}
+
 // Strip the leading top-of-file build-note comment block, then any remaining
 // stray comments (author notes) so internal notes never reach the reader.
 const LEADING_COMMENT_RE = /^\s*<!--[\s\S]*?-->\s*/;
@@ -225,6 +272,25 @@ export interface RenderedChapter {
   ledeHtml: string; // the "See it work" lede — set beside the hero plate
   bodyHtml: string; // "The problem" onward — the book column (panels + wall inside)
   wallclockInjected: boolean; // true if the Run-it placeholder was found + filled
+}
+
+/**
+ * Render a prose-ONLY module (a Phase-5 reading-track / graduation appendix) to
+ * HTML. Unlike renderChapterProse these files carry no include-by-region code
+ * panels, no wall-clock placeholder and no "See it work" split — they are plain
+ * markdown essays. We drop the leading H1 (the page header renders the title),
+ * strip author-note HTML comments, run marked, and add stable heading ids (same
+ * slugify the chapter pages use), so the module reads fully server-side / JS-off.
+ */
+export function renderModuleProse(markdown: string): string {
+  let src = markdown;
+  src = src.replace(LEADING_COMMENT_RE, "");
+  src = src.replace(LEADING_H1_RE, "");
+  const math = extractMath(src); // display math → tokens before marked
+  src = math.src;
+  src = src.replace(HTML_COMMENT_RE, "");
+  const html = addHeadingIds(marked.parse(src, { async: false }) as string, new Map<string, number>());
+  return injectMath(html, math.blocks);
 }
 
 export interface RenderOptions {
@@ -264,6 +330,11 @@ export function renderChapterProse(
   src = src.replace(LEADING_COMMENT_RE, "");
   src = src.replace(LEADING_H1_RE, "");
 
+  // Pull display math out to tokens BEFORE marked (raw LaTeX must not reach it),
+  // rendering each equation to static KaTeX HTML now.
+  const math = extractMath(src);
+  src = math.src;
+
   // Swap every include fence for a PANEL token, then strip any remaining comments.
   src = src.replace(INCLUDE_RE, (_m, name: string) => `\n\n@@BK_PANEL_${name}@@\n\n`);
   src = src.replace(HTML_COMMENT_RE, "");
@@ -292,11 +363,12 @@ export function renderChapterProse(
   // Shared across the lede + body passes so heading ids are globally unique.
   const headingSeen = new Map<string, number>();
   function pipe(md: string): string {
-    // marked (prose only) → optional entity-link → substitute the real panels + wall.
+    // marked (prose only) → optional entity-link → substitute the real panels +
+    // wall + the pre-rendered KaTeX equations.
     let html = marked.parse(md, { async: false }) as string;
     if (entities) html = linkEntities(html);
     html = addHeadingIds(html, headingSeen);
-    return inject(html);
+    return injectMath(inject(html), math.blocks);
   }
 
   return {

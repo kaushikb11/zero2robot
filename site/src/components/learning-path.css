@@ -1,0 +1,581 @@
+/* ============================================================================
+   learning-path.css — the interactive dependency map (feature: /map).
+
+   Scoped `.lp-*`, rendered inside `.book`, so every colour, font and rule token
+   comes from the shared design system (public/styles.css) and flips correctly in
+   dark theme. No new palette:
+     · warm ink on ivory paper for the cards + reading;
+     · oxblood (--book) marks a chapter's PREREQUISITES on focus ("old ink,
+       already behind you");
+     · the ONE signal blue (--signal) marks the FOCUSED chapter + what it
+       UNBLOCKS, and every focus ring — the live, interactive colour;
+     · thread line-STYLE (solid / dashed / dotted / weight) encodes the four
+       real relationship types.
+
+   Everything degrades: the SVG threads + nodes are baked at build time, so with
+   JavaScript off the diagram still renders and the static outline below carries
+   the identical structure as plain, focusable text.
+   ========================================================================== */
+
+.lp {
+  margin: 2.4rem 0 1rem;
+}
+
+.lp-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.lp-kicker::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rule-strong), transparent);
+}
+
+.lp__title {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 0.7rem;
+}
+.lp__lede {
+  max-width: 42rem;
+  color: var(--ink-soft);
+  font-size: var(--step-0);
+  margin: 0 0 1.3rem;
+}
+.lp__lede code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--ink);
+}
+
+/* --- legend ---------------------------------------------------------------- */
+.lp-legend {
+  list-style: none;
+  margin: 0 0 0.4rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.5rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.lp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+.lp-legend__swatch {
+  width: 34px;
+  height: 8px;
+  flex: none;
+  overflow: visible;
+}
+.lp-legend__label {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.lp-legend__hint {
+  color: var(--ink-mute);
+  font-size: 0.8rem;
+}
+.lp-legend__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+.lp-legend__dot--pre {
+  background: var(--book);
+}
+.lp-legend__dot--unb {
+  background: var(--signal);
+}
+
+/* --- board scroll frame ---------------------------------------------------- */
+.lp-scrollhint {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  margin: 0.6rem 0 0.35rem;
+}
+.lp-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4rem 0.4rem 0.9rem;
+  margin: 0 -0.4rem;
+  scrollbar-width: thin;
+}
+.lp-board {
+  position: relative;
+  /* width + height are inline (build-time geometry) */
+}
+
+/* --- phase column headers -------------------------------------------------- */
+.lp-col {
+  position: absolute;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+.lp-col__label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--book);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- threads (SVG) --------------------------------------------------------- */
+.lp-threads {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.lp-edge {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 1.6;
+  opacity: 0.6;
+}
+.lp-edge--builds_on {
+  stroke: var(--book-soft);
+  stroke-width: 2.4;
+  opacity: 0.72;
+}
+.lp-edge--requires {
+  stroke-width: 1.9;
+}
+.lp-edge--phase_requires {
+  stroke-dasharray: 5 4;
+}
+.lp-edge--policy_reused {
+  stroke-dasharray: 1.5 4;
+  stroke-linecap: round;
+}
+
+/* legend swatches shouldn't fade */
+.lp-legend__swatch .lp-edge {
+  opacity: 1;
+}
+
+/* highlighted threads (JS focus/hover) */
+.lp--focused .lp-edge {
+  opacity: 0.12;
+}
+.lp-edge.lp--e-prereq {
+  stroke: var(--book);
+  stroke-width: 2.8;
+  opacity: 1;
+}
+.lp-edge.lp--e-unblock {
+  stroke: var(--signal);
+  stroke-width: 2.8;
+  opacity: 1;
+}
+
+/* --- nodes ----------------------------------------------------------------- */
+.lp-node {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.4rem 0.6rem;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: 0 1px 0 var(--paper-edge);
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-node {
+    transition:
+      border-color 0.14s ease,
+      box-shadow 0.14s ease,
+      opacity 0.14s ease,
+      transform 0.14s ease;
+  }
+}
+.lp-node:hover {
+  border-color: var(--signal);
+}
+.lp-node:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-color: var(--signal);
+}
+.lp-node__num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--book);
+}
+.lp-node__title {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  line-height: 1.14;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lp-node__wires {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.05rem;
+}
+.lp-node__wire {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-mute);
+}
+.lp-node__wire--in {
+  color: var(--book-soft);
+}
+.lp-node__wire--out {
+  color: var(--signal);
+}
+
+/* gated marker — not a link, honestly "coming" */
+.lp-node--gated {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--paper-2),
+    var(--paper-2) 6px,
+    var(--paper-3) 6px,
+    var(--paper-3) 12px
+  );
+  border-style: dashed;
+  border-color: var(--rule-strong);
+  color: var(--ink-mute);
+  cursor: default;
+}
+.lp-node--gated .lp-node__num,
+.lp-node--gated .lp-node__title {
+  color: var(--ink-mute);
+}
+.lp-node__wire--gated {
+  color: var(--book-soft);
+}
+
+/* focus/hover emphasis (JS) */
+.lp--focused .lp-node {
+  opacity: 0.34;
+}
+.lp-node.lp--active {
+  opacity: 1;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 2px var(--signal-line);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-node.lp--active {
+    transform: translateY(-1px);
+  }
+}
+.lp-node.lp--prereq {
+  opacity: 1;
+  border-color: var(--book);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--book) 34%, transparent);
+}
+.lp-node.lp--unblock {
+  opacity: 1;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 2px var(--signal-line);
+}
+
+/* ===========================================================================
+   STATIC BACKBONE — always visible, JS-off + screen-reader structure
+   ======================================================================== */
+.lp-static {
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--rule);
+}
+.lp-static__title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  color: var(--ink);
+  margin: 1.4rem 0 0.4rem;
+}
+.lp-static__title:first-child {
+  margin-top: 0;
+}
+.lp-static__note {
+  color: var(--ink-mute);
+  font-size: 0.92rem;
+  max-width: 40rem;
+  margin: 0 0 1rem;
+}
+
+.lp-outline {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 1.2rem;
+}
+.lp-outline__phlabel {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--book);
+  margin: 0 0 0.5rem;
+}
+.lp-outline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.lp-outline__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.9rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dotted var(--rule);
+}
+.lp-outline__link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+.lp-outline__link:hover .lp-outline__ttl,
+.lp-outline__link:focus-visible .lp-outline__ttl {
+  color: var(--book);
+  text-decoration: underline;
+}
+.lp-outline__link:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.lp-outline__num {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--book);
+  min-width: 2.2rem;
+}
+.lp-outline__ttl {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--ink);
+}
+.lp-outline__deps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  font-size: 0.82rem;
+  color: var(--ink-mute);
+}
+.lp-outline__deplabel {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.lp-outline__phase--gated .lp-outline__gate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  background: var(--paper-2);
+  border: 1px dashed var(--rule-strong);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.lp-outline__gatetag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--book);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+}
+
+/* --- flat thread table ----------------------------------------------------- */
+.lp-threadlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.lp-threadlist__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px dotted var(--rule);
+}
+.lp-threadlist__end {
+  color: var(--ink);
+  text-decoration: none;
+}
+.lp-threadlist__end b {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--book);
+}
+.lp-threadlist__end:hover,
+.lp-threadlist__end:focus-visible {
+  text-decoration: underline;
+  color: var(--book);
+}
+.lp-threadlist__end:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.lp-threadlist__rel {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.lp-threadlist__rel--builds_on {
+  color: var(--book);
+  border-color: var(--book-soft);
+}
+.lp-threadlist__arrow {
+  color: var(--ink-mute);
+}
+
+/* ===========================================================================
+   OPTIONAL · DEPTH — off-the-main-line electives (meta.yaml `track: elective`)
+   Understated by design: a muted, dashed treatment that reads clearly as
+   "optional" without competing with the main-line spine. Derived from the
+   field, never hand-typed per chapter.
+   ======================================================================== */
+
+/* lede: the derived main-line sentence + its inline chip */
+.lp__lede--mainline {
+  margin-top: -0.4rem;
+}
+.lp-opt-chip,
+.lp-outline__opttag,
+.lp-col__badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  border: 1px dashed var(--rule-strong);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+.lp-opt-chip {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.15rem;
+}
+
+/* legend swatch: a muted, dashed node */
+.lp-legend__optswatch {
+  width: 22px;
+  height: 12px;
+  flex: none;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 3px;
+  background: var(--paper-2);
+}
+
+/* column header: stack the label + badge, dashed underline */
+.lp-col--optional {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  height: auto;
+  gap: 1px;
+  border-bottom-style: dashed;
+}
+.lp-col--optional .lp-col__label {
+  color: var(--ink-soft);
+}
+.lp-col__badge {
+  color: var(--book-soft);
+}
+
+/* nodes: muted paper, dashed border, quieter ink — still fully legible + linked */
+.lp-node--optional {
+  background: var(--paper-2);
+  border-style: dashed;
+  border-color: var(--rule);
+}
+.lp-node--optional .lp-node__num {
+  color: var(--book-soft);
+}
+.lp-node--optional .lp-node__title {
+  color: var(--ink-soft);
+}
+.lp-node__wire--opt {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* static backbone: mark the optional phase + a one-line note */
+.lp-outline__opttag {
+  margin-left: 0.55rem;
+}
+.lp-outline__optnote {
+  margin: 0 0 0.7rem;
+  font-size: 0.82rem;
+  color: var(--ink-mute);
+  max-width: 40rem;
+}
+
+@media (max-width: 40rem) {
+  .lp__title {
+    font-size: var(--step-2);
+  }
+}

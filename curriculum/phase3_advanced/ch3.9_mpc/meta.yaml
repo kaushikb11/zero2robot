@@ -1,0 +1,108 @@
+id: ch3.9-mpc
+title: "Plan Through Your Engine: Sampling-Based MPC (CEM / MPPI)"
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: mpc.py             # 303 LOC (<=450 cap), CPU-only; the model rollouts are mj_step on tiny cartpole (microsecond-cheap). NO learned policy, NO training run — the controller is a live search through the model.
+task: cartpole-swingup       # pole starts hanging DOWN; the one actuator only pushes the cart (underactuated). Swing it up and hold it by planning, not learning.
+builds_on:                   # the payoff of the "Build a Physics Engine" arc: a model you understand is a model you can PLAN through
+  - ch3.3-engine             # you took mj_step apart (dynamics / integrators); MPC's whole premise is that you HAVE a (state, action) -> next-state model
+  - ch3.5-contact            # ...through contact and constraints; the engine you opened is the engine you now plan through
+  - ch3.6-compare            # the honest counterweight: model != world. ch3.6 MEASURED the sim-to-sim gap; this chapter grants a PERFECT model, and the ceiling section says so out loud
+objectives:
+  - "Kill the misconception that you must LEARN a policy to control a robot. With a model — the engine you built in ch3.3-3.6 — you can PLAN: at every control step, sample action sequences, roll each through the model, score by a cost you write down, and act on the best. Cartpole swing-up falls to this with ZERO learning."
+  - "Implement sampling-based MPC from scratch: sample N action sequences over a horizon H, roll each through the model, refine the sampling distribution for a couple of iterations, execute the first action, and re-plan from where you actually land (RECEDING horizon)."
+  - "Hold both refinement rules in one file and read the ~15-line diff: CEM refits a Gaussian to the ELITE fraction; MPPI takes a softmax-WEIGHTED average of every sample. Same loop, one idea differs (the course's signature device)."
+  - "Feel the honest ceiling: MPC needs a good model AND compute per step (N x H model rollouts every tick). Cripple the plan (--break: too short a horizon, or too few samples) and the pole never comes up — the search must look far enough ahead, with enough tries, to find the energy-pumping swing."
+
+scale_lab: false
+# ch3.9 is free-tier by construction: cartpole is a 2-DOF model with no contact solver, so a
+# model rollout is a handful of mj_step calls (microseconds). The default plan is N=64 x H=25 x
+# iters=2 rollouts per control step, ~120 steps — seconds of pure CPU. The scale knobs (--samples,
+# --horizon) are the LESSON, not a tier ramp: more samples / longer horizon = a better plan at more
+# compute-per-step, which IS the MPC bargain. No GPU, no Scale Lab. (mujoco_mpc runs this loop in
+# real time by throwing many CPU threads at the rollouts — same idea, more cores.)
+
+# READ-THE-REAL-THING: the map pairs this chapter with a real sampling-MPC controller planning
+# through MuJoCo. mujoco_mpc (MJPC) is the exact object — an interactive planner whose Predictive
+# Sampling / Cross-Entropy / MPPI agents are this file's CEM/MPPI loop, at real-time scale over the
+# same mj_step you plan through here. The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have
+# a verified offline commit sha and must never invent one.
+read_the_real_thing: true
+rtrt:
+  repo: google-deepmind/mujoco_mpc
+  commit:                    # UNPINNED — author pins a verified SHA (never invented). MJPC tracks a recent mujoco; pin to the sha the drop is built against.
+  focus:
+    - "mjpc/planners/sampling (Predictive Sampling) and mjpc/planners/cross_entropy: the same 'sample action sequences, roll through the model, keep the good ones' loop this file writes by hand — CEM is the cross_entropy planner, MPPI its softmax-weighted cousin"
+    - "how MJPC rolls candidates through mj_step in parallel over CPU threads to hit real-time control: the honest answer to this chapter's ceiling (MPC's cost is compute-per-step, and you buy it with cores)"
+    - "the cost/residual definition (mjpc task cost): the same 'write down what good means' step as this file's state_cost — no learning, just an objective"
+
+demo: mpc_fanout             # the sampled rollouts fanning out at one planning moment (pole-tip paths, colored by cost) + the MPPI-chosen plan; beside it the swing-up curve (upright-cos -1 -> +1) vs the --break horizon run that never comes up
+
+# Reference run: MPPI at the locked default (--method mppi --samples 64 --horizon 25 --iters 2
+# --steps 120 --temperature 0.3, seed 0). CEM at the same knobs is the sibling method. All seed 0
+# on cpu, numpy 2.4.6 / mujoco 3.10.0, measured 2026-07-08. The headline is a MECHANISM claim, not
+# a SOTA number: planning through a model swings the pole up (upright_frac -> 1.0) with NO learning,
+# far below the no-plan baseline's cost — and it is seed-robust (0/1/2 below).
+reference_run:
+  provenance: "seed 0 on cpu, numpy 2.4.6 / mujoco 3.10.0; --method mppi --samples 64 --horizon 25 --iters 2 --steps 120 --temperature 0.3 (CEM sibling at the same knobs); measured 2026-07-08"
+  # --- HEADLINE: MPC solves swing-up with ZERO learning, both refinement rules ---
+  mppi_mean_cost: 1.210              # mean per-step cost over the 120-step episode (the smooth number)
+  mppi_upright_frac: 1.0             # fraction of the settle window (last 30 steps) within ~25 deg of upright == it balanced
+  cem_mean_cost: 1.280              # CEM at the same knobs also solves it; MPPI is marginally smoother here (temp 0.3)
+  cem_upright_frac: 1.0
+  random_mean_cost: 1.988           # the no-plan floor (uniform-random actions from the same start): the pole flails
+  random_upright_frac: 0.0
+  # --- SEED-ROBUSTNESS (the claim is the DIRECTION, checked 0/1/2) ---
+  #   CEM  mean_cost seed 0/1/2 : 1.280 / 1.296 / 1.275   upright_frac 1.0 / 1.0 / 1.0
+  #   MPPI mean_cost seed 0/1/2 : 1.210 / 1.221 / 1.207   upright_frac 1.0 / 1.0 / 1.0
+  #   both methods swing up on every seed; cost ~1.2-1.3 << random ~2.0. Lead with the direction.
+  # --- THE --break DEGRADATION (validated: the plan collapses, seed-robustly) ---
+  break_horizon_upright_frac: 0.0   # H=3 (too short to see the swing pay off): upright_frac 0.0 on seeds 0/1/2, both methods
+  break_samples_upright_frac: 0.0   # N=3 (too few tries to stumble on the pump): upright_frac 0.0 on seeds 0/1/2, both methods
+  # HONESTY (author MUST keep this framing — it is the measured truth, and the whole point):
+  #  * The claim is MECHANISM, not SOTA: "with a model + a search, and NO learning, you solve a task
+  #    an RL policy needs thousands of episodes for." Gate on the DIRECTION (swings up, cost << random,
+  #    break fails), never on the exact cost. upright_frac 1.0 here is genuine — cartpole swing-up
+  #    with a PERFECT model is reliably solvable — but say PERFECT MODEL out loud (next bullet).
+  #  * THE CEILING (do not omit): MPC needs (a) a good model and (b) compute per step. Here model ==
+  #    world (a perfect copy of the simulator), the best case. ch3.6 already MEASURED what a wrong
+  #    model costs; with that gap, a plan optimizes an imagined trajectory the real world does not
+  #    follow, and MPC degrades. That model-vs-compute price is exactly the RL/learned-policy tradeoff:
+  #    RL pays a huge one-time training cost, then acts in microseconds with no model; MPC pays nothing
+  #    up front but re-solves an optimization every single tick and needs a model to do it.
+  #  * CEM vs MPPI is a WASH on this task (both reach upright_frac 1.0). Do not oversell one over the
+  #    other; the point is that the two updates are ~15 lines apart, not that either wins.
+
+# Reference bands + provenance for the exercise checks (seeded band with provenance, not a bare
+# magic number). checks.py reads these instead of inlining tolerances.
+exercise_checks:
+  smoke:                             # mpc.py --smoke (8 samples, horizon 5, 10 steps) — the hermetic signature CI reproduces byte-for-byte
+    provenance: "seed 0 on cpu, numpy 2.4.6 / mujoco 3.10.0, --smoke (samples 8, horizon 5, iters 1, steps 10); measured 2026-07-08"
+    mpc_mean_cost: 2.000372          # smoke is too tiny to swing up (that is fine — smoke only checks the pipeline runs + reproduces)
+    random_mean_cost: 2.001872
+    mpc_upright_frac: 0.0
+    random_upright_frac: 0.0
+    reproduce_abs: 1.0e-6            # mpc.py's own smoke run reproduces these to well within this band (numpy + CPU mj_step are deterministic)
+  ex1:                               # ex1_predict_planning.py (predict-then-run: does MPC solve swing-up with zero learning?)
+    answer: "C"                      # YES — it swings up and holds (upright_frac -> 1.0), at a cost far below the random baseline; both CEM and MPPI
+    upright_min: 0.8                 # the seed-robust floor for a working plan (reference 1.0); the check asserts mpc >= this and mpc_cost < random_cost
+  ex2:                               # ex2_predict_break.py (predict-then-run of --break horizon: what does a too-short plan do?)
+    answer: "B"                      # it FAILS — the pole never comes up (upright_frac -> 0.0); a 3-step horizon cannot see the swing pay off
+    break_upright_max: 0.2           # a crippled plan stays near 0.0 upright (reference 0.0); the check asserts break <= this while the full plan solves
+  ex3:                               # ex3_completion_update.py (code-completion: fill in the CEM elite-refit AND the MPPI weighted-average update)
+    reproduce_abs: 1.0e-9            # the completed updates must match the reference mean to within this on fixed (samples, costs)
+
+# region_hashes are recorded by the site build on first render (check_prose_code_drift passes a
+# chapter that carries none); do not hand-write them.
+
+# Colab notebook variant: generate with the notebook-tier-test skill once the artifact is final
+# (it records notebook_hash + notebook_file_hash here). Left unset on this draft.
+
+notebook_hash: a2f04d112a37875b70d1b6f008efa60410805aee40329dafc48955826062392f        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 0fa9089f0c35333dd59335e2e0b8887ccd695d535b4bd13ab689dc70907451d4   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: b7ad540c60f2492201946e38bb7756eee31c7997d7409dbbf8feac910302a9c3
+  model: 3aec574bb4d64a9afde68bd4a946a259938a57192b9eb3aeb709ee7c5f6d023e
+  planner: e60204afe0d25361bba6bff72de47eebe1b647e7bab2409af493b8939e38cde1
+  control: 9c4c970b9c74047c6627ed51279362211d660aa35bbedca9ecbe4e744572231e
+  report: 5a0cdeaa1dd1fdfc41b64bb5e3a5b66b0c96580612c4b2988423497b92607b6f

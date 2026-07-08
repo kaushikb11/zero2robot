@@ -11,8 +11,8 @@ demo: quadruped_reward_hack
 scene: quadruped            # curriculum/common/envs/quadruped/quadruped.xml, verbatim
 # The hero is a SIDE-BY-SIDE: same robot, same PPO, two reward programs.
 policies:
-  shaped: shaped_walk.onnx  # PENDING export; contract v1: obs float32[1,23] -> action float32[1,8]
-  hack: height_hack.onnx    # PENDING export; same tensor contract
+  shaped: shaped_walk.onnx  # exported; contract v1: obs float32[1,23] -> action float32[1,8]
+  hack: height_hack.onnx    # exported; same tensor contract
 camera:
   lookat: [1.0, 0.0, 0.25]  # follow the torso; the walker drifts +x, the hack stays put
   distance: 3.5

@@ -1,0 +1,227 @@
+/* ch2.5 "Locomotion: The Quadruped Walks" concept-toy — the GAIT-EMERGENCE toy.
+ *
+ * Co-located CSS for QuadrupedWalkToy.tsx (imported at the top of that file).
+ * Namespaced `qw-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`sg-*` classes. Like ch3.3/ch3.6 this toy is PURE inline
+ * SVG over a pre-recorded rollout + training curve from walk.py — no WASM — so it
+ * drives every colour from the site's flipping design tokens and is genuinely
+ * theme-aware in BOTH light and dark. Every var carries a light fallback so it
+ * still renders if mounted outside the shell.
+ *
+ * Colour scheme — mapped to tokens by MEANING:
+ *   - --signal blue        → the EMERGENT gait (the learned walk, the hero: the
+ *                            robot body, the forward-progress fill, the curve)
+ *   - --entity-target grn  → the scripted TROT reference (the distance bar it
+ *                            passes / the return ceiling it falls short of)
+ *   - --alert red          → the honest CAVEAT (falls before the horizon; return
+ *                            below the trot's — emergent != robust at free-tier)
+ *   - neutral --ink-mute    → the stand floor / ground / graph paper (a map)
+ */
+
+.qw { display: grid; gap: 0.9rem; }
+
+/* ---- panels -------------------------------------------------------------- */
+.qw-panel {
+  margin: 0;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.qw-head { margin-bottom: 0.6rem; }
+.qw-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem; letter-spacing: 0.01em; font-weight: 700;
+  color: var(--ink, #23201b);
+}
+.qw-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.qw-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- panel 1: the walking quadruped (side view) -------------------------- */
+.qw-stage {
+  display: block; width: 100%; height: auto; aspect-ratio: 460 / 220;
+  border: 1px solid color-mix(in srgb, var(--signal, #1f56de) 40%, var(--paper-edge, #ded3ba));
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--paper, #f7f3ea) 96%, var(--signal, #1f56de) 4%),
+      var(--paper-2, #f0e9d9));
+}
+.qw-grid line { stroke: color-mix(in srgb, var(--rule, #e4dcc8) 70%, transparent); stroke-width: 1; }
+.qw-floor { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); stroke-width: 1.6; }
+.qw-tick line { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 30%, transparent); stroke-width: 1; }
+.qw-tick-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+
+/* the robot — the emergent gait (signal blue); near legs solid, far legs faded */
+.qw-torso {
+  fill: color-mix(in srgb, var(--signal, #1f56de) 82%, var(--paper, #f7f3ea));
+  stroke: var(--signal, #1f56de); stroke-width: 1.4;
+}
+.qw-leg { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.qw-leg--near { stroke: var(--signal, #1f56de); stroke-width: 3.2; }
+.qw-leg--far  { stroke: color-mix(in srgb, var(--signal, #1f56de) 40%, transparent); stroke-width: 2.6; }
+.qw-foot { stroke: var(--paper, #f7f3ea); stroke-width: 0.8; }
+.qw-foot--swing { fill: none; stroke: color-mix(in srgb, var(--signal, #1f56de) 55%, transparent); stroke-width: 1.4; }
+.qw-foot--stance { fill: var(--signal, #1f56de); }
+.qw-foot--far { opacity: 0.4; }
+.qw-jhead { fill: color-mix(in srgb, var(--signal, #1f56de) 60%, var(--paper, #f7f3ea)); }
+
+/* progress track: how far the torso has travelled, with the trot marker */
+.qw-track-wrap { margin-top: 0.55rem; }
+.qw-track {
+  position: relative; height: 1.35rem;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, var(--paper, #f7f3ea));
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  overflow: hidden;
+}
+.qw-track-fill {
+  position: absolute; inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--signal, #1f56de) 26%, transparent);
+  border-right: 2px solid var(--signal, #1f56de);
+}
+.qw-track-trot {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  border-left: 2px dashed var(--entity-target-ink, #0c7d5f);
+}
+.qw-track-trot::after {
+  content: "trot 2.15 m"; position: absolute; top: 50%; left: 4px;
+  transform: translateY(-50%);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.6rem; white-space: nowrap;
+  color: var(--entity-target-ink, #0c7d5f);
+}
+.qw-track-lbl {
+  display: flex; justify-content: space-between; margin-top: 0.2rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+}
+.qw-track-lbl b { color: var(--signal, #1f56de); font-variant-numeric: tabular-nums; }
+
+/* foot-contact gait strip — the periodic stride (structure = a gait) */
+.qw-strip { display: block; width: 100%; height: auto; margin-top: 0.5rem; }
+.qw-strip-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); }
+.qw-strip-bg { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 8%, transparent); }
+.qw-strip-on { fill: color-mix(in srgb, var(--signal, #1f56de) 70%, transparent); }
+.qw-strip-head { stroke: var(--alert, #c0362a); stroke-width: 1.2; }
+
+/* ---- panel 1 controls ---------------------------------------------------- */
+.qw-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.qw-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink-soft, #4a4437);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.qw-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.qw-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.qw-btn--primary {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff);
+  border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.4));
+}
+.qw-btn--primary:hover { color: var(--signal-ink, #fff); background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.qw-btn[disabled] { opacity: 0.5; cursor: default; }
+.qw-scrub { flex: 1 1 150px; min-width: 120px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.qw-scrub:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.qw-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252); margin-left: auto;
+}
+
+/* ---- panel 2: forward progress over training ----------------------------- */
+.qw-chart { display: block; width: 100%; height: auto; }
+.qw-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.qw-cgrid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent); stroke-width: 1; }
+.qw-tick2 { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); }
+.qw-axtitle { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em; }
+
+.qw-ref { stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; }
+.qw-ref--stand { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 60%, transparent); }
+.qw-ref--trot  { stroke: var(--entity-target-ink, #0c7d5f); }
+.qw-ref-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8.5px; }
+.qw-ref-lbl--stand { fill: var(--ink-mute, #6d6252); }
+.qw-ref-lbl--trot  { fill: var(--entity-target-ink, #0c7d5f); }
+
+.qw-curve { fill: none; stroke: var(--signal, #1f56de); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.qw-cpt { fill: var(--signal, #1f56de); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.qw-cpt--last { r: 4; }
+.qw-walkmark { stroke: var(--signal, #1f56de); stroke-width: 1; stroke-dasharray: 2 2; }
+.qw-walkmark-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8.5px; fill: var(--signal, #1f56de); }
+
+/* ---- panel 3: the honest ceiling (distance comparison + caveat) ---------- */
+.qw-bars { display: grid; gap: 0.4rem; margin: 0.2rem 0 0.75rem; }
+.qw-bar-row {
+  display: grid; grid-template-columns: 6.5rem 1fr 4rem; align-items: center; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.7rem;
+}
+.qw-bar-name { color: var(--ink-soft, #4a4437); text-align: right; }
+.qw-bar-track {
+  position: relative; height: 0.9rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 10%, transparent);
+}
+.qw-bar-zero { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1px solid color-mix(in srgb, var(--ink-mute, #6d6252) 50%, transparent); }
+.qw-bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.qw-bar-fill--neg { background: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); }
+.qw-bar-fill--stand { background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+.qw-bar-fill--trot { background: var(--entity-target-ink, #0c7d5f); }
+.qw-bar-fill--gait { background: var(--signal, #1f56de); }
+.qw-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink, #23201b); font-weight: 600; }
+.qw-bar-row--gait .qw-bar-name,
+.qw-bar-row--gait .qw-bar-val { color: var(--signal, #1f56de); }
+
+.qw-caveat {
+  display: grid; gap: 0.35rem;
+  padding: 0.6rem 0.75rem; border-radius: 4px;
+  border: 1px dashed color-mix(in srgb, var(--alert, #c0362a) 45%, var(--paper-edge, #ded3ba));
+  background: color-mix(in srgb, var(--alert, #c0362a) 6%, var(--paper, #f7f3ea));
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.5; color: var(--ink, #23201b);
+}
+.qw-caveat-h {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--alert, #c0362a) 85%, var(--ink, #23201b));
+}
+.qw-caveat b.qw-bad { color: var(--alert, #c0362a); }
+.qw-caveat b.qw-good { color: var(--signal, #1f56de); }
+.qw-caveat b.qw-trot { color: var(--entity-target-ink, #0c7d5f); }
+
+.qw-note {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.qw-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* visually-hidden live region for screen readers */
+.qw-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 34rem) {
+  .qw-control-note { display: none; }
+  .qw-title { font-size: 0.84rem; }
+  .qw-bar-row { grid-template-columns: 5rem 1fr 3.4rem; font-size: 0.66rem; }
+}
+
+/* honour reduced-motion: kill the only CSS transitions (the replay itself is
+   already skipped in the component's rAF logic under reduced motion) */
+@media (prefers-reduced-motion: reduce) {
+  .qw-btn { transition: none; }
+}

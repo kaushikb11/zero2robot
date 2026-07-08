@@ -82,31 +82,44 @@ class DeterministicPolicy(nn.Module):
         return self.actor_mean(observation)
 
 
+def smoke_policy(seed: int = 0, hidden_dim: int = 64) -> tuple[nn.Module, int, int]:
+    """A random-init deterministic policy — no checkpoint, no env rollout needed.
+    Exercises the exact Agent architecture + export path in CI (hermetic)."""
+    obs_dim, act_dim = CartpoleEnv.OBS_DIM, CartpoleEnv.ACT_DIM  # 5, 1
+    torch.manual_seed(seed)
+    agent = Agent(obs_dim, act_dim, hidden_dim)
+    return DeterministicPolicy(agent.actor_mean).eval(), obs_dim, act_dim
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ckpt", type=Path, default=Path("outputs/ch2.1-ppo/ppo_agent.pt"),
                         help="the state_dict ppo.py saved")
     parser.add_argument("--out", type=Path, default=Path("outputs/ch2.1-ppo/ppo_agent.onnx"))
     parser.add_argument("--hidden_dim", type=int, default=64)  # ppo.py default
+    parser.add_argument("--smoke", action="store_true",
+                        help="skip the checkpoint; export a random-init actor (CI parity smoke)")
     parser.add_argument("--no-copy", dest="copy_site", action="store_false", default=True,
                         help="skip copying the .onnx into site/public/models/")
     args = parser.parse_args()
 
-    if not args.ckpt.is_file():
-        sys.exit(f"no checkpoint at {args.ckpt} — train it first:\n"
-                 f"  .venv/bin/python curriculum/phase2_reinforcement/ch2.1_ppo/ppo.py --seed 0 --device cpu")
-
     obs_dim, act_dim = CartpoleEnv.OBS_DIM, CartpoleEnv.ACT_DIM  # 5, 1
-    agent = Agent(obs_dim, act_dim, args.hidden_dim)
-    agent.load_state_dict(torch.load(args.ckpt, map_location="cpu"))
-    policy = DeterministicPolicy(agent.actor_mean)
+    if args.smoke:
+        policy, obs_dim, act_dim = smoke_policy(hidden_dim=args.hidden_dim)
+    else:
+        if not args.ckpt.is_file():
+            sys.exit(f"no checkpoint at {args.ckpt} — train it first:\n"
+                     f"  .venv/bin/python curriculum/phase2_reinforcement/ch2.1_ppo/ppo.py --seed 0 --device cpu")
+        agent = Agent(obs_dim, act_dim, args.hidden_dim)
+        agent.load_state_dict(torch.load(args.ckpt, map_location="cpu"))
+        policy = DeterministicPolicy(agent.actor_mean)
 
     onnx_path = export_policy(policy, obs_dim, act_dim, args.out)
     # Prove torch and onnxruntime agree on random obs[5] BEFORE the file ships.
     parity_delta = assert_parity(policy, onnx_path, obs_dim)
     print(f"exported {onnx_path} — torch/onnx parity delta {parity_delta:.2e}")
 
-    if args.copy_site:
+    if args.copy_site and not args.smoke:
         SITE_MODEL.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(onnx_path, SITE_MODEL)
         print(f"provisioned {SITE_MODEL} (git-ignored — not committed)")

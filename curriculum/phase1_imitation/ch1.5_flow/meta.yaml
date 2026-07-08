@@ -1,6 +1,6 @@
 id: ch1.5-flow
 title: "Generative Policies II: Flow Matching"
-artifact: flow.py            # target ~300 LOC (built to 438: the 2D toy + a from-scratch conditional flow-matching objective + an ODE sampler + an obs-conditioned flow policy, one file)
+artifact: flow.py            # target ~300 LOC (built to 439, under the 450 cap: the 2D toy + a from-scratch conditional flow-matching objective + an ODE sampler + an obs-conditioned flow policy, one file)
 task: pusht                  # same task as ch1.4 (curriculum/common/envs/pusht); multimodality shown on the same self-contained 2D ring toy
 objectives:
   - Explain flow matching as the generative alternative to diffusion — learn a VELOCITY field along the straight noise->data line (target = data - noise), then SAMPLE by integrating an ODE forward — and why it escapes the same squared-error mode-collapse
@@ -27,13 +27,13 @@ scale_lab: false
 #     VLM backbone, the pieces we cut).
 # site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: <author pins: facebookresearch/flow_matching  OR  Physical-Intelligence/openpi>
-#   commit: <author pins a real sha>
-#   focus:
-#     - the conditional flow path + velocity objective (our interpolate + flow_matching_loss)
-#     - the ODE sampler / solver (our ode_sample_loop — real code uses a torchdiffeq/ higher-order solver)
-#     - the action-horizon chunk + VLM conditioning we replaced with a single action on the state vector
+rtrt:
+  repo: facebookresearch/flow_matching
+  commit: 11568d37f8d5a080e12aa7b5305d9c35ae07d136   # default-branch HEAD (no release tags); pinned 2026-07-07 (API-verified)
+  focus:
+    - "the conditional flow path + velocity objective (our interpolate + flow_matching_loss)"
+    - "the ODE sampler / solver (our ode_sample_loop — real code uses a torchdiffeq / higher-order solver)"
+    - "the action-horizon chunk + VLM conditioning we replaced with a single action on the state vector"
 
 demo: flow_multimodality     # 2D toy panel (ring: flow vs regression, + the step-efficiency curve); PushT policy panel BLOCKED on contract v2
 
@@ -122,14 +122,15 @@ exercise_checks:
   ex4:                             # ex4_completion_euler_sampler.py (code-completion, fast)
     abs_tol: 1.0e-6               # a constant-velocity (straight) path must land exactly on the target under Euler
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab
-# variant is not built yet (ch1.5 is a draft pending the teaching-pass);
-# notebook-tier-test writes both on generation, and the gate skips a chapter that
-# carries neither key (never a PENDING placeholder, which reads as stale).
-
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records
-# them on first render; do not hand-write them.
+# region_hashes: sha256 of each region's exact body (infra/ci/lib/regions.py);
+# check_prose_code_drift recomputes them against flow.py. Re-record on any code-region
+# edit. The final edit touched only the module docstring (outside all regions), so
+# these are unchanged.
+# NOTE: the final-edit docstring fix changed flow.py's bytes, so notebook_hash below
+# is now stale by design — notebook-tier-test will detect the drift and regenerate
+# both keys. Do not hand-edit them.
+notebook_hash: 97884d818b7faa9a2298e3e7779f285fc8462d0497461f779cf96f9426e11637        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 7a1014a5a79d0b9ed8d68e667fc34a7a9353f602b69892f32eeceef4337d3e0d   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: dc3dd00e801ddb4466c7a1288182c146582785a9bb1c54a2d9e7fdd9dc1bf248
@@ -139,6 +140,3 @@ region_hashes:
   train: 44c85a21e5c479795dffe3c0c2b146b93c569e04a5528b8d455a87a05eaf6ff5
   eval: 826cfdcb1f200aa19679b1db6a1703a10375eed815403552877443d04dc14243
   report: b6798ba77882fab683958b3a6365b5d55ef8de6c65fc0ec2e1a2c923b11f5f26
-
-notebook_hash: 3e0d8c1374fc3f493c6825740a9517f6e7d9c7790e6a2aed6852cf3650a39fb0        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 7a1014a5a79d0b9ed8d68e667fc34a7a9353f602b69892f32eeceef4337d3e0d   # sha256 of the generated notebook bytes; mismatch => hand-edited

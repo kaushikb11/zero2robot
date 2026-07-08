@@ -1,0 +1,144 @@
+id: ch5.8-real_loop
+title: "The Real Loop: Teleoperate, Record, Train, Deploy — on a Real Arm's Body (in sim)"
+artifact: real_loop.py       # target ~320 LOC (drafted to 443, hard cap 450: reproducible model fetch + a from-scratch SO-101 reach env + real LeRobotDataset record + ch1.1 BC retargeted to 6-D joint action + deploy/eval + ONNX, one file)
+task: so101_reach            # google-deepmind/mujoco_menagerie `robotstudio_so101` (SO-101 follower) + a box on the floor; reach the box with the gripper
+
+# NOTE (doctrine): this is the Phase-5 GRADUATION hands-on. It runs the ENTIRE LeRobot loop
+# (drive -> record -> train -> deploy -> eval) on the SO-101's REAL morphology and kinematics,
+# free-tier, in MuJoCo — the exact format + control loop the learner would run on the $150 arm G1
+# sends them to buy. `lerobot` (LeRobotDataset) is ALLOWED here, as in ch0.4/ch1.9 — recording the
+# REAL dataset format is the whole point. `transformers`/hydra/etc stay forbidden; the BC policy is
+# ch1.1's MLP re-derived, retargeted to the 9-D obs / 6-D joint-position action. `allow_transformers`
+# UNSET. NO simplification of the arm: the six sts3215 servos, link lengths, and joint limits are the
+# manufacturer's MJCF. What the twin CANNOT model — the reality gap — is the point of G1 (see honesty).
+
+builds_on:
+  - ch0.4-record        # LeRobotDataset.create/add_frame/save_episode — the record pattern, reused verbatim
+  - ch1.1-bc            # the BC train->deploy->eval loop, retargeted to 6-D joint action
+  - ch1.6-eval          # a success RATE over held-out placements + baselines, not a hero rollout
+  - graduation/reading-track   # the modern-VLA + data reading arc this hands-on is the payoff of
+  - graduation/g1_first_real_robot   # the small step from this sim twin to real hardware
+
+objectives:
+  - Fetch a REAL robot model reproducibly and free-tier — download the Menagerie `robotstudio_so101` MJCF + 18 STL meshes into a gitignored cache (integrity-checked: the two XMLs are sha-pinned, the binary meshes size-checked, and the final proof is that MuJoCo compiles the model), skip-if-present. No binaries in git (invariant #5); the commit is UN-PINNED (G1 doctrine — upstream moves).
+  - Run the WHOLE LeRobot loop on the SO-101's real body in sim — drive a deterministic scripted-expert reach (shoulder_pan aimed at the box's azimuth + a fixed lower-to-the-table pose, commanded as position targets), RECORD it as a real STATE-only LeRobotDataset (the actual create/add_frame/save_episode/finalize API, v3.0), load that dataset BACK, TRAIN ch1.1's BC MLP on it (MSE in NORMALIZED action space so the big joints don't drown the tiny box-dependent pan signal), DEPLOY the clone (policy -> d.ctrl), and EVALUATE a success rate with ch1.6 rigor.
+  - Internalize the DIRECTION as the seed-robust claim — the recorded-then-cloned policy reproduces the scripted reach (success clearly above no-op / random), i.e. the loop closes end-to-end on the real arm's body. It is a MECHANISM/loop claim, not SOTA, and reported as a direction, not a %: MuJoCo contact + servo settling are bitwise on ONE CPU but not across arches (ch1.6).
+  - Feel the reality gap by naming what the twin CANNOT give you (the honest core, below) AND by breaking the loop the way the metal breaks it — `--break obs_swap` wires the DEPLOY observation's box_x/box_y opposite to the RECORDING (the ch0.4 lesson): training is spotless, loss is ~0, and the arm reaches the wrong way. A wiring bug no loss curve can see.
+
+# HONESTY (author MUST keep this framing — it is the measured truth and the whole point of the chapter):
+#  * WHAT THE TWIN GIVES YOU: the real SO-101 morphology + kinematics (Menagerie's manufacturer MJCF),
+#    the real LeRobotDataset format (v3.0, byte-for-byte ch0.4 / `lerobot-record`), and the real control
+#    loop (obs -> policy -> d.ctrl -> step). Every SKILL transfers to hardware unchanged; that is G1's thesis.
+#  * WHAT THE TWIN CANNOT GIVE YOU (do NOT paper over this): the REALITY GAP — servo backlash, friction,
+#    latency, camera noise, calibration drift. Menagerie's sts3215 position gains are NOT the real servo
+#    gains (the MJCF's own comment says so). This chapter is morphology + the loop, NOT torque-level
+#    fidelity. Those gaps are the whole reason real hardware exists, and they stay READING: that is G1.
+#  * The task is a REACH (gripper within success_tol of the box), scripted deterministically — NOT a
+#    dexterous grasp/lift. A frictional pinch-grasp is exactly where the reality gap bites hardest; we do
+#    not claim it. The headline is "the LOOP closes on the real body," not "BC solves manipulation."
+#  * The clone MATCHES the scripted expert (both ~1.00 at the default tol) because a scripted reach is an
+#    easy, low-variance target — that is the right bar for a MECHANISM demo, not a performance flex. Report
+#    the DIRECTION (clone >> no-op / random), never the exact %; it shifts with the platform (ch1.6).
+#  * No human demonstrations, no real camera. `use_videos=False` (state-only) is a determinism choice, and
+#    the honest limitation named in prose: real recording carries images, and image OOD is the reality gap.
+
+scale_lab: false
+# The free-tier core IS the point: the whole loop runs on a CPU laptop in ~1 min at the default config
+# (64 recorded episodes, 400 BC epochs, 30-episode eval). The honest "scale" step is not a bigger GPU —
+# it is REAL HARDWARE, and that is G1, not a scale lab. Do NOT add a GPU tier that implies the gap is compute.
+
+# READ-THE-REAL-THING: this graduation hands-on pairs with the two upstreams it mirrors. The rtrt: block
+# is LEFT FOR THE AUTHOR to pin — commits are UN-PINNED on purpose (both move weekly; G1 doctrine). NEVER
+# invent a sha. site RTRT.astro renders nothing until repo + commit both exist.
+read_the_real_thing: true
+rtrt:
+  repo: huggingface/lerobot
+  commit: PENDING   # author pins a verified SHA. NEVER invent one. Focus: the SO-101 record->train->rollout path.
+  focus:
+    - "LeRobotDataset.create/add_frame/save_episode/finalize — the SAME v3.0 write API this chapter calls (src/lerobot/datasets/lerobot_dataset.py)"
+    - "the so101_follower robot + `lerobot-record` / `lerobot-train` / `lerobot-rollout` CLI — the hardware form of this chapter's drive/record/train/deploy loop"
+    - "the select_action control loop (get_observation -> policy -> send_action) — our deploy region is the sim mirror of it"
+  also:
+    repo: google-deepmind/mujoco_menagerie
+    commit: PENDING   # author pins a verified SHA for the robotstudio_so101 model this chapter fetches. NEVER invent one.
+    focus:
+      - "robotstudio_so101/so101.xml — the six sts3215 position actuators + the MJCF comment that the gains are NOT the real servo gains (the torque-fidelity honesty)"
+      - "scene_box.xml — the box + wrist_cam this chapter reaches for and (in prose) names as the missing camera/OOD reality gap"
+
+demo: so101_reach_replay   # replay a recorded SO-101 rollout (gripper-tip path) over the drive->record->train->deploy loop diagram; clone reaches the box, --break obs_swap reaches the wrong way. Static vizdata (demo/vizdata.json); the toy scales it. See demo/embed.yaml.
+
+# All reference metrics: seed 0, default config; mujoco 3.10.0 / lerobot 0.4.4 / torch 2.10.0 / numpy
+# 2.4.6 (course pins). Env reset + step are bitwise on ONE CPU (the --smoke metrics.json is byte-identical
+# twice-run on this machine); the SO-101 model FETCH is content-checked (sha on the two XMLs, MuJoCo
+# compile as the final gate). TRAINING is statistically reproducible; deployment success is a RATE over a
+# held-out sample (ch1.6). THE HONEST HEADLINE is a DIRECTION, not a %: the recorded-then-cloned BC policy
+# reproduces the scripted reach (~1.00 at the default tol across seeds) — clearly above no-op (~0.03) and
+# random (~0.00-0.13) — every seed. --break obs_swap collapses it (~0.17-0.27). The ORDER is the rock.
+reference_run:
+  provenance: "seed 0, default config (demos 64, epochs 400, batch 128, lr 1e-3, hidden 256, steps 60, eval_episodes 30, success_tol 0.08); measured 2026-07-08. Full runs used the drafting machine's default device (mps); the exercise gates force --device cpu. The ROBUST claim the gates assert is the DIRECTION (clone >> no-op / random; obs_swap collapses it), NOT the exact 1.00 — MuJoCo contact + servo settling shift the exact rate across CPU/GPU arches (ch1.6). PROVISIONAL: measured on ONE machine; author RE-VERIFIES on the reference tier + wallclock-bench MEASURES wall-clock before drop."
+  obs_dim: 9                          # 6 joint angles + box (x, y, z)
+  act_dim: 6                          # 6 joint-position targets (shoulder_pan..gripper)
+  demos: 64                           # recorded scripted-expert reach episodes (real LeRobotDataset, state-only)
+  final_train_loss: 0.000011          # the BC MLP fits the recorded reach cleanly (normalized-action MSE)
+  parity_delta: 0.0                   # torch/onnxruntime agree (contract v1); rounds to 0.0, gate asserts < 1e-4
+  # --- the measurement: the clone reproduces the scripted reach, clearly above the baselines ---
+  clone_success_rate: 1.0             # recorded-then-cloned BC policy, held-out box placements
+  noop_success_rate: 0.033333         # hold the rest pose — never reaches the box
+  random_success_rate: 0.0            # random joint targets — flails
+  clone_beats_baselines: true         # the DIRECTION the gates assert (clone > max(no-op, random), every seed)
+  expert_ceiling_dist_m: 0.056        # the scripted expert's own gripper-to-box distance (the target the clone matches)
+  success_tol: 0.08                   # gripper-to-box distance (m) counted as a reach
+  # Seed robustness (default config, measured 2026-07-08): clone / no-op / random / break(obs_swap)
+  # seed0 1.00 / 0.03 / 0.00 / 0.20;  seed1 1.00 / 0.03 / 0.13 / 0.27;  seed2 1.00 / 0.03 / 0.03 / 0.17.
+  # Clone BEATS both baselines by a wide margin on EVERY seed, and obs_swap collapses it every seed. Direction is the rock.
+  # --- the --break demo (seed 0): the ch0.4 lesson, on the metal ---
+  break_obs_swap_success_rate: 0.2    # deploy obs wires box_x/box_y opposite the recording: training is spotless (loss ~1e-5), the arm reaches the wrong way (1.00 -> ~0.20)
+
+# Reference bands + provenance for the exercise checks. PROVISIONAL: measured on ONE machine (2026-07-08);
+# author RE-VERIFIES on the reference tier and finalizes provenance before drop. All gates assert the
+# DIRECTION with conservative margins (never an exact %), because deploy success is a held-out RATE and
+# MuJoCo contact/servo settling are not bitwise across arches (ch1.6). ex1/ex2 run the FULL loop (~1 min
+# CPU each: fetch-cached + record + train + eval) so they are @pytest.mark.slow; ex3 (expert_action
+# completion) is a FAST self-contained gate (pure numpy, no sim) that runs in `make check`.
+exercise_checks:
+  exercise_config:
+    demos: 64
+    epochs: 400
+    eval_episodes: 30
+    steps: 60
+    success_tol: 0.08
+    provenance: "PENDING author reverification. Measured 2026-07-08, real_loop.py at default config, --device cpu, seed 0: clone 1.00, no-op 0.03, random 0.00; --break obs_swap 0.20. CPU env+step is bitwise so seed-0 reproduces; gates assert the DIRECTION (clone >> baselines; obs_swap collapses), seed-robust across 0/1/2."
+    min_clone_rate: 0.7               # ex1: the clone must reach >= this (measured 1.00; conservative floor for cross-arch drift)
+    max_baseline_rate: 0.35           # ex1: no-op AND random must each stay <= this (measured <= 0.13)
+    min_clone_over_baseline: 0.5      # ex1: clone - max(no-op, random) >= this (measured ~0.87)
+    max_break_rate: 0.5               # ex2: obs_swap must drop the clone to <= this (measured ~0.20)
+    min_clean_over_break: 0.4         # ex2: clean clone - obs_swap clone >= this (measured ~0.80)
+  ex1:                                # ex1_predict_loop.py (predict-then-run; SLOW)
+    answer: "B"                       # the clone reproduces the reach (>> no-op ~ random); the LOOP closes on the real body
+  ex2:                                # ex2_predict_obs_swap.py (predict-then-run + learner-generated failure; SLOW)
+    answer: "C"                       # a deploy/record obs mismatch collapses deployment while training stays spotless — invisible to the loss
+  ex3:                                # ex3_completion_expert.py (code-completion, fast, no sim)
+    abs_tol: 1.0e-6                   # a correct expert_action matches the reference joint target exactly
+
+# region_hashes: OMITTED here — the site records them at chapter-build time (per the arc contract).
+# notebook_hash PENDING (regenerate via notebook-tier-test once code is frozen). NOTE for notebook-tier-test:
+# this chapter FETCHES a ~17MB model over the network on first run (jsdelivr CDN mirror of the Menagerie
+# so101, cached in outputs/); the notebook lane must allow that one-time download (it is free-tier, ~17MB).
+notebook_hash: 8c0996942dae2ecc27047c0c5605da11fd17255e352fdb74ac3a03f6655aafc1        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 9905e59ba19e73c803f3e24538c42b601a4044480e1ef6f3f2d19314cb778b2d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+# wall-clock: PENDING — wallclock-bench MEASURES it on the reference tier (root invariant: never estimate).
+# The banner prints "not yet measured" until curriculum/common/wallclock.csv has a ch5.8-real_loop row.
+# Drafting-machine observation only (NOT a reference number): ~1 min CPU end-to-end at default config,
+# plus a one-time ~17MB model download on the first run.
+
+region_hashes:
+  setup: e58f7a666e25b3f582c14239648407a33cd8ba7734721e0a31ebfa413183f0d1
+  fetch: 897b8fa177a95b0323940b7e1acaa44da50f3c8a81f834067d56f487ecb93182
+  env: ccb40c0414ecc877b1bf003c801e66b2d0a8b4d558a8673761bffc74599581a3
+  expert: 64fa80c3f028c06be6234295e0e580f1ab057c944744a27e1f836f3c487e6997
+  record: 641c6a379ae8003e4889bdda0e5fd6aa9dbce2471c023d3ca28cae050dd4544e
+  model: c4f49e53eca845ca86897d749621cc1b5c057da12d3f91f5021df6ef7a536db7
+  train: babc4def5d523b4d8ed542aa1ba7d43f996c86af42898106412e3caa330ce41d
+  deploy: c208b81c3a5241698092343e1d699e3654e4686a8d7b74d7a04909a612de3016
+  report: 6ebfaccf20404c7bc1718cf50320866b6743d26c77a907712e93044975298ef9

@@ -1,0 +1,43 @@
+# Demo embed stub — ch4.2 "pusht_dagger_recovery".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, teleop capture, and the embed component; this file declares WHAT the
+# embeds show. Coordinate at the contracts.ts level before wiring.
+
+demo: pusht_dagger_recovery
+scene: pusht                 # curriculum/common/envs/pusht/pusht.xml, verbatim
+
+# ---- Primary (free-tier core): the recovery curve ----------------------------
+# The hero is the success-vs-DAgger-round curve with Wilson intervals, straight
+# from dagger.py's rerun log (eval/success_rate, eval/ci_low, eval/ci_high) or
+# metrics.json round_rates. BC sits low (covariate shift); the best round clears
+# it; the last round shows the honest regression. This is the whole lesson and it
+# needs no browser — it renders from the recorded run.
+primary:
+  kind: recovery-curve
+  source: metrics.json#round_rates      # round 0 = BC baseline, rounds 1..N = DAgger
+  overlay: rerun                        # eval/success_rate + ci_low/ci_high on the dagger_round timeline
+  annotate:
+    - "round 0: BC — covariate shift (block starts anywhere, demos only saw near starts)"
+    - "best round: recovered, interval clears BC's"
+    - "last round: over-iterated — select the best round, not the last"
+
+# ---- Follow-up (interactive): browser-teleop corrections ---------------------
+# The interactive payoff, wired when this chapter graduates from spike to drop.
+# The scripted expert in dagger.py is the OFFLINE STAND-IN for THIS: the visitor
+# watches the current policy roll out, and on the frames where it drifts, GRABS
+# the pusher (mouse teleop) and demonstrates the correction. Those (state, human-
+# action) pairs are the DAgger dataset — identical mechanism, human labeler.
+follow_up:
+  kind: teleop-correction
+  policy: dagger_policy.ts.pt            # best-round checkpoint dagger.py saves; ONNX export is the wiring follow-up
+  interaction: grab-and-correct          # visitor takes over on drifted frames; corrections aggregate into a round
+  hud:
+    - success_rate                        # before vs after the visitor's corrections
+    - frames_corrected
+  notes: >
+    The contrast with ch1.1's demo (fragile BC that "sometimes recovers") is the
+    point: here the visitor MAKES the recovery happen by correcting the policy on
+    its own mistakes — the human-in-the-loop loop, live. Honest scope: the free-
+    tier chapter proves the mechanism with the scripted expert; this follow-up
+    swaps in the human and changes nothing else. OUT OF SCOPE for the feasibility
+    spike (no browser dependency on the core result).

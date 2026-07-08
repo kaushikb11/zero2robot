@@ -20,6 +20,10 @@ PREDICT before you run: how does the policy transfer to your engine?
 
 Record your answer in PREDICTION below, then run this file (needs a trained ch1.1
 policy — see find_policy; if none is found the run explains how to make one).
+
+Before you run, write one sentence: WHY — what about a frictionless two-point-mass block
+would make its ANGLE harder to reproduce than its position?
+
 Estimated learner time: 15 minutes.
 """
 
@@ -44,12 +48,26 @@ REPO_ROOT = CHAPTER.parents[2]
 
 
 def find_policy() -> Path | None:
-    """A trained ch1.1 TorchScript policy, if one exists at a conventional path."""
-    for rel in ("outputs/ch3.6-bc/bc_policy.ts.pt", "outputs/ch1.1-bc/bc_policy.ts.pt"):
-        cand = REPO_ROOT / rel
-        if cand.is_file():
-            return cand
-    return None
+    """ch1.1's canonical trained TorchScript policy, if a REAL one exists (this chapter
+    runs that exact checkpoint — the 500-demo one ch1.1 saves — not a policy of its own).
+
+    QUALITY GUARD: ch1.1's DEFAULT --out is this very path, so a `bc.py --smoke` run
+    leaves an UNTRAINED smoke checkpoint sitting right here (metrics.json: smoke=true,
+    success_rate=0). Running it would silently print a meaningless ~0 transfer, so we
+    read the sibling metrics.json and treat a smoke/zero-success checkpoint as NO
+    policy — the caller then emits the 'train the real ch1.1 policy' guidance."""
+    cand = REPO_ROOT / "outputs/ch1.1-bc/bc_policy.ts.pt"
+    if not cand.is_file():
+        return None
+    sib = cand.parent / "metrics.json"
+    if sib.is_file():
+        try:
+            meta = json.loads(sib.read_text())
+        except (json.JSONDecodeError, OSError):
+            meta = {}
+        if meta.get("smoke") or meta.get("success_rate", 0) == 0:
+            return None  # smoke/untrained: not a real full-circle policy
+    return cand
 
 
 def run_compare(policy: Path, *extra: str) -> dict:
@@ -67,9 +85,9 @@ if __name__ == "__main__":
     policy = find_policy()
     if policy is None:
         raise SystemExit(
-            "No trained policy found. Make one first (this IS the ch1.1 policy):\n"
-            "  python curriculum/common/envs/pusht/gen_demos.py --episodes 300 --seed 0 --out outputs/ch3.6-demos --no-video\n"
-            "  python curriculum/phase1_imitation/ch1.1_bc/bc.py --data outputs/ch3.6-demos --out outputs/ch3.6-bc --device cpu --no-rerun")
+            "No trained policy found. Train ch1.1's canonical policy first (this chapter runs it):\n"
+            "  python curriculum/common/envs/pusht/gen_demos.py --episodes 500 --seed 0 --out outputs/pusht-demos --no-video\n"
+            "  python curriculum/phase1_imitation/ch1.1_bc/bc.py --data outputs/pusht-demos --out outputs/ch1.1-bc --device cpu --no-rerun")
     m = run_compare(policy, "--episodes", "20")
     print(f"MuJoCo (ground truth) BC success : {m['mj_success_rate']:.2f}")
     print(f"your-engine           BC success : {m['engine_success_rate']:.2f}")

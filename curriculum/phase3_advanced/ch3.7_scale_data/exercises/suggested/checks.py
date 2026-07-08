@@ -90,9 +90,9 @@ def test_ex1_prediction_recorded():
 
 @pytest.mark.slow
 def test_ex1_augmentation_helps(tmp_path):
-    # Measured 2026-07-06 (cpu, seed 0, default config): source 0.02 -> augmented
-    # 0.14. The reliable signal is the ORDERING (augmented > source); the seed-robust
-    # floor on the gain is meta.yaml ex1.scale_effect_min (min observed +0.08 over
+    # Measured 2026-07-07 (cpu, seed 0, default config): source 0.02 -> augmented
+    # 0.30. The reliable signal is the ORDERING (augmented > source); the seed-robust
+    # floor on the gain is meta.yaml ex1.scale_effect_min (min observed +0.12 over
     # seeds 0-2, band set at +0.05).
     source, augmented = ex1.measure(0, tmp_path)
     assert augmented > source, (
@@ -113,9 +113,9 @@ def test_ex3_prediction_recorded():
 
 @pytest.mark.slow
 def test_ex3_more_augmentation_helps(tmp_path):
-    # aug_per_demo 0 is the source-only baseline (no demo survives to add); 8 is the
-    # default. Measured seed 0: 0.02 (none) -> 0.14 (aug 8). The seed-robust claim is
-    # monotone improvement, not a magnitude.
+    # aug_per_demo 0 reproduces the source-only arm exactly (no demo survives to add);
+    # 8 is the default. Measured seed 0: 0.02 (none) -> 0.30 (aug 8). The seed-robust
+    # claim is monotone improvement, not a magnitude.
     none = ex3.success_at(0, tmp_path)
     full = ex3.success_at(8, tmp_path)
     assert full - none >= CHECKS["ex3"]["monotone_min"], (

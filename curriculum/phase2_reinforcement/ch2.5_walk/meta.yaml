@@ -10,15 +10,16 @@ objectives:
   - Read the observation design — why joint angles + velocities (proprioception), torso height + up-vector (posture), and torso linear velocity (momentum); why an up-vector not a quaternion; why no clock / no contact flag
   - Read the action design — why RESIDUAL joint-position targets around a default crouch (action 0 = stand), not raw torque, make the search tractable
   - Meet domain randomization as a preview (ch2.7): jitter one dynamics parameter (torso mass) per episode so the gait can't overfit one body
-  - Be honest about the free-tier ceiling — the emergent gait clears the stand and moves forward but does NOT reach the scripted trot's +2.14 m at a CPU-laptop budget; the shape of the emergence is the lesson, the full trot is the Scale Lab
+  - Be honest about the free-tier ceiling — the emergent gait outruns the scripted trot on forward DISTANCE (+3.02 m vs +2.14 m) but falls before the 500-step horizon (mean length ~249), so its total RETURN (~247) stays below the trot's (~307): emergent != robust. The shape of the emergence is the lesson; a gait that walks far AND stays up for the full episode is the Scale Lab
 scale_lab: false           # map lists a humanoid-at-4090 Scale Lab as a REFERENCE (not built). A quadruped SL here = same walk.py, --hidden_dim 512 --total_steps 500k+ on GPU, measure whether the emergent gait reaches/beats the trot. PENDING a measured GPU run.
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor: a MuJoCo Menagerie
-# quadruped (Unitree Go1/Go2) trained with an established legged-RL loop
-# (legged_gym / rsl_rl lineage) — the production setup the learner graduates to.
-# Do NOT invent a commit sha here; the read-the-real-thing skill pins the real
-# upstream commit.
-#   repo: <PLACEHOLDER — resolve the real org/commit via the skill>
+rtrt:
+  repo: leggedrobotics/legged_gym
+  commit: 8fa29acc6fd1910c3d9659eef6310bdd301cde0a   # default-branch HEAD (no release tags); pinned 2026-07-07 (API-verified). The canonical learned-quadruped-locomotion loop (legged_gym/rsl_rl lineage); MuJoCo Menagerie Go1/Go2 supplies the models.
+  focus:
+    - "legged_gym/envs — the reward terms + curriculum a production locomotion loop uses, vs this chapter's single SAC gait"
+    - "rsl_rl — the PPO/actor-critic training loop the legged-RL lineage runs"
+    - "the sim-to-real design (domain randomization, observation/action choices) that makes a gait TRANSFER — ch2.6/2.7 territory"
 demo: quadruped_walk       # hero: the learned policy's legs fall into a stride and the torso travels forward — a gait nobody scripted (see demo/embed.yaml)
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
@@ -42,12 +43,12 @@ reference_run:
   scripted_trot_forward_dist: 2.1536  # m on the same held-out seeds (the ceiling on distance the policy passes)
 exercise_checks:
   ex1:                     # ex1_predict_gait.py — trains walk.py on seeds 0-2 (each seed bit-reproducible on CPU)
-    provenance: "__PENDING__ cpu, seeds 0-2, total_steps 30000; measured __DATE__: forward_dist [__, __, __] m"
-    emerges_mean_dist_min: null      # __MEASURED__ — mean forward distance, clearly positive (>> stand)
-    emerges_per_seed_dist_min: null  # __MEASURED__ — every seed walks clearly forward
+    provenance: "cpu (Apple M1), seeds 0-2, total_steps 25000; measured 2026-07-08: forward_dist [3.51, 4.14, 4.35] m"
+    emerges_mean_dist_min: 2.5       # mean forward distance, clearly positive (>> stand ~-0.01); measured mean 4.00 m
+    emerges_per_seed_dist_min: 1.5   # every seed walks clearly forward; measured min 3.51 m
   ex2:                     # ex2_investigate_obs.py — full obs vs velocity-blinded, seeds 0-2
-    provenance: "__PENDING__ cpu, seeds 0-2, total_steps 30000; measured __DATE__: full mean __ m vs blind mean __ m"
-    full_obs_emerges_mean_dist_min: null  # __MEASURED__ — full obs reliably produces a gait
+    provenance: "cpu (Apple M1), seeds 0-2, total_steps 25000; measured 2026-07-08: full mean 4.00 m vs blind mean 2.70 m"
+    full_obs_emerges_mean_dist_min: 2.5   # full obs reliably produces a gait; measured mean 4.00 m
     blind_help_tolerance: 0.15       # blinding torso velocity must not clearly OUTPERFORM full obs (observational effect, learner interprets)
 
 # region_hashes: LEFT FOR THE AUTHOR / site build. check_prose_code_drift only
@@ -60,3 +61,13 @@ exercise_checks:
 
 notebook_hash: 930b99b8861265d0ca5ef2bf83066f95f16de71845d4ee87cf00605d50554ecf        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
 notebook_file_hash: c8bee2d49b2cad0a7f3f5198e16861d0317a652f21cdec9d111b728b594628b1   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 41d16b18c5ccecb87210190a0e3c202091b2f5098668d0a7163d9df8d5c8561f
+  env: 43cfce8ebe69d2b12723d9a539e315b13d66cba64381ef13f33bf26a67d15242
+  model: 6f4928f001de895bce6125deec1df933af34681b5c394775799affa742fe1d5b
+  replay: eccfa0584d6531e1b13699a633101f662abf541ad453330cb55034042e9f1fe6
+  update: 1ef806993966b4fb13b1575be84c2b5e2fa30aa452e0f33b7bee734f6f3bffcb
+  eval: 74629f3fdcca2056a838477631716f18fb50d0d44eca27806fa5e3438390ce8e
+  train: c9368b5befa1fabc972667b2844a1d0ad350debb96ccaf9e6d10d149ed2ff2e5
+  report: 9652e6af56204f2cf34ce9351e48d9931604f85e2e2f04730ab265b68daeaf66

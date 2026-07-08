@@ -1,0 +1,65 @@
+/* ch4 offline primer — the LIVE AWAC-vs-BC side-by-side pusher-reach toy
+ * (OfflineReachLive.tsx). Namespaced `or-*`; hardcoded-LIGHT instrument (literal
+ * colours) so it reads identically in light + dark without a styles.css pin.
+ * Colour by meaning: AWAC = blue, BC = amber, target/success = green. */
+
+.or-live-stack { display: grid; gap: 1.6rem; }
+
+.or { display: grid; gap: 0; }
+
+.or-figure { position: relative; }
+
+.or-lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.or-lanes[hidden] { display: none; }
+
+.or-lane { margin: 0; display: grid; gap: 0.35rem; }
+.or-canvas,
+.or-poster-svg {
+  display: block; width: 100%; aspect-ratio: 1 / 1;
+  border: 1px solid #dcd0b6; border-radius: 3px;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+}
+.or-canvas { touch-action: none; }
+
+/* poster vectors */
+.or-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
+.or-reach { fill: none; stroke: #6d6252; stroke-width: 1; stroke-dasharray: 3 5; opacity: 0.5; }
+.or-tol { fill: none; stroke: #0c7d5f; stroke-width: 1.6; stroke-dasharray: 4 3; }
+.or-target-dot { fill: #0c7d5f; }
+
+.or-lane-cap {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem;
+  font-family: ui-monospace, monospace; font-size: 0.7rem;
+}
+.or-lane-name { font-weight: 700; letter-spacing: 0.02em; }
+.or-lane-blurb { color: #6d6252; font-size: 0.62rem; text-align: right; }
+.or-lane-dist { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; }
+.or-lane-dist.or-ok { color: #0c7d5f; }
+
+.or-status {
+  margin-top: 0.5rem;
+  font-family: ui-monospace, monospace; font-size: 0.64rem; color: #6d6252;
+}
+.or-status[data-failed="true"] { color: #c0362a; }
+
+.or-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.or-btn {
+  font-family: ui-monospace, monospace; font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem; border: 1px solid #c8bc9e; border-radius: 100px;
+  background: #f7f3ea; color: #473f34; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.or-btn:hover { border-color: #1f56de; color: #23201b; }
+.or-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.or-btn--primary { background: #1f56de; color: #fff; border-color: #1f56de; box-shadow: 0 1px 4px -1px rgba(31,86,222,0.4); }
+.or-btn--primary:hover { color: #fff; background: color-mix(in srgb, #1f56de 90%, #000); }
+.or-btn:disabled { opacity: 0.5; cursor: default; }
+.or-control-note { font-family: ui-monospace, monospace; font-size: 0.64rem; color: #6d6252; margin-left: auto; }
+
+@media (max-width: 30rem) {
+  .or-lane-blurb { display: none; }
+  .or-control-note { display: none; }
+}

@@ -6,6 +6,10 @@ don't. Symptom: the pusher drives forward but the block barely moves north
 (tee ends at y~0.04 instead of ~0.38 [measured]), as if the pusher can only
 travel along one axis.
 
+Before you touch the XML, write one sentence: if the pusher drives forward but
+the block barely moves north, what must be true about the two pusher joints'
+axes — and which direction can the pusher no longer travel?
+
 Find the bug by READING the MJCF the way the chapter taught: a joint's `axis`
 is the direction it moves along, and two joints on a body should span the two
 directions you want. Fix it, then re-run checks.py until the metrics agree with

@@ -16,6 +16,10 @@ PREDICT before you run: when you HALVE dt, what happens to the final drift?
      steeply (toward ~16x, fourth order)
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run: in one sentence, write WHY halving dt should shrink RK4's error far more
+steeply than Euler's.
+
 Estimated learner time: 15 minutes.
 """
 

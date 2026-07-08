@@ -1,5 +1,6 @@
 id: ch3.4-constraints
 title: "Build a Physics Engine II: Joints & Constraints"
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
 artifact: constraints.py     # 352 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
 task: pendulum-chains        # 1-/2-/3-link distance-constrained chains — all from-scratch numpy
 objectives:
@@ -24,16 +25,13 @@ scale_lab: false
 # or a constrained-dynamics text (Featherstone, Rigid Body Dynamics Algorithms; or
 # Baumgarte's 1972 stabilization paper — the source of the feedback term here).
 read_the_real_thing: true
-# rtrt:
-#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - the docs' "Computation" / constraint model: soft constraints, the impedance/reference
-#       parameters — the principled version of the Baumgarte gain we hand-tune here
-#     - engine_core_constraint / the PGS-or-CG constraint solver: J M^-1 J^T is the same matrix
-#       we build by hand, but regularized (soft) rather than solved as a hard equality
-#     - why hard equality constraints + explicit integration DRIFT (this chapter's headline)
-#       and why MuJoCo chose a convex, stabilized formulation instead
+rtrt:
+  repo: google-deepmind/mujoco
+  commit: 28009f9105cd92784b7b0b30c0605a5e29107a77   # tag 3.10.0 (matches the course-pinned mujoco); pinned 2026-07-07
+  focus:
+    - "the docs' \"Computation\" / constraint model: soft constraints, the impedance/reference parameters — the principled version of the Baumgarte gain we hand-tune here"
+    - "engine_core_constraint / the PGS-or-CG constraint solver: J M^-1 J^T is the same matrix we build by hand, but regularized (soft) rather than solved as a hard equality"
+    - "why hard equality constraints + explicit integration DRIFT (this chapter's headline) and why MuJoCo chose a convex, stabilized formulation instead"
 
 demo: constraint_drift       # 2D pendulum path + the constraint-violation curve (none vs baumgarte); pure numpy
 
@@ -87,13 +85,17 @@ exercise_checks:
     answer: "C"                    # each seed is bitwise reproducible, yet nearby seeds diverge wildly — deterministic but not predictable
     tip_divergence_min: 0.5        # seed 0 vs seed 1 double-pendulum tip distance over 20 s (measured ~1.12) is far above this
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
-# is not built yet (ch3.4 is an agent draft pending the teaching-pass); notebook-tier-test
-# writes both on generation, and the gate skips a chapter that carries neither key.
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
-# on first render; do not hand-write them.
-
+# Colab variant is generated (notebooks/ch3.4-constraints.ipynb). notebook-tier-test
+# writes both hashes on generation; if constraints.py changes, regenerate so notebook_hash
+# tracks it, and never hand-edit the .ipynb (that breaks notebook_file_hash).
 notebook_hash: 26edae789ab2cfa854431af4616ebede42b9ea13a62f6a722949f2e2c915e8e2        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
 notebook_file_hash: 65bbfd4462cccdebeca821dfec0cb05a2ecad56af96856f76afb61ac8b1aadb2   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 34b7a46ff596be7e07445f8d9009f891ccbb172895431fcc0b1ac60e5a9ca8ab
+  systems: af5583ba01ce6a872d9d3e2e382264cb28d57ffb9b8686c6116fde75faa32590
+  constraints: 6a61a929c40b54ba8d99bb7cd39a51ba21d35154eaacc90ae0de22e0f23df965
+  integrators: eafc8d5fff13a0a7e223ba7eb51b5ede4425d56dcc0d8f957c2ebd994076b68c
+  simulate: 5c73d0573ae2673584daddd5c114b5aeba27c3d9a6d573c13034d0f88650d9bd
+  report: 4b1efeac240ffad146b2562c0fee2a1a740c905ceb633a6687147bbf395c9365

@@ -14,7 +14,13 @@ falls, but the sampler integrates the wrong line and never reaches the data.
 
 THE BUG. `flow_interpolate` below has its two coefficients SWAPPED. It still runs,
 still returns the right shape, and training still produces a falling loss — the
-model just learns the wrong path and samples badly. Find it and fix it so the check
+model just learns the wrong path and samples badly.
+
+Before you unswap them, write one sentence: with the endpoints backwards the
+loss still falls — so what did the net learn to predict perfectly, and why does
+the sampler then walk the wrong way?
+
+Find it and fix it so the check
 passes (the endpoints must be: t=0 -> noise, t=1 -> data).
 
     pytest curriculum/phase1_imitation/ch1.5_flow/exercises/suggested/checks.py -k ex3
@@ -34,4 +40,4 @@ def flow_interpolate(data: np.ndarray, noise: np.ndarray, t: np.ndarray) -> np.n
     BUG: the two time coefficients are swapped, so the path runs data->noise instead
     of noise->data. At t=0 it must equal noise; at t=1 it must equal data.
     """
-    return t[:, None] * noise + (1.0 - t)[:, None] * data   # <-- coefficients are swapped
+    return t[:, None] * noise + (1.0 - t)[:, None] * data

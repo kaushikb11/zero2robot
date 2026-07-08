@@ -1,0 +1,57 @@
+# Demo embed stub — ch5.8 "so101_reach_replay".
+# Playground integration point: playground/ owns the site components; this file declares WHAT the
+# embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json from real_loop.py;
+# the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# ONE-PARAGRAPH TOY SPEC (for the TSX author): a side-by-side REPLAY of the graduation loop. On the
+# left, the drive -> record -> train -> deploy loop diagram (five nodes, an arrow cycle) with the
+# active stage highlighted as a scrubber steps through a rollout. On the right, a top-down view of the
+# SO-101's reachable patch with the box (vizdata.box) drawn as a green square and the gripper-tip PATH
+# traced over time: clone_tip_path curls in and lands ON the box (a reach — it ends inside success_tol),
+# while a TRAINED/BROKEN toggle swaps to break_tip_path, which curls to the WRONG side and stops short
+# (the obs_swap wiring bug — same box, transposed x/y). A caption carries the whole chapter: "the same
+# recorded loop, deployed two ways — the only difference is which order the deploy script read box_x and
+# box_y." Below, three success-rate bars (clone / no-op / random) make the headline direction visible.
+# This is a pure DATA-VIEWER over demo/vizdata.json (2D tip paths + rates). It needs NO MuJoCo-WASM and
+# NO tensor contract: the cheapest embed tier. The exported bc_policy.onnx (contract v1, 9->6) EXISTS
+# and is parity-checked, so a later, richer tier COULD run the clone live in-browser — but the shipped
+# toy is static and unblocked as soon as the site can read the JSON and draw two paths.
+demo: so101_reach_replay
+vizdata: vizdata.json          # emitted by real_loop.py (seed 0, default config); schema below
+panels:
+  - id: loop_replay
+    kind: canvas-overlay        # draw the box + two gripper-tip paths on a top-down axis; no MuJoCo/WASM
+    title: "The loop, deployed two ways"
+    shows: >
+      A top-down (x, y) plot of the SO-101's reachable patch. The box (vizdata.box, a green square,
+      success_tol as its halo). The clone's gripper-tip path (clone_tip_path, a curve of (x, y, z) per
+      control step; use x, y) traced as the scrubber advances — it ends within the halo (a reach). A
+      TRAINED/BROKEN toggle swaps to break_tip_path (the obs_swap rollout on the SAME box): it curves to
+      the mirrored side and stops short. Caption: "same recorded loop, same trained weights — the only
+      difference is the order the deploy script read box_x / box_y."
+    interactions:
+      - "scrub the rollout -> the loop diagram highlights drive/record/train/deploy/eval in turn"
+      - "toggle trained/broken -> same box, clone reach vs obs_swap miss"
+      - "hover the box -> show its (x, y) and the success_tol radius"
+  - id: rate_bars
+    kind: static-figure         # the ch1.6 headline as three bars
+    title: "Does the loop close?"
+    shows: >
+      Three success-rate bars from vizdata: clone_rate (~1.0) vs noop_rate (~0.03) vs random_rate
+      (~0.00). Caption: "the recorded-then-cloned policy reproduces the reach on the real arm's body,
+      clearly above doing nothing or flailing — the LOOP closes. A direction, not a %." Author: keep the
+      honesty line that this is the loop working, not manipulation solved; the reality gap is G1.
+schema:                          # demo/vizdata.json, emitted by real_loop.py's report region
+  task: "string — the reach instruction recorded into every frame"
+  box: "[x, y, z] — the held-out box placement (eval seed 10_000) both rollouts reach for"
+  success_tol: "float — gripper-to-box distance (m) drawn as the box's halo"
+  clone_rate: "float — clone_success_rate (the headline; ~1.0)"
+  noop_rate: "float — no-op baseline (~0.03)"
+  random_rate: "float — random baseline (~0.00)"
+  clone_tip_path: "list of [x, y, z] per control step — the clone reaching the box"
+  break_tip_path: "list of [x, y, z] per control step — the obs_swap rollout reaching the wrong way"
+notes: >
+  Ship the loop_replay from vizdata.json (unblocked, no WASM, no live policy) and render rate_bars as a
+  static figure. The committed vizdata.json is the seed-0 reference; regenerate it if the artifact's viz
+  emit changes. bc_policy.onnx (contract v1) is exported and parity-checked, so a live in-browser clone
+  is a POSSIBLE later tier — but do NOT block the toy on it; the static two-path replay is the whole story.

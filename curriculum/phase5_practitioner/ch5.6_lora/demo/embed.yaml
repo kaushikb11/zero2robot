@@ -1,0 +1,64 @@
+# Demo embed stub — ch5.6 "lora_rank_dial".
+# Playground integration point: playground/ owns the site components; this file declares WHAT
+# the embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json from
+# lora.py; the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# CONTRACT NOTE (author + playground must read): this chapter trains NO env policy and exports
+# NO onnx. There is NOTHING to run in MuJoCo-WASM — the artifact produces a rank sweep of scalar
+# metrics. So this embed is a pure DATA-VIEWER over demo/vizdata.json (a 7-point rank sweep). It
+# needs neither tensor contract v1 nor v2; it is the cheapest embed tier: no sim loop, no
+# inference, no WASM. UNBLOCKED as soon as the site can read the JSON and draw two synced curves.
+#
+# TOY SPEC (one paragraph — the author/orchestrator builds the TSX):
+# THE RANK DIAL. A single horizontal slider selects the LoRA rank r along vizdata.ranks
+# (0, 1, 2, 4, 8, 16). As the learner drags it, TWO readouts move in sync: (1) a "% of weights
+# trained" bar/number that CLIMBS with r (vizdata.trainable_pct: 0% -> 5.4%), and (2) a
+# "held-out skill fit (R^2)" gauge/curve that RISES then PLATEAUS (vizdata.held_out_r2: about
+# -0.44 at r=0, crossing zero near r=2, ~0.77 at the highlighted r=4, then flattening onto the
+# dashed full-fine-tune reference line vizdata.full.held_out_r2 by r=8). The visible ELBOW is the
+# hero: past the knee, more trainable parameters buy almost nothing — "fewer params" is not
+# "worse fit." Mark r=4 (vizdata.headline_rank) with its label "~1.3% of the weights, ~84% of
+# full-FT's fit." A SECOND, muted trace shows the honest twist: task_A fit (vizdata.task_a_r2)
+# starting at ~1.0 (r=0) and FALLING as the dial turns — the old skill the frozen base knew is
+# being forgotten as the adapter grows, even though W is frozen. One-line caption to feel: "turn
+# the dial: the new skill snaps in for ~1% of the weights — and the old skill quietly leaves."
+demo: lora_rank_dial
+vizdata: vizdata.json          # emitted by lora.py (seed 0, default config); schema below
+panels:
+  - id: rank_dial
+    kind: slider-synced-readouts    # a slider + two synced numeric/curve readouts; no MuJoCo/WASM
+    title: "Turn the rank dial"
+    shows: >
+      A slider over rank r (vizdata.ranks). Readout 1: % of weights trained (vizdata.trainable_pct),
+      a climbing bar. Readout 2: held-out skill fit (vizdata.held_out_r2), a curve that rises then
+      PLATEAUS onto the dashed full-fine-tune line (vizdata.full.held_out_r2). Highlight r=4
+      (vizdata.headline_rank): ~1.3% of params, ~84% of full-FT's fit — the elbow. A muted third
+      trace (vizdata.task_a_r2) shows the in-distribution skill's fit falling as the dial turns.
+    interactions:
+      - "drag the rank slider -> both readouts update; the held-out curve shows the elbow"
+      - "compare against the dashed full-fine-tune reference (100% of params, vizdata.full)"
+      - "toggle the task_A forgetting trace -> watch the old skill degrade as the adapter grows"
+  - id: zero_init_note
+    kind: static-figure             # optional companion; author renders from meta.yaml reference_run
+    title: "Why B starts at zero"
+    shows: >
+      Two numbers from meta.yaml reference_run: lora_step0_frozen_gap 0.0 (zero-init B: the adapter
+      is a bitwise no-op at step 0 — you begin from the exact pretrained model) vs break_step0_frozen_gap
+      0.17 (--break rand_init_B: kaiming B perturbs the frozen head before any training). Caption:
+      "zero-init B is what makes LoRA start from the model you paid to pretrain."
+schema:                          # demo/vizdata.json, emitted by lora.py's report region
+  held_out_skill: 3              # the skill held out of pretraining (the adapter must teach it)
+  task_a_skill: 0                # the in-distribution skill watched for forgetting
+  headline_rank: 4               # the rank highlighted in the dial (~1.3% of params, recovers most)
+  base_total_params: "int — the frozen base's parameter count (~78K)"
+  ranks: "list[int] — the LoRA ranks swept (0,1,2,4,8,16); r=0 is the frozen zero-shot"
+  trainable_pct: "list[float] — % of base params the adapter trains at each rank (climbs 0 -> 5.4)"
+  held_out_r2: "list[float] — held-out skill fit at each rank (rises then plateaus — the elbow)"
+  task_a_r2: "list[float] — in-distribution skill fit at each rank (falls: the forgetting trace)"
+  full: "{held_out_r2, task_a_r2, trainable_pct} — the full-fine-tune reference (100% of params)"
+  frozen: "{held_out_r2, task_a_r2} — the frozen zero-shot base (r=0)"
+notes: >
+  Ship the rank_dial from vizdata.json (unblocked, no WASM, no policy) and render the zero_init_note
+  as a static figure from meta.yaml. The committed vizdata.json is the seed-0 reference; regenerate
+  it if the artifact's viz emit changes. There is no rollout in this chapter by design — do NOT wait
+  on any sampler/contract runtime.

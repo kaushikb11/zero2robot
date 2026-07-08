@@ -11,13 +11,16 @@ framework/abstraction layers that hide the lesson. Blocked at ANY indentation
 
 Scans every lowercase .py file directly inside each chapter directory (the
 artifact plus any sibling chapter code), matching the session-time twin
-infra/hooks/pedagogy_gate.py: regex `^\\s*(import|from)\\s+<mod>\\b` per line.
+infra/hooks/pedagogy_gate.py. Imports are extracted with `ast` (not a line
+regex) so compound (`import numpy, gym`), aliased (`import gym as g`), and
+semicolon-joined (`import os; import hydra`) forms cannot slip past.
 Exit 1 listing `path:line: module`.
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
 from pathlib import Path
@@ -33,27 +36,59 @@ FORBIDDEN_ALWAYS = [
     "gym",
 ]
 FORBIDDEN_UNLESS_GRANTED = ["transformers"]
+# jax/flax/optax are the ONE excursion (decision 015): allowed only in a chapter that
+# declares `allow_mjx: true` (ch2.3 MJX). Everywhere else they are forbidden — this is
+# what actually enforces the doctrine's "MJX chapters additionally" carve-out.
+FORBIDDEN_UNLESS_MJX = ["jax", "flax", "optax"]
 
 CHAPTER_CODE_RE = re.compile(r"^[a-z0-9_]+\.py$")
 
 
-def _import_re(module: str) -> re.Pattern[str]:
-    return re.compile(rf"^\s*(import|from)\s+{module}\b")
+def _imported_modules(text: str) -> list[tuple[int, str]]:
+    """(lineno, top-level module) for every import, via ast when the file parses.
+
+    ast handles `import a, b`, `import a as x`, `import a.b`, `from a import b`,
+    and `import a; import b` uniformly — the top-level name is what the doctrine
+    blocks. A file that does not parse falls back to a per-statement scan (split
+    on ';' and ',') so a syntax error never silently passes the gate.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        pairs: list[tuple[int, str]] = []
+        for lineno, raw in enumerate(text.splitlines(), start=1):
+            for stmt in raw.split(";"):
+                s = stmt.strip()
+                if s.startswith("from "):
+                    m = re.match(r"from\s+([\w.]+)", s)
+                    if m:
+                        pairs.append((lineno, m.group(1).split(".")[0]))
+                elif s.startswith("import "):
+                    for part in s[len("import "):].split(","):
+                        tok = part.strip().split(" as ")[0].strip()
+                        if tok:
+                            pairs.append((lineno, tok.split(".")[0]))
+        return pairs
+    pairs = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                pairs.append((node.lineno, alias.name.split(".")[0]))
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            pairs.append((node.lineno, node.module.split(".")[0]))
+    return pairs
 
 
-def scan_file(path: Path, allow_transformers: bool) -> list[tuple[int, str]]:
+def scan_file(path: Path, allow_transformers: bool, allow_mjx: bool = False) -> list[tuple[int, str]]:
     """Return (lineno, module) for every forbidden import in `path`."""
-    blocked = list(FORBIDDEN_ALWAYS)
+    blocked = set(FORBIDDEN_ALWAYS)
     if not allow_transformers:
-        blocked += FORBIDDEN_UNLESS_GRANTED
-    patterns = [(module, _import_re(module)) for module in blocked]
-    hits: list[tuple[int, str]] = []
+        blocked |= set(FORBIDDEN_UNLESS_GRANTED)
+    if not allow_mjx:
+        blocked |= set(FORBIDDEN_UNLESS_MJX)
     text = path.read_text(encoding="utf-8")
-    for lineno, line in enumerate(text.splitlines(), start=1):
-        for module, pattern in patterns:
-            if pattern.match(line):
-                hits.append((lineno, module))
-    return hits
+    hits = {(lineno, mod) for lineno, mod in _imported_modules(text) if mod in blocked}
+    return sorted(hits)
 
 
 def chapter_code_files(chapter: Chapter) -> list[Path]:
@@ -95,15 +130,22 @@ def main(argv: list[str] | None = None) -> int:
     scanned = 0
     for chapter in chapters:
         allow_transformers = bool(chapter.meta.get("allow_transformers"))
+        allow_mjx = bool(chapter.meta.get("allow_mjx"))
         for code_file in chapter_code_files(chapter):
             scanned += 1
             rel = code_file.relative_to(root).as_posix()
-            for lineno, module in scan_file(code_file, allow_transformers):
+            for lineno, module in scan_file(code_file, allow_transformers, allow_mjx):
                 if module in FORBIDDEN_UNLESS_GRANTED:
                     violations.append(
                         f"{rel}:{lineno}: '{module}' requires "
                         "`allow_transformers: true` in this chapter's "
                         "meta.yaml (tiny-VLA chapters only)"
+                    )
+                elif module in FORBIDDEN_UNLESS_MJX:
+                    violations.append(
+                        f"{rel}:{lineno}: '{module}' requires "
+                        "`allow_mjx: true` in this chapter's "
+                        "meta.yaml (MJX chapters only — decision 015)"
                     )
                 else:
                     violations.append(f"{rel}:{lineno}: '{module}'")

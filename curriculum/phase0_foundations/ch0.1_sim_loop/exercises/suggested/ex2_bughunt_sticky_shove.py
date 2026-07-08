@@ -1,9 +1,14 @@
 """SUGGESTED exercise candidate (humans promote) — bug-hunt, ch0.1.
 
-This is the chapter artifact with the rerun logging stripped out and EXACTLY
-ONE conceptual bug injected. Its smoke metrics should match sim_loop.py's
-(same seed, same physics) — they don't. Symptom: the box drifts ~0.42 m
-sideways instead of ~0.09 m [measured], as if the shove never let go.
+This is the chapter's simulation loop, stripped to essentials (no rerun, no
+inspection scaffolding) with EXACTLY ONE conceptual bug injected. Its smoke
+metrics should match sim_loop.py's (same seed, same physics) — they don't.
+Symptom: the box drifts ~0.42 m sideways instead of ~0.09 m, as if the shove
+never let go.
+
+Before you change a line, write one sentence: the box drifts 0.42 m instead of
+0.09 — what does a shove that behaves as if it never let go tell you about what
+mjData clears between steps and what it doesn't?
 
 Find the bug by reasoning about mjData (rerun the chapter's mental model:
 what persists across mj_step, and what doesn't?), fix it, and re-run
@@ -63,17 +68,14 @@ push_newtons = rng.uniform(6.0, 12.0)
 push_sign = rng.choice([-1.0, 1.0])
 push_force = np.array([0.0, push_sign * push_newtons, 0.0])
 
-mujoco.mj_forward(model, data)
-box_pos_at_push = data.xpos[box.id].copy()
-
 for step in range(num_steps):
-    data.ctrl[0] = 1.0
-
-    if args.perturb and step == push_start:
-        data.xfrc_applied[box.id, :3] = push_force  # deliver the shove at its scheduled step
+    in_shove = args.perturb and push_start <= step < push_start + push_steps
     if step == push_start:
-        box_pos_at_push = data.xpos[box.id].copy()
+        box_pos_at_push = data.xpos[box.id].copy()  # .copy(): xpos is a view; the next mj_step overwrites it in place
 
+    data.ctrl[0] = 1.0
+    if in_shove:
+        data.xfrc_applied[box.id, :3] = push_force  # apply the shove during its window
     mujoco.mj_step(model, data)
 
 final_box_pos = data.qpos[0:3]

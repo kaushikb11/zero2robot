@@ -41,7 +41,7 @@ from curriculum.common.seeding import set_seed  # noqa: E402
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--out", type=Path, default=Path("outputs/ch2.1-ppo"))
-parser.add_argument("--total_steps", type=int, default=200_000)  # cpu-laptop: minutes | smoke: 512
+parser.add_argument("--total_steps", type=int, default=200_000)  # cpu-laptop: ~0.3 min | smoke: 512
 parser.add_argument("--num_envs", type=int, default=8)      # parallel rollouts; T4: 8 | 4090: 64
 parser.add_argument("--num_steps", type=int, default=256)   # steps per env per rollout -> batch = envs*steps
 parser.add_argument("--update_epochs", type=int, default=10, help="passes over each rollout batch")
@@ -57,7 +57,7 @@ parser.add_argument("--hidden_dim", type=int, default=64)  # cartpole is tiny; w
 parser.add_argument("--eval_episodes", type=int, default=20)  # T4: 20 | smoke: 3
 parser.add_argument("--seed", type=int, default=0, help="seeds torch, numpy, AND every env reset")
 parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default=detect_device())
-# --- the five PPO tricks, each a toggle so you can measure what it buys (ablation) ---
+# --- three of PPO's tricks as on/off toggles, so you can ablate what each one buys ---
 parser.add_argument("--norm-adv", dest="norm_adv", action="store_true", default=True,
                     help="normalize advantages per minibatch (on by default)")
 parser.add_argument("--no-norm-adv", dest="norm_adv", action="store_false")

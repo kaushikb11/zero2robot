@@ -1,0 +1,140 @@
+id: ch5.2-align
+title: "Why Aligned: Contrastive Vision-Language Pretraining"
+artifact: align.py           # target ~410 LOC (built to 445 total lines, hard cap 450 — the TIGHTEST chapter of the arc: two towers (a re-contained tiny ViT + a trivial text tower), symmetric InfoNCE with a learned temperature, THREE encoders (contrastive / supervised-probe / random) and a retrieval eval, one file)
+task: perception             # contrastive image-text retrieval over curriculum/common/envs/pusht frames
+
+builds_on:
+  - ch5.1   # the tiny ViT image tower (re-contained here — chapters do NOT import each other) + the supervised-probe baseline this chapter beats
+  - ch1.7   # the word-level Tokenizer + instruction-template idea (re-contained) and the frame-render / cheap-label-from-sim-state conventions
+
+# NOTE (doctrine): a vision-language chapter, but NOTHING is imported. Both towers, the
+# tokenizer, the InfoNCE loss and the learned temperature are built FROM SCRATCH (no
+# transformers, no open_clip, no HF tokenizers). So `allow_transformers` stays UNSET and the
+# forbidden-imports gate runs at full strictness. A REAL CLIP/SigLIP (a pretrained ViT + a
+# subword tokenizer at web scale) is the reference/Scale-Lab, reached for by POINTER, not import.
+
+objectives:
+  - Map an image and the WORDS that describe it into ONE shared embedding space with two from-scratch towers — a tiny ViT image tower (re-contained: patch-embed a 64x64 frame into 64 tokens, a CLS token, learned positions, a few pre-norm attention blocks) and a trivial text tower (word-level tokenizer -> embed -> one block -> masked mean-pool) — each projecting to a small L2-normalized vector.
+  - Train the alignment with SYMMETRIC InfoNCE over a batch's image-text cosine matrix (cross-entropy in BOTH directions, image->text AND text->image) plus a LEARNED temperature — using NO labels, only which caption came with which frame. Flag the free-tier reality: contrastive wants a big batch (128-256) for in-batch negatives, which fits here only because the towers are tiny, and these near-blank 64x64 sim frames need background subtraction so the ViT sees the block, not the table.
+  - Measure alignment as RETRIEVAL: type "the block is near the top left corner" and rank held-out frames by cosine. Show the contrastive encoder beats BOTH a ch5.1-style supervised-probe encoder AND a random-init encoder — the DIRECTION (aligned >> random; aligned > supervised on the fine metric), seed-robust, never an exact number.
+  - Diagnose the classic InfoNCE bug the learner writes themselves — dropping the NEGATIVES (pull each matched pair's cosine to 1 but never push non-matches apart) — predict its retrieval, run it (--break noneg), and self-explain why, with nothing repelling non-matches, the embedding space collapses so retrieval stays above chance but is measurably worse. And refute the misconception "contrastive learning needs labels": the negatives come free from PAIRING (every other caption in the batch), and the supervised baseline that DOES use quadrant labels still loses to the label-free contrastive tower.
+
+scale_lab: false
+# The real thing here is web-scale CLIP/SigLIP (a pretrained ViT + a subword tokenizer over
+# hundreds of millions of image-text pairs), which is far off the free-tier floor and is the
+# READ-THE-REAL-THING target below, not a distinct Scale Lab. The scale knobs (--dim, --depth,
+# --embed_dim, --batch_size, --episodes) are the on-ramp. If the author later designs a GPU
+# study (a bigger ViT, a real image-caption set, larger batches), set scale_lab: true + a ref
+# and have wallclock-bench MEASURE it — do not assert a scaling claim.
+
+# READ-THE-REAL-THING: the map pairs this chapter with the contrastive-pretraining source. The
+# rtrt: block is LEFT FOR THE AUTHOR to pin — I must never invent a commit SHA. Honest candidate
+# (repo + a REAL commit the author verifies offline):
+#   * openai/CLIP — model.py: the symmetric image/text InfoNCE and the learned `logit_scale`
+#     (temperature) this chapter rebuilds from scratch. Focus on `CLIP.forward` /
+#     `logit_scale.exp()` and the two symmetric cross-entropies in the training loop.
+# PROSE POINTER (not a second rtrt, just name it): google-research/big_vision —
+# big_vision/models/proj/image_text/two_towers.py — SigLIP swaps the softmax InfoNCE for a per-pair
+# SIGMOID loss, which is what modern VLA vision backbones (SmolVLA's SigLIP) actually use because
+# the sigmoid decouples the loss across the batch and scales to huge batches better than a
+# softmax over in-batch negatives. Author pins both SHAs; site RTRT.astro renders nothing until
+# repo + commit both exist.
+read_the_real_thing: true
+rtrt:
+  repo: openai/CLIP
+  commit: d05afc436d78f1c48dc0dbf8e5980a9d471f35f6   # openai/CLIP default-branch HEAD; pinned 2026-07-08 (API-verified: clip/model.py present — logit_scale + logits_per_image/logits_per_text). NEVER invent a sha.
+  focus:
+    - "the SYMMETRIC loss: logits_per_image and logits_per_text, two cross-entropies against arange labels (real + ours: image->text AND text->image)"
+    - "the LEARNED temperature `logit_scale` (real: a clamped log-parameter, exp()'d; ours: identical) — why a learned scale beats a fixed one"
+    - "the two towers projecting to a shared, L2-normalized embedding (real: a big ViT + a Transformer text encoder; ours: a tiny ViT + a mean-pool text tower)"
+    - "PROSE POINTER — google-research/big_vision two_towers.py: the sigmoid variant modern VLAs use, and WHY it scales the batch better than softmax InfoNCE"
+
+demo: aligned_vs_random_retrieval   # type an instruction -> highlight which cached frames light up, aligned encoder vs a random-init one, side by side; emits demo/vizdata.json (retrieval rankings + gallery block positions, no image binaries)
+
+# All reference metrics: seed 0, cpu. Env resets + rendering are bitwise on CPU; the tower inits
+# are seeded; the smoke metrics.json is byte-identical twice-run (CI-checked). BUT this chapter
+# trains on rendered IMAGE features and MuJoCo rasterization is NOT bitwise across CPU arches, so
+# the exact retrieval@1 is platform-sensitive — the ROBUST, reproducible claim the exercise gates
+# assert is the DIRECTION (aligned >> random every seed/platform; aligned > supervised on the fine
+# metric), never the exact 0.83. Same-machine runs are byte-deterministic.
+#
+# DRAFT NOTE (author/orchestrator MUST re-measure + record): the numbers below are a PROVISIONAL
+# draft measurement (align.py at episodes 70, epochs 25, sup_epochs 12, batch 128, seed 0, cpu,
+# Apple Silicon) — NOT a wallclock-bench run at the default config (episodes 80, epochs 30). Run
+# wallclock-bench + reverify at the default config, across seeds 0/1/2, and REPLACE these.
+reference_run:
+  provenance: "PROVISIONAL DRAFT (episodes 70, epochs 25, sup_epochs 12, batch 128, seed 0, cpu). Orchestrator: re-measure at the default config across seeds and record. The DIRECTION is the claim, not the exact %."
+  num_pairs: 1662                    # (frame, caption) pairs from PushT expert replays (default episodes 80 -> ~1900)
+  num_gallery: 249                   # held-out gallery frames retrieval ranks over
+  vocab_size: 21                     # from-scratch word-level vocab (4 specials + template/quadrant/near-far words)
+  embed_dim: 64                      # shared image/text embedding width (aligned + random towers; supervised uses NUM_QUAD=4)
+  final_contrastive_loss: 2.600306   # symmetric InfoNCE at the last epoch (in-batch negatives -> floor above 0)
+  temperature_learned: 0.069656      # the learned softmax temperature (1 / exp(logit_scale)); init 0.07 (CLIP), barely moves here
+  # --- alignment as retrieval@1 (FINE = quadrant AND near/far; the headline) ---
+  retrieval_at1_aligned: 0.831325    # contrastive: captures the WHOLE caption
+  retrieval_at1_supervised: 0.702811 # ch5.1 probe: recovers the quadrant LABEL, loses the near/far half of the caption
+  retrieval_at1_random: 0.100402     # random init: ~chance (1/8 = 0.125)
+  # --- retrieval@1 (QUAD = quadrant only, the coarser score) ---
+  retrieval_quad_at1_aligned: 0.975904
+  retrieval_quad_at1_supervised: 0.959839  # supervised nails the quadrant it was trained on — expected
+  retrieval_quad_at1_random: 0.192771       # ~chance (1/4 = 0.25)
+  # --- the Break-It: --break noneg (positives only, no in-batch negatives -> the space collapses) ---
+  break_noneg_retrieval_at1_aligned: 0.37751      # fine drops 0.83 -> 0.38 (measurable), but stays above random 0.10
+  break_noneg_retrieval_quad_at1_aligned: 0.654619  # quad drops 0.98 -> 0.65 too
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The ROCK is aligned >> random (0.83 vs 0.10 fine; 0.98 vs 0.19 quad). Contrastive learns a
+  #    real shared space from PAIRING ALONE. Lead with THAT and with the label-free point.
+  #  * aligned > supervised is the SECONDARY measured direction, and it lives on the FINE metric:
+  #    both nail the quadrant (quad ~0.96-0.98), but the supervised probe's space is shaped by a
+  #    4-WAY LABEL, so it loses the near/far half of the caption (fine 0.70 vs 0.83). On QUAD alone
+  #    supervised ~ ties aligned — SAY SO; do not oversell contrastive on the coarse metric.
+  #  * The supervised baseline USES quadrant labels; the contrastive tower uses NONE. That is the
+  #    misconception refuted: contrastive needs PAIRING, not labeling.
+  #  * BREAK-IT CHOICE (orchestrator note): the contract suggested the one-sided / constant-temperature
+  #    InfoNCE bug, but I MEASURED those do NOT reliably degrade at this tiny scale (with enough
+  #    epochs the model recovers; one-sided can even tie/beat symmetric). --break noneg (drop the
+  #    negatives -> collapse) DOES degrade reliably at every budget/seed (fine 0.83->0.38; seed1
+  #    0.92->0.66) AND reinforces the misconception (negatives, not labels, are what pairing buys).
+  #    The correct loss still teaches CLIP's SYMMETRIC both-directions form; prose covers why.
+  #  * These are TINY towers on near-blank 64x64 sim frames; background subtraction is what makes
+  #    them learnable at all. This is a MECHANISM demo, not a strong perception model. A real
+  #    CLIP/SigLIP over web-scale pairs is the reference — do not inflate the tiny numbers.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
+# provenance, not a bare magic number). checks.py reads these. All PENDING re-measurement by the
+# orchestrator. The two reproduce checks TRAIN (contrastive) and are @pytest.mark.slow (excluded
+# from `make check`); the self-contained gates (ex3 InfoNCE-loss completion, ex4 retrieval@1
+# helper) are FAST + deterministic and run in `make check`.
+exercise_checks:
+  exercise_config:                 # reduced config for the SLOW reproduce checks (kept small; still shows the direction)
+    episodes: 40
+    epochs: 20
+    sup_epochs: 10
+    batch_size: 128
+    provenance: "DRAFT-measured at this reduced config (seed 0, cpu, Apple Silicon): aligned 0.886 fine, supervised 0.342, random 0.302, noneg 0.403 -> gaps al-rand 0.58, al-sup 0.54, neg-gap 0.48 (all bands pass with wide margin). FULL config (episodes 70, epochs 25): aligned 0.83, supervised 0.70, random 0.10, noneg 0.38. Orchestrator: reverify across seeds 0/1/2. DIRECTION is the gate; exact numbers shift with budget (random is noisier at the reduced held-out size)."
+    min_aligned_over_random: 0.3   # ex1: aligned retrieval@1 (fine) must beat random by >= this (measured margin ~0.73 at episodes 70; conservative)
+    min_aligned_over_supervised: 0.05  # ex2: aligned (fine) must beat the supervised probe by >= this (measured ~0.13; small + on the FINE metric only)
+    min_negatives_over_noneg: 0.15     # ex1: full InfoNCE (fine) must beat --break noneg by >= this (measured ~0.45 at episodes 70; seed-robust >= 0.26)
+  ex1:                             # ex1_predict_negatives.py (predict-then-run; SLOW; the learner-generated failure — full InfoNCE vs --break noneg)
+    answer: "B"                    # full InfoNCE > no-negatives: without negatives repelling non-matches the space collapses and retrieval drops
+  ex2:                             # ex2_predict_aligned_vs_supervised.py (predict-then-run; SLOW)
+    answer: "A"                    # contrastive beats the label-supervised probe on the fine metric (it keeps the whole caption)
+  ex3:                             # ex3_completion_infonce.py (code-completion, fast)
+    abs_tol: 1.0e-5              # a correct symmetric InfoNCE matches the reference loss within this
+  ex4:                             # ex4_completion_retrieval.py (code-completion, fast)
+    abs_tol: 1.0e-6              # a correct retrieval@1 count matches the reference exactly
+
+# region_hashes: OMITTED in this draft — the site records them at chapter-build time
+# (check_prose_code_drift recomputes against align.py). Populate when the artifact freezes.
+
+notebook_hash: a87765b5dcb919d2d2331f2f11b5f0369f861c3484572f8710e2f76d73396739        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: e2d54b8062313c953449e9fd894f1b4a4fe6482495da221368a1cb5fce7c22df   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 570f9e328c6b11374d0ea6cfeb32ab86aa022c254114ae1a33ac7f4e6ef8e91c
+  data: e54913d6461f1f2ac71c7ffed802b8254448284c7c17ea72a97233ba936df243
+  language: 4260f4c5c8eea9a55e06455c02ee61a5c062d9f33dd1d2ff0f84cc9f55df6157
+  vision: 45d26d533eee1211be32f9412cfd2fc86bd87603f93f293e8646bf5e0d508342
+  contrastive: 00cd5df1a3492e9dc3dbfed8f609a7e580e996d6e69eb44e04f50e9d87560c36
+  eval: c8a0888a0020d22de913c4fe34fd03b6106f8c553d0fad13680eebd2d3f7fdca
+  report: f555c970662e8da15b497dbcd9670ccf7b13cf3c7df34b269f26cf3bdb736e4c

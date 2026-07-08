@@ -25,13 +25,13 @@ scale_lab: false
 # did not have a verified offline commit sha and must never invent one, so the
 # author pins it. site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: real-stanford/diffusion_policy   # author: confirm + pin a real commit sha
-#   commit: <author pins>
-#   focus:
-#     - diffusion_policy/policy/diffusion_unet_lowdim_policy.py  the conditional denoiser + sampling
-#     - diffusion_policy/model/diffusion/ema_model.py            EMA (a stabilizer we omit)
-#     - the action-horizon / receding-horizon execution we replaced with single-step sampling
+rtrt:
+  repo: real-stanford/diffusion_policy
+  commit: 5ba07ac6661db573af695b419a7947ecb704690f   # default-branch HEAD (no tags in repo); pinned 2026-07-07
+  focus:
+    - diffusion_policy/policy/diffusion_unet_lowdim_policy.py  the conditional denoiser + sampling
+    - diffusion_policy/model/diffusion/ema_model.py            EMA (a stabilizer we omit)
+    - the action-horizon / receding-horizon execution we replaced with single-step sampling
 
 demo: diffusion_multimodality   # 2D toy panel (ring: diffusion vs regression); PushT policy panel BLOCKED on contract v2
 
@@ -91,9 +91,9 @@ exercise_checks:
     num_demos: 30
     epochs: 150
     eval_episodes: 10
-    provenance: "PENDING — measure with diffusion.py at this reduced config, seed 0, cpu; the DIRECTION (toy: diffusion covers modes >> regression; few_steps under-denoises) is robust, the exact band author-confirms"
-    min_radius_gap: 0.3            # toy: diffusion mean_radius must beat regression's by >= this (measured margin at default ~0.81; conservative here)
-    min_mode_gap: 4               # toy: diffusion must cover >= regression + this many angular modes (measured margin at default is 8)
+    provenance: "measured 2026-07-07 at this reduced config, seed 0, cpu: toy diffusion 8/8 modes radius 0.828742 vs regression 0/8 radius 0.039856 (radius gap 0.79, mode gap 8); few_steps drops the toy to 7/8. Bands below are conservative floors on those measured margins."
+    min_radius_gap: 0.3            # toy: diffusion mean_radius must beat regression's by >= this (measured margin 0.79 at reduced config, ~0.81 at default; conservative here)
+    min_mode_gap: 4               # toy: diffusion must cover >= regression + this many angular modes (measured margin is 8 at both configs)
   ex1:                             # ex1_predict_multimodality.py (predict-then-run)
     answer: "B"                    # diffusion covers all modes; regression collapses to the empty center
   ex2:                             # ex2_predict_denoising_steps.py (predict-then-run)
@@ -103,14 +103,10 @@ exercise_checks:
   ex4:                             # ex4_completion_reverse_step.py (code-completion, fast)
     rel_tol: 1.0e-6                # completed posterior mean must match the reference on the fixture
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab
-# variant is not built yet (ch1.4 is a draft pending the teaching-pass);
-# notebook-tier-test writes both on generation, and the gate skips a chapter that
-# carries neither key (never a PENDING placeholder, which reads as stale).
-
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records
-# them on first render; do not hand-write them.
+# region_hashes: sha256 of each region's exact body (infra/ci/lib/regions.py);
+# check_prose_code_drift recomputes them against diffusion.py. Verified current.
+notebook_hash: 3f29c9a5d1a7948d81d92e997903b71beeddfdd70fa688a1d6a9e71e2d132fa0        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: c719632f2d66841c1cc30795082b473a2b72c92e2b2c7a480d6152155ca4ed3d   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 37ee3522eca22a35ae3db13ea9d401990505ed72eeb8b6dcfb9c86aedc345066
@@ -120,6 +116,3 @@ region_hashes:
   train: 40ad25d0b91c01a7836d3ca82f2f1a4174b4890d62b1688e172d3e07d1ec115b
   eval: bac97de6c2bd8b4f7d158882e79c3888ad8ec74ad3d571288440897292de8474
   report: b455dff9ba63d256206c2dd85524d35a3545255cf59157e1aa858263dee0f21f
-
-notebook_hash: 3f29c9a5d1a7948d81d92e997903b71beeddfdd70fa688a1d6a9e71e2d132fa0        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: c719632f2d66841c1cc30795082b473a2b72c92e2b2c7a480d6152155ca4ed3d   # sha256 of the generated notebook bytes; mismatch => hand-edited

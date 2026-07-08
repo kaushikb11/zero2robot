@@ -1,0 +1,161 @@
+/* ch2.6 "Sim-to-Real Intuition Lab I" concept-toy — the LATENCY-DEGRADE toy.
+ *
+ * Co-located CSS for LatencyDegradeToy.tsx (imported at the top of that file).
+ * Namespaced `ld-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`cp-*` classes. Like ch3.3's engine-drift toy this is PURE
+ * SVG over pre-computed perturb.py curves + rollouts — no WASM — so it drives every
+ * colour from the site's flipping design tokens and is genuinely theme-aware in
+ * BOTH light and dark. Every var carries a light fallback so it still renders if
+ * mounted outside the shell.
+ *
+ * Colour by MEANING (mirrors the ch2.1 cartpole toy + the frozen contract):
+ *   - --entity-pusher amber → the POLE (the thing being balanced)
+ *   - --entity-target green → CLEAN / balanced / the healthy baseline
+ *   - --alert red           → FALLING / the breaker (latency)
+ *   - --signal blue         → the ONE live handle (the magnitude marker + slider)
+ *   - neutral ink           → the benign no-op curve (gravity) + rails/axes
+ */
+
+.ld { display: grid; gap: 0.6rem; }
+
+/* --- controls: family selector + magnitude slider ------------------------ */
+.ld-controls { display: grid; gap: 0.55rem; }
+.ld-seg-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ld-seg-label,
+.ld-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.ld-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.ld-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.8rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ld-seg-btn:last-child { border-right: 0; }
+.ld-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: var(--signal-ink, #fff); }
+.ld-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ld-seg-worst { opacity: 0.75; font-style: italic; }
+.ld-seg-btn[aria-pressed="true"] .ld-seg-worst { opacity: 0.9; }
+
+.ld-slider-row { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.ld-slider { flex: 1 1 200px; min-width: 150px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.ld-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.ld-mag-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  min-width: 10ch; text-align: right;
+  color: var(--signal, #1f56de);
+}
+.ld-mag-val.ld-ok  { color: var(--entity-target, #0c7d5f); }
+.ld-mag-val.ld-mid { color: var(--entity-pusher, #b0560f); }
+.ld-mag-val.ld-bad { color: var(--alert, #c0362a); }
+
+/* --- panels -------------------------------------------------------------- */
+.ld-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.5rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ld-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.15rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.ld-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.ld-svg { display: block; width: 100%; height: auto; }
+
+/* --- curve panel marks --------------------------------------------------- */
+.ld-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.ld-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent); stroke-width: 1; }
+.ld-tick {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.ld-axis-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em;
+}
+
+/* the degradation curve, coloured by the family's severity meaning */
+.ld-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.ld-c-break { stroke: var(--alert, #c0362a); }              /* latency — the breaker */
+.ld-c-dent  { stroke: var(--entity-pusher, #b0560f); }      /* sensor noise — dents */
+.ld-c-noop  { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 70%, transparent); }  /* gravity — no-op */
+
+.ld-dot { stroke: var(--paper-2, #f0e9d9); stroke-width: 1.4; }
+.ld-dot-ok  { fill: var(--entity-target, #0c7d5f); }
+.ld-dot-mid { fill: var(--entity-pusher, #b0560f); }
+.ld-dot-bad { fill: var(--alert, #c0362a); }
+
+/* the ONE live handle: the current-magnitude marker (signal blue) */
+.ld-marker { stroke: var(--signal, #1f56de); stroke-width: 1.4; stroke-dasharray: 4 4; opacity: 0.8; }
+.ld-marker-ring { fill: none; stroke: var(--signal, #1f56de); stroke-width: 2; }
+
+/* --- readout HUD --------------------------------------------------------- */
+.ld-readout {
+  display: grid; gap: 0.28rem;
+  padding: 0.45rem 0.55rem; margin-top: 0.4rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+}
+.ld-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+.ld-row-base { border-top: 1px dashed var(--rule-strong, #c8bc9e); padding-top: 0.28rem; margin-top: 0.05rem; }
+.ld-k { color: var(--ink-mute, #6d6252); }
+.ld-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.ld-v.ld-ok  { color: var(--entity-target, #0c7d5f); }
+.ld-v.ld-mid { color: var(--entity-pusher, #b0560f); }
+.ld-v.ld-bad { color: var(--alert, #c0362a); }
+
+/* --- rollout replays ----------------------------------------------------- */
+.ld-rolls { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 520px) { .ld-rolls { grid-template-columns: 1fr 1fr; } }
+.ld-roll {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.4rem 0.5rem 0.35rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ld-roll-cap {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  margin-bottom: 0.1rem;
+}
+.ld-roll-title { font-size: 0.74rem; font-weight: 700; }
+.ld-roll-title.ld-ok  { color: var(--entity-target, #0c7d5f); }
+.ld-roll-title.ld-bad { color: var(--alert, #c0362a); }
+.ld-roll-sub { font-size: 0.66rem; color: var(--ink-mute, #6d6252); font-variant-numeric: tabular-nums; }
+.ld-roll-svg { display: block; width: 100%; height: auto; }
+
+.ld-fallcone line { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 24%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.ld-rail { stroke: var(--ink-mute, #6d6252); stroke-width: 2; stroke-linecap: round; opacity: 0.55; }
+.ld-rail-end { stroke: var(--ink-mute, #6d6252); stroke-width: 1.5; opacity: 0.55; }
+.ld-cart { fill: color-mix(in srgb, var(--ink, #23201b) 62%, var(--paper, #f7f3ea)); }
+.ld-pole { stroke: var(--entity-pusher, #b0560f); stroke-width: 5; stroke-linecap: round; }
+.ld-pole-fell { stroke: var(--alert, #c0362a); }
+.ld-bob { fill: var(--entity-pusher, #b0560f); }
+.ld-bob-fell { fill: var(--alert, #c0362a); }
+
+/* --- the honest note ----------------------------------------------------- */
+.ld-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.ld-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill transitions; the replay is JS-gated off separately */
+@media (prefers-reduced-motion: reduce) {
+  .ld-seg-btn { transition: none; }
+}

@@ -1,0 +1,157 @@
+/* ch3.3 "Build a Physics Engine I" concept-toy — the INTEGRATOR ENERGY-DRIFT toy.
+ *
+ * Co-located CSS for EngineDriftToy.tsx (imported at the top of that file).
+ * Namespaced `ed-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `fr-*`/`sl-*` classes. Like ch1.5's flow-ring this toy is PURE
+ * SVG over pre-computed engine.py curves — no WASM — so it drives every colour
+ * from the site's flipping design tokens and is genuinely theme-aware in BOTH
+ * light and dark. Every var carries a light fallback so it still renders if
+ * mounted outside the shell.
+ *
+ * Colour scheme — three data series (mirrors engine.py COLORS + embed.yaml),
+ * mapped to tokens by MEANING:
+ *   - --alert red         → explicit EULER (energy runs away — the cautionary one)
+ *   - --entity-target grn → SEMI-IMPLICIT (bounded energy — the symplectic hero)
+ *   - --signal blue       → RK4 (most accurate per step)
+ */
+
+.ed { display: grid; gap: 0.6rem; }
+
+/* --- controls: the system selector + the dt slider ----------------------- */
+.ed-controls { display: grid; gap: 0.55rem; }
+.ed-seg-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ed-seg-label,
+.ed-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.ed-seg-label b, .ed-slider-label b { color: var(--signal, #1f56de); }
+.ed-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.ed-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.85rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ed-seg-btn:last-child { border-right: 0; }
+.ed-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.ed-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.ed-slider-row { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.ed-slider { flex: 1 1 180px; min-width: 140px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.ed-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.ed-dt-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--signal, #1f56de); min-width: 7.5ch; text-align: right;
+}
+
+/* --- panels -------------------------------------------------------------- */
+.ed-panels { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .ed-panels { grid-template-columns: 1.35fr 1fr; align-items: stretch; } }
+
+.ed-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.4rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ed-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.15rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.ed-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.ed-svg { display: block; width: 100%; height: auto; }
+.ed-phase-svg { aspect-ratio: 1 / 1; }
+
+/* --- energy panel marks --------------------------------------------------- */
+.ed-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.ed-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent); stroke-width: 1; }
+.ed-baseline { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 60%, transparent); stroke-width: 1.4; }
+.ed-tick {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.ed-axis-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em;
+}
+.ed-baseline-lab { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: color-mix(in srgb, var(--entity-target, #2f9e44) 80%, var(--ink, #23201b)); }
+
+/* the three integrator curves (energy + phase share these) */
+.ed-euler { stroke: var(--alert, #c0362a); }
+.ed-semi  { stroke: var(--entity-target, #2f9e44); }
+.ed-rk4   { stroke: var(--signal, #1f56de); }
+.ed-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ed-line.ed-rk4 { stroke-width: 2.4; }   /* rk4 sits on the baseline; keep it readable */
+
+/* --- phase panel marks ---------------------------------------------------- */
+.ed-phase-guide { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent); stroke-width: 1; }
+.ed-phase-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; opacity: 0.9; }
+.ed-phase-start { fill: var(--ink-mute, #6d6252); }
+.ed-comet { stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.ed-comet.ed-euler { fill: var(--alert, #c0362a); }
+.ed-comet.ed-semi  { fill: var(--entity-target, #2f9e44); }
+.ed-comet.ed-rk4   { fill: var(--signal, #1f56de); }
+.ed-phase-axlab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; fill: var(--ink-mute, #6d6252);
+}
+
+/* --- freefall caveat card (replaces the phase portrait) ------------------- */
+.ed-caveat {
+  margin: 0; flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: center; gap: 0.4rem;
+  padding: 0.9rem 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--alert, #c0362a) 45%, var(--paper-edge, #ded3ba));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--alert, #c0362a) 6%, var(--paper, #f7f3ea));
+}
+.ed-caveat-h {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--alert, #c0362a) 85%, var(--ink, #23201b));
+}
+.ed-caveat-p { font-size: 0.8rem; line-height: 1.45; color: var(--ink, #23201b); }
+.ed-caveat-p b.ed-plus { color: var(--alert, #c0362a); }
+.ed-caveat-p b.ed-minus { color: var(--entity-target, #2f9e44); }
+
+/* the persistent honest-note line under both panels */
+.ed-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.ed-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* --- readout HUD + legend ------------------------------------------------- */
+.ed-readout {
+  display: grid; gap: 0.28rem;
+  padding: 0.45rem 0.55rem; margin-top: 0.35rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+}
+.ed-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+.ed-lg { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ed-lg::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; }
+.ed-lg.ed-l-euler { color: var(--alert, #c0362a); }
+.ed-lg.ed-l-semi  { color: var(--entity-target, #2f9e44); }
+.ed-lg.ed-l-rk4   { color: var(--signal, #1f56de); }
+.ed-lg-name { color: var(--ink, #23201b); }
+.ed-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.ed-v.ed-bad { color: var(--alert, #c0362a); }
+.ed-v.ed-ok  { color: var(--entity-target, #2f9e44); }
+.ed-v.ed-flat { color: var(--signal, #1f56de); }
+
+/* honour reduced-motion: kill transitions; the comet is JS-gated off separately */
+@media (prefers-reduced-motion: reduce) {
+  .ed-seg-btn { transition: none; }
+}

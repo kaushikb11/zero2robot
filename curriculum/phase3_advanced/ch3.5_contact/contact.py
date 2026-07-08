@@ -396,9 +396,10 @@ for name in names:
     flag = "EXPLODED" if r["blew_up"] else "ok"
     print(f"{name:<10}{r['max_penetration_frac']:>12.4e}{r['rest_penetration_frac']:>12.4e}{r['energy_excess']:>+12.3e}{r['rest_jitter']:>12.3e}{flag:>10}")
 if args.contact == "all":
-    # The headline, an ORDERING so it survives any seed/tier: lcp holds the body
-    # deeper penetration is penalty's, and lcp never sinks past it at rest. (Energy
-    # and jitter are the bounce scene's headline; penetration is the robust rock.)
+    # The headline is an ORDERING, so it survives any seed/tier: penalty drives the
+    # DEEPER impact penetration AND rests INSIDE the table, while lcp never sinks past
+    # it. (Energy and jitter are the bounce scene's headline; penetration is the
+    # robust rock — it holds this ordering on every scene and seed.)
     ok = quality["lcp"]["max_penetration_frac"] < quality["penalty"]["max_penetration_frac"] and \
         quality["lcp"]["rest_penetration_frac"] <= quality["penalty"]["rest_penetration_frac"] + 1e-9
     verdict = "as expected" if ok else "UNEXPECTED — investigate"

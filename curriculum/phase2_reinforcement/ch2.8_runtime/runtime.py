@@ -8,16 +8,22 @@ to the others; they publish and subscribe through a bus. That decoupling is why
 you can swap the policy without touching the sensor, log every topic for free,
 and reason about a 40-node robot at all. ROS is the industrial formalization of
 exactly this shape. This file builds the shape from scratch in stdlib threading
-+ queues — 300 lines instead of a ROS install — so you can see WHY it is shaped
-this way, and what breaks when a rate is missed.
++ queues — a few hundred lines instead of a ROS install — so you can see WHY it
+is shaped this way, and what breaks when a rate is missed.
 
 The graph we wire (the sense -> think -> act loop, decoupled into three nodes):
 
     SENSOR   reads the cartpole state          --/obs-->    at --sensor_hz
-    POLICY   runs the ch2.1 PPO policy          --/action--> at --control_hz
+    POLICY   runs the balancer on that reading  --/action--> at --control_hz
     ACTUATOR applies the action, steps the env               at the plant rate
 
-Run the graph and the pole balances — driven not by one script but by three
+The brain behind the POLICY node is swappable — that is the whole point of a
+runtime. By default it is a built-in scripted balancer (a few lines of linear
+feedback), so the graph runs reproducibly from a fresh clone with nothing to
+download; it is also the brain CI and the exercises measure. Point --policy at
+the PPO checkpoint you trained in ch2.1 (outputs/ch2.1-ppo/ppo_agent.pt) to run
+that policy through the exact same graph — the runtime lesson is identical either
+way. Run it and the pole balances, driven not by one script but by three
 concurrent nodes passing messages. Drop the control rate (--break) and watch the
 actuator hold a stale action too long while the pole falls: the control RATE is
 not a detail, it is the thing keeping the robot alive.
@@ -33,6 +39,7 @@ this).
 Run it:      python curriculum/phase2_reinforcement/ch2.8_runtime/runtime.py --seed 0
 Reproduce:   python .../runtime.py --seed 0 --clock virtual   (twice -> identical)
 Break it:    python .../runtime.py --seed 0 --break           (control rate -> 5 Hz, pole falls)
+Your ch2.1:  python .../runtime.py --seed 0 --policy outputs/ch2.1-ppo/ppo_agent.pt
 CI smoke:    python .../runtime.py --smoke --seed 0 --no-rerun
 """
 
@@ -69,8 +76,8 @@ parser.add_argument("--control_hz", type=float, default=50.0, help="how often th
 parser.add_argument("--queue_depth", type=int, default=1, help="per-topic message buffer; 1 = latest-wins (the control-systems default)")
 parser.add_argument("--clock", choices=("real", "virtual"), default="real",
                     help="real: one thread per node vs the wall clock (non-deterministic). virtual: single-thread simulated clock (reproducible; --smoke forces it)")
-parser.add_argument("--policy", type=Path, default=Path("outputs/ch2.1-ppo/ppo_agent.pt"),
-                    help="trained ch2.1 PPO checkpoint to run as the 'brain'; falls back to a scripted balancer if absent")
+parser.add_argument("--policy", type=str, default="scripted",
+                    help="brain the POLICY node runs: 'scripted' (default) = built-in checkpoint-free balancer, reproducible from a fresh clone; or a path to a trained ch2.1 PPO checkpoint (e.g. outputs/ch2.1-ppo/ppo_agent.pt) to run that policy instead")
 parser.add_argument("--break", dest="break_bug", action="store_true",
                     help="Break It (optional demo, NOT the graded exercise): drop --control_hz to 5 Hz so the policy can't keep up -> the pole falls")
 parser.add_argument("--seed", type=int, default=0, help="seeds torch, numpy, AND the env reset")
@@ -183,20 +190,34 @@ class Node:
 # --- endregion ---
 
 # --- region: graph ---
-def load_policy(path: Path, device: torch.device):
-    """Return an obs -> action function: the ch2.1 PPO policy's MEAN action (no
-    sampling — this is deployment, not exploration). We rebuild just the
-    actor_mean MLP (obs_dim -> 64 -> 64 -> act_dim) and load its weights from the
-    checkpoint ch2.1 saved. If no checkpoint exists (a fresh clone / CI), fall
-    back to a scripted linear balancer computed from the obs — the runtime lesson
-    is identical whichever brain is behind the topic."""
-    if path.is_file():
+def load_policy(spec: str, device: torch.device):
+    """Return an (obs -> action) function and a human-readable label for the brain
+    the POLICY node runs. Two brains, one interface — the node only ever calls
+    obs -> action, which is exactly why the policy is swappable:
+
+      spec == "scripted" (the default): a built-in linear balancer computed from
+        the obs. No checkpoint, no download, so the graph runs reproducibly from a
+        fresh clone — this is the brain CI and the exercises measure.
+      spec == a checkpoint path: the ch2.1 PPO policy's MEAN action (no sampling —
+        this is deployment, not exploration). We rebuild just the actor_mean MLP
+        (obs_dim -> hidden -> hidden -> act_dim, width INFERRED from the checkpoint
+        like ch2.6 does) and load the weights ch2.1 saved.
+
+    The runtime lesson — decoupled nodes, rates, the zero-order hold — is identical
+    whichever brain sits behind the topic."""
+    path = Path(spec)
+    if spec != "scripted" and path.is_file():
+        # Load first, then INFER the actor width from the checkpoint (same idiom as
+        # ch2.6_perturb) instead of hardcoding 64 — a learner who retrains ch2.1 at
+        # any --hidden_dim then loads here without a cryptic size-mismatch.
+        # weights_only=True: we only ever want tensors, never arbitrary pickles.
+        state = torch.load(path, map_location=device, weights_only=True)
+        hidden = state["actor_mean.0.weight"].shape[0]  # Linear(obs, hidden) weight is (hidden, obs)
         net = nn.Sequential(
-            nn.Linear(CartpoleEnv.OBS_DIM, 64), nn.Tanh(),
-            nn.Linear(64, 64), nn.Tanh(),
-            nn.Linear(64, CartpoleEnv.ACT_DIM),
+            nn.Linear(CartpoleEnv.OBS_DIM, hidden), nn.Tanh(),
+            nn.Linear(hidden, hidden), nn.Tanh(),
+            nn.Linear(hidden, CartpoleEnv.ACT_DIM),
         ).to(device)
-        state = torch.load(path, map_location=device)
         net.load_state_dict({k.replace("actor_mean.", ""): v
                              for k, v in state.items() if k.startswith("actor_mean.")})
         net.eval()
@@ -207,14 +228,17 @@ def load_policy(path: Path, device: torch.device):
             return a[0].cpu().numpy()
         return policy, f"ch2.1 PPO checkpoint ({path})"
 
+    if spec != "scripted":  # a path was asked for but nothing is there
+        print(f"[ch2.8-runtime] no checkpoint at {path} — using the scripted balancer instead")
+
     def scripted(obs: np.ndarray) -> np.ndarray:
-        # Mirrors common.cartpole.balance_action's gains, but reads the OBS (what
-        # the sensor published), not the env — the policy node only ever sees
-        # messages. obs = [cart_pos, cart_vel, cos(theta), sin(theta), angvel].
+        # Same gains as common.cartpole.balance_action, but reads the OBS the
+        # SENSOR published (not the env — the policy node only ever sees messages).
+        # obs = [cart_pos, cart_vel, cos(theta), sin(theta), pole_angvel].
         theta = math.atan2(float(obs[3]), float(obs[2]))
         u = 10.0 * theta + 2.0 * float(obs[4]) + 0.4 * float(obs[0]) + 0.8 * float(obs[1])
         return np.array([np.clip(u, -1.0, 1.0)], dtype=np.float32)
-    return scripted, "scripted balancer (no checkpoint found)"
+    return scripted, "scripted balancer (built-in, checkpoint-free)"
 
 
 class SensorNode(Node):
@@ -275,6 +299,7 @@ class ActuatorNode(Node):
             self.state["latency_n"] += 1
         if info["terminated"]:  # the pole fell — a real failure, stop the graph
             self.state["fell"] = True
+            self.state["fell_at"] = now  # sim time of the fall, so the report is honest
         if args.rerun:
             rr.set_time("control_step", sequence=self.state["steps"])
             rr.log("plant/pole_angle_rad", rr.Scalars([pole_angle]))
@@ -293,7 +318,7 @@ def build_graph():
     obs_topic = Topic("/obs", args.queue_depth)
     action_topic = Topic("/action", args.queue_depth)
     policy_fn, policy_src = load_policy(args.policy, device)
-    state = {"steps": 0, "fell": False, "pole_angle": 0.0,
+    state = {"steps": 0, "fell": False, "fell_at": None, "pole_angle": 0.0,
              "latency_sum": 0.0, "latency_n": 0, "obs_topic": obs_topic}
     nodes = [
         SensorNode(env, lock, obs_topic, args.sensor_hz),
@@ -344,7 +369,7 @@ def run_real(nodes, state, duration_s):
         t.start()
     for t in threads:
         t.join()
-    return duration_s
+    return state["fell_at"] if state["fell"] else duration_s  # true sim time when it stopped
 # --- endregion ---
 
 # --- region: report ---

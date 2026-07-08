@@ -93,6 +93,11 @@ export interface ChapterMeta {
   // Existing consumers that destructure the four fields above are unaffected.
   demo?: string | null;
   task?: string | null;
+  // Curriculum track marker, verbatim from meta.yaml's `track:` (null when the
+  // key is absent). "elective" means OFF the main line (0→1→2→4→5) — optional
+  // Depth the capstone never requires (Phase 3 declares it). The map keys its
+  // "optional · Depth" treatment off this; it never hard-codes a phase number.
+  track?: string | null;
   readTheRealThing?: boolean | null; // the gate signal in meta.yaml
   rtrt?: RTRT | null; // the pinned pointer, non-null only when declared
 }
@@ -209,4 +214,68 @@ export function chaptersByPhase(
  *  stores NO prose of its own — single source of truth stays in curriculum/. */
 export function readProse(proseRelPath: string): string {
   return readFileSync(resolve(REPO_ROOT, proseRelPath), "utf-8");
+}
+
+// --- further-reading modules: the practitioner reading track + graduation ---
+// Phase 5 ships prose-only appendices alongside its built chapters: the
+// practitioner reading track (curriculum/phase5_practitioner/reading-track/*.md)
+// and the graduation "go build" bridge (…/graduation/*.md). They are NOT chapters
+// (no meta.yaml, no artifact, no exercises), so discoverChapters skips them — but
+// they are real curriculum prose the site should surface. We discover them the
+// same way: structure from the filesystem, content read verbatim by the bridge's
+// readProse. The site invents nothing — a track dir that is absent yields no
+// modules.
+
+/** A prose-only Phase-5 appendix module (reading track or graduation bridge). */
+export interface FurtherModule {
+  track: "reading" | "graduation"; // URL segment + grouping key
+  trackLabel: string; // sidebar/section heading
+  file: string; // "p1_finetune.md"
+  slug: string; // URL module segment, e.g. "p1-finetune"
+  badge: string; // short marker from the H1, e.g. "P1" / "G1" (may be "")
+  title: string; // the module title (H1 text, badge + trailing parenthetical stripped)
+  proseRel: string; // repo-relative path — pass to readProse()
+}
+
+const FURTHER_TRACKS: { track: FurtherModule["track"]; dir: string; label: string }[] = [
+  { track: "reading", dir: "reading-track", label: "Practitioner reading track" },
+  { track: "graduation", dir: "graduation", label: "Graduation — go build" },
+];
+
+/** "P1 — Fine-Tune a Real Foundation Policy (Reading Track)" -> badge "P1",
+ *  title "Fine-Tune a Real Foundation Policy". Robust to a missing badge. */
+function parseModuleH1(markdown: string): { badge: string; title: string } {
+  const line = markdown.split(/\r?\n/).find((l) => /^#\s+\S/.test(l)) ?? "";
+  const text = line.replace(/^#\s+/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const m = text.match(/^([A-Za-z]?\d+)\s*[—–-]\s*(.+)$/);
+  return m ? { badge: m[1], title: m[2].trim() } : { badge: "", title: text };
+}
+
+/** Discover the Phase-5 further-reading modules, in track then filename order.
+ *  Returns [] if the practitioner phase or its appendix dirs are absent. */
+export function discoverFurther(): FurtherModule[] {
+  const phaseRoot = resolve(REPO_ROOT, CURRICULUM_DIR, "phase5_practitioner");
+  const out: FurtherModule[] = [];
+  for (const { track, dir, label } of FURTHER_TRACKS) {
+    const trackDir = join(phaseRoot, dir);
+    if (!existsSync(trackDir)) continue;
+    const files = readdirSync(trackDir, { withFileTypes: true })
+      .filter((d) => d.isFile() && d.name.endsWith(".md"))
+      .map((d) => d.name)
+      .sort();
+    for (const file of files) {
+      const proseRel = `${CURRICULUM_DIR}/phase5_practitioner/${dir}/${file}`;
+      const { badge, title } = parseModuleH1(readFileSync(join(trackDir, file), "utf-8"));
+      out.push({
+        track,
+        trackLabel: label,
+        file,
+        slug: file.replace(/\.md$/, "").replace(/_/g, "-"),
+        badge,
+        title,
+        proseRel,
+      });
+    }
+  }
+  return out;
 }

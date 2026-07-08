@@ -1,61 +1,62 @@
 id: ch2.8-runtime
 title: "Concepts of ROS, Without ROS: a Pub-Sub Control Runtime"
-artifact: runtime.py       # 397 LOC (measured); target ~300, hard cap 450
+artifact: runtime.py       # 416 LOC (measured); target ~300, hard cap 450
 task: cartpole             # curriculum/common/envs/cartpole — the plant the node graph controls
 dataset:
   reference: null          # no dataset: the runtime RUNS a policy, it does not train one
   learner_path: false
-policy_reused: ch2.1-ppo   # the "brain" the graph runs is the TRAINED ch2.1 PPO checkpoint (outputs/ch2.1-ppo/ppo_agent.pt); scripted balancer fallback when absent (CI)
+policy_reused: ch2.1-ppo   # OPTIONAL brain: --policy outputs/ch2.1-ppo/ppo_agent.pt runs the TRAINED ch2.1 PPO policy through the graph. Default (and CI/exercise reference) is the built-in checkpoint-free scripted balancer, since no checkpoint is committed (root CLAUDE.md #5: no binaries in git)
 objectives:
   - Build the three primitives real robot middleware is made of — Node, Topic (a thread-safe pub-sub bus), Rate (a fixed-Hz loop) — from scratch in stdlib threading + queues, no ROS
-  - Wire the sense -> think -> act loop as three DECOUPLED concurrent nodes (sensor / policy / actuator) exchanging messages on topics, and run the ch2.1 policy through it to balance the pole
+  - Wire the sense -> think -> act loop as three DECOUPLED concurrent nodes (sensor / policy / actuator) exchanging messages on topics, and run a swappable balancer through it to keep the pole up (scripted by default; your ch2.1 PPO checkpoint via --policy)
   - Explain why real robot software is a graph of nodes at fixed rates — decoupling, swappability, per-topic logging, and the zero-order hold when a consumer is slower than a producer
   - Measure what degrades when the control RATE drops: message drops, sense->act latency, and the rate below which the controller can no longer keep the pole up
   - Reason honestly about determinism in a concurrent system — why the threaded real-time graph is not bitwise reproducible, and how a virtual-clock scheduler recovers reproducibility
 scale_lab: false
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR. Natural anchors: the ROS 2 (rclcpp/
-# rclpy) executor + topic design docs, or a real robot stack's node graph. The point
-# is to show the learner that the Node/Topic/Rate they just built by hand is the same
-# shape a production middleware formalizes (with QoS, discovery, real transports).
-# Do NOT invent a commit sha here; the read-the-real-thing skill pins the real upstream.
-#   repo: <ros2/design or a real stack>   # PLACEHOLDER — resolve via the skill
+rtrt:
+  repo: ros2/rclpy
+  commit: eedd8b106b7302bd46412236cda2a31a24584ce9   # tag release-latest; pinned 2026-07-07 (API-verified). The real ROS 2 Python client — your hand-rolled Node/Topic/Rate, formalized (QoS, discovery, real transports).
+  focus:
+    - "rclpy/node.py — the real Node: create_publisher/create_subscription/create_timer vs your from-scratch versions"
+    - "rclpy/executors.py — the executor/spin loop that replaces your virtual-clock scheduler"
+    - "what your hand-rolled runtime OMITS: QoS profiles, discovery, and a real (DDS) transport"
 demo: cartpole_runtime_graph   # hero: the live node graph balancing the pole; a rate slider shows the pole fall as control_hz drops
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
 # "seeded-run band with provenance", not a bare magic number). checks.py reads
 # these instead of hardcoding tolerances.
 # PROVENANCE: --clock virtual (deterministic), cpu, torch 2.10.0 / mujoco 3.10.0 /
-# numpy 2.4.6; seeds 0-2; measured 2026-07-06 with the trained ch2.1 checkpoint.
+# numpy 2.4.6; seeds 0-2; measured 2026-07-07 with the built-in scripted balancer
+# (--policy scripted), the checkpoint-free reference CI and the exercises run.
 # RL-doctrine (ch2.1 spike): NO mandatory Break-It bug-hunt. The graded exercises are
 # a predict-then-run (the control-rate cliff) and a hyperparameter-investigation
 # (queue_depth vs rate) — both seed-robust and deterministic under --clock virtual.
 exercise_checks:
   ex1:                     # ex1_predict_control_rate.py — predict-then-run, control-rate sweep
-    provenance: "cpu, --clock virtual, seeds 0-2, default 10 s run; measured 2026-07-06: BALANCES (501 control steps) at control_hz in {50,25,20,15,10} on every seed; FALLS at 5 Hz on every seed (24-41 steps). Deterministic per seed; sense->act latency climbs 0 -> ~60 ms as the rate drops."
+    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2, default 10 s run; measured 2026-07-07: BALANCES (501 control steps) at control_hz in {50,25,20,15,10} on every seed; FALLS at 5 Hz on every seed (16-102 steps, seed-dependent). While balancing the run is seed-independent too (identical steps/latency across seeds — a stable attractor). Sense->act latency climbs 0 -> ~60 ms as the rate drops from 50 to 10 Hz."
     balances_at_hz: 10.0     # at >= this policy rate the pole survives the whole run, all seeds
     falls_at_hz: 5.0         # at this policy rate the pole falls, all seeds (rate cliff between 5 and 10 Hz)
     balanced_steps_min: 500  # a surviving run reaches ~501 control steps (10 s at the 50 Hz plant rate)
   ex2:                     # ex2_investigate_queue_depth.py — hyperparameter-investigation, queue_depth vs rate
-    provenance: "cpu, --clock virtual, seeds 0-2; measured 2026-07-06: at control_hz 5, queue_depth 1 drops 20-35 /obs messages and the pole falls; queue_depth 100 drops 0 messages and the pole falls at the SAME step. A deeper queue hides the dropped-message symptom but does NOT rescue a controller that is simply too slow — the RATE is the killer, not the buffer."
+    provenance: "cpu, --clock virtual, --policy scripted, seeds 0-2; measured 2026-07-07: at control_hz 5, queue_depth 1 drops 13-90 /obs messages and the pole falls (at step 16-102, seed-dependent); queue_depth 100 drops 0 messages and the pole falls at the SAME step. A deeper queue hides the dropped-message symptom but does NOT rescue a controller that is simply too slow — the RATE is the killer, not the buffer."
     slow_control_hz: 5.0
     shallow_queue_depth: 1
-    deep_queue_depth: 100    # deep queue => obs_dropped == 0 (measured), yet balanced is UNCHANGED (still falls)
+    deep_queue_depth: 100    # deep queue => obs_dropped == 0 (measured), yet balanced is UNCHANGED (still falls at the same step)
 
-# region_hashes: LEFT FOR THE SITE BUILD. check_prose_code_drift passes chapters
-# without region_hashes (not yet rendered); the site build records each region's
-# sha256 here when the chapter page is first rendered, and the author refreshes
-# them after any voice-pass edit to runtime.py.
+# region_hashes: recorded from the frozen artifact (the site build records these;
+# check_prose_code_drift recomputes each region's sha256 and gates on drift). The
+# author refreshes them after any voice-pass edit to runtime.py.
 
 # notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill when
 # the Colab variant is generated.
 
-region_hashes:
-  setup: c85e4afc12ca5996f31b555450b986f6936b412cb0033b23f76e778fca8f4fc7
-  primitives: bd0b2077a5ab2879b701a71bfe6da55b7f323b4f9739cc99401fe79e30901c05
-  graph: dddb0cf3c075a71df70f4a6853bb7a9b3436dfae977517d6116fbc4e373a0ffa
-  scheduler: e686bda7c298eeb462b590b9f1a388aa6556fd6a97d60df4431e21ab3f058479
-  report: 882fa60526829ac7049efcf46a689de0233db04a6cd32a24a1cc67cb71532e3c
+notebook_hash: e08eb5c6920d3a187ef243743fff06c9a545bbc2898890c33247b5e1fba74c89        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 0e05780b9737c8134db18516be4d3785f8e635b90d134ec9ff67b204f0d3928b   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
-notebook_hash: daa66491c1b5177c708b964118de0c3933bc7f772458bf45307f9443267f574e        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 59a660582091f1d56fb93a847b12f81f93db957bc57608dc946e5c81db4e0eef   # sha256 of the generated notebook bytes; mismatch => hand-edited
+region_hashes:
+  setup: 86eebb468cea0a3d57d1fe721a91e805f66f19a95492d7af179cbf45feb0cbb4
+  primitives: bd0b2077a5ab2879b701a71bfe6da55b7f323b4f9739cc99401fe79e30901c05
+  graph: 8c1eb290ad7d5e6b7bf5ab5b3e1c79a361253722e41fca43d4c523c58cce885c
+  scheduler: a68919683cb3c05b6dc0b3c6d7b03531c260688f2eef01b6487c0f2be5702e2d
+  report: 882fa60526829ac7049efcf46a689de0233db04a6cd32a24a1cc67cb71532e3c

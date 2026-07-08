@@ -1,0 +1,79 @@
+/* ch2.7 domain randomization — the LIVE break-the-policy toy (DomainRandLive.tsx).
+ *
+ * Namespaced `dr-*`. Hardcoded-LIGHT lab instrument. Same navy robot in both panels;
+ * per-panel accent only labels which policy (amber = narrow, blue = randomized).
+ * The mass slider is the one live control.
+ */
+.dr-live-stack { display: grid; gap: 1.6rem; }
+.dr { display: grid; gap: 0; }
+
+.dr-figure {
+  position: relative; margin: 0;
+  border: 1px solid #dcd0b6; border-radius: 3px; overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;
+}
+.dr-figure:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+
+.dr-poster { display: block; }
+.dr-poster[hidden] { display: none; }
+.dr-poster-svg { display: block; width: 100%; height: auto; }
+.dr-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
+.dr-ground { stroke: #c8bc9e; stroke-width: 2; }
+.dr-torso { fill: #333e6b; }
+.dr-head { fill: #1f56de; }
+.dr-leg { fill: none; stroke: #3a4576; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.dr-poster-lbl { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600; fill: #473f34; }
+.dr-poster-sub { font-family: ui-monospace, monospace; font-size: 10px; fill: #6d6252; }
+
+.dr-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.dr-panels[hidden] { display: none; }
+.dr-panel { position: relative; border-right: 1px solid #e4dcc7; }
+.dr-panel:last-child { border-right: none; }
+.dr-canvas { display: block; width: 100%; height: auto; }
+
+.dr-cap {
+  position: absolute; left: 0.5rem; bottom: 0.5rem; right: 0.5rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+  font-family: ui-monospace, monospace; font-size: 0.66rem;
+  background: color-mix(in srgb, #fdfbf6 84%, transparent);
+  border: 1px solid #c8bc9e; border-radius: 4px; padding: 0.35rem 0.5rem;
+  backdrop-filter: blur(2px); pointer-events: none;
+}
+.dr-cap-title { font-weight: 600; color: #23201b; }
+.dr-cap-num { font-variant-numeric: tabular-nums; color: #473f34; }
+.dr-cap-num[data-fell="true"] { color: #c0362a; }
+.dr-cap--narrow { border-left: 3px solid #b0560f; }
+.dr-cap--rand { border-left: 3px solid #1f56de; }
+
+.dr-status {
+  padding: 0.5rem 0.7rem; border-top: 1px solid #e4dcc7;
+  font-family: ui-monospace, monospace; font-size: 0.62rem; color: #6d6252;
+  display: flex; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap;
+}
+.dr-status[data-failed="true"] { color: #c0362a; }
+
+.dr-controls { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.85rem 0.1rem 0.1rem; }
+.dr-slider-lbl {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: ui-monospace, monospace; font-size: 0.72rem; color: #473f34;
+}
+.dr-slider { width: 11rem; accent-color: #1f56de; cursor: pointer; }
+.dr-slider:disabled { opacity: 0.5; cursor: default; }
+.dr-slider-val { font-variant-numeric: tabular-nums; font-weight: 600; color: #23201b; min-width: 3ch; }
+.dr-btn {
+  font-family: ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.35rem 0.8rem; border: 1px solid #c8bc9e; border-radius: 100px;
+  background: #f7f3ea; color: #473f34; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dr-btn:hover { border-color: #1f56de; color: #23201b; }
+.dr-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.dr-btn:disabled { opacity: 0.5; cursor: default; }
+.dr-control-note { font-family: ui-monospace, monospace; font-size: 0.64rem; color: #6d6252; margin-left: auto; }
+
+@media (max-width: 34rem) {
+  .dr-panels { grid-template-columns: 1fr; }
+  .dr-panel { border-right: none; border-bottom: 1px solid #e4dcc7; }
+  .dr-control-note { display: none; }
+}

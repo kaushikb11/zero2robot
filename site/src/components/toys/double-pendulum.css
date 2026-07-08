@@ -1,0 +1,220 @@
+/* ch3.4 "Joints & Constraints" concept-toy — the DOUBLE-PENDULUM + CHAOS + DRIFT toy.
+ *
+ * Co-located CSS for DoublePendulumToy.tsx (imported at the top of that file).
+ * Namespaced `dp-*` so it never collides with the global `ct-*`/`bk-*` or the sibling
+ * toys' `fr-*`/`mx-*`/etc. classes. Like flow-ring/mjx-parallel this toy is PURE SVG +
+ * design tokens: every colour comes from the site's FLIPPING tokens, so it is genuinely
+ * theme-aware in BOTH light and dark with no hardcoded surfaces. Every var carries a
+ * light fallback so the toy still renders if mounted outside the book shell.
+ *
+ * Colour scheme (theme-aware tokens):
+ *   --signal blue     → pendulum A (seed 0) + the live scrubber/focus
+ *   --entity-block    → pendulum B (seed 1), the near-neighbour
+ *   --alert red       → the NAIVE (unstabilized) drift curve — links coming apart
+ *   --entity-target   → the BAUMGARTE-stabilized drift curve — links holding
+ *   neutral ink       → axes, grids, traced paths, the divergence gap
+ */
+
+.dp {
+  display: grid;
+  gap: 0.7rem;
+}
+
+/* the honesty banner — recorded, not a live solve */
+.dp-recorded {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  color: var(--ink-mute, #6d6252);
+  padding: 0.35rem 0.55rem;
+  border: 1px dashed var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 70%, transparent);
+}
+.dp-recorded b { color: var(--ink, #23201b); }
+
+/* --- shared panel chrome -------------------------------------------------- */
+.dp-panel {
+  margin: 0;
+  padding: 0.5rem 0.6rem 0.55rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.dp-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+  margin-bottom: 0.3rem;
+}
+
+/* --- the pendulum arena (panels 1 & 2) ----------------------------------- */
+.dp-arena {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 120% at 50% 20%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--signal, #1f56de) 6%),
+      var(--paper-2, #f0e9d9));
+}
+
+/* the fixed anchor */
+.dp-pivot circle { fill: var(--ink-mute, #6d6252); }
+.dp-ceiling {
+  stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent);
+  stroke-width: 2.5; stroke-linecap: round;
+}
+
+/* rigid links + the joints/bobs */
+.dp-link { stroke-width: 2; stroke-linecap: round; }
+.dp-bob { stroke: var(--paper, #f7f3ea); stroke-width: 1.4; }
+
+/* pendulum A — seed 0 (signal blue, the hero) */
+.dp-pen-a .dp-link { stroke: var(--signal, #1f56de); }
+.dp-pen-a .dp-bob  { fill: var(--signal, #1f56de); }
+/* pendulum B — seed 1 (entity-block magenta, the near-neighbour) */
+.dp-pen-b .dp-link { stroke: color-mix(in srgb, var(--entity-block, #a5257d) 88%, transparent); }
+.dp-pen-b .dp-bob  { fill: var(--entity-block, #a5257d); }
+
+/* the traced tip path (faint neutral ink — a ghost of the whole swing) */
+.dp-trace {
+  fill: none;
+  stroke: color-mix(in srgb, var(--signal, #1f56de) 40%, transparent);
+  stroke-width: 1; stroke-linejoin: round; stroke-linecap: round;
+}
+.dp-trace-b { stroke: color-mix(in srgb, var(--entity-block, #a5257d) 38%, transparent); }
+
+/* --- panel 2: chaos body layout ----------------------------------------- */
+.dp-chaos-body {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(190px, 1.25fr);
+  gap: 0.6rem;
+  align-items: start;
+}
+@media (max-width: 460px) {
+  .dp-chaos-body { grid-template-columns: 1fr; }
+}
+.dp-overlay-wrap { position: relative; }
+.dp-chaos-right { display: grid; gap: 0.5rem; align-content: start; }
+
+.dp-legend {
+  display: flex; flex-wrap: wrap; gap: 0.6rem;
+  margin-top: 0.3rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+}
+.dp-lg { display: inline-flex; align-items: center; }
+.dp-lg::before {
+  content: ""; width: 0.62rem; height: 0.62rem; border-radius: 50%;
+  margin-right: 0.32rem; background: currentColor;
+}
+.dp-lg-a { color: var(--signal, #1f56de); }
+.dp-lg-b { color: var(--entity-block, #a5257d); }
+.dp-lg-delta { color: var(--ink-mute, #6d6252); font-variant-numeric: tabular-nums; }
+
+/* --- shared chart bits (divergence + drift) ------------------------------ */
+.dp-div-svg, .dp-drift-svg { display: block; width: 100%; height: auto; }
+.dp-ax { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); stroke-width: 1; }
+.dp-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent); stroke-width: 1; }
+.dp-ylab, .dp-xlab, .dp-ytitle, .dp-xtitle {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.dp-ylab { font-size: 10px; }
+.dp-ytitle, .dp-xtitle { font-size: 9.5px; letter-spacing: 0.03em; }
+
+/* the divergence curve — chaos as a number (neutral-strong ink line) */
+.dp-div-line {
+  fill: none;
+  stroke: var(--ink, #23201b);
+  stroke-width: 2; stroke-linejoin: round;
+  opacity: 0.72;
+}
+.dp-div-drop { stroke: color-mix(in srgb, var(--signal, #1f56de) 45%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+.dp-div-head { fill: var(--signal, #1f56de); stroke: var(--paper, #f7f3ea); stroke-width: 1.4; }
+.dp-div-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums;
+  fill: var(--signal, #1f56de);
+}
+
+/* the determinism badge — the other half of the headline */
+.dp-det {
+  display: grid; gap: 0.18rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-left: 3px solid var(--entity-target, #0c7d5f);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--entity-target, #0c7d5f) 7%, var(--paper, #f7f3ea));
+}
+.dp-det-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--entity-target, #0c7d5f) 85%, var(--ink, #23201b));
+}
+.dp-det-body {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; line-height: 1.4; color: var(--ink-mute, #6d6252);
+}
+.dp-det-hash {
+  display: inline-block; margin-left: 0.25rem;
+  padding: 0.02rem 0.3rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent);
+  color: var(--ink, #23201b); font-size: 0.62rem;
+}
+.dp-det-punch {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--ink, #23201b);
+}
+
+/* --- panel 3: constraint drift ------------------------------------------ */
+.dp-drift-none { fill: none; stroke: var(--alert, #c0362a); stroke-width: 2.2; stroke-linejoin: round; }
+.dp-drift-baum { fill: none; stroke: var(--entity-target, #0c7d5f); stroke-width: 2.2; stroke-linejoin: round; }
+.dp-drift-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.dp-drift-lab-none { fill: var(--alert, #c0362a); }
+.dp-drift-lab-baum { fill: color-mix(in srgb, var(--entity-target, #0c7d5f) 90%, var(--ink, #23201b)); }
+.dp-drift-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem; line-height: 1.45;
+  color: var(--ink-mute, #6d6252);
+}
+.dp-drift-note b { color: var(--ink, #23201b); }
+
+/* --- the one control: replay / scrub ------------------------------------ */
+.dp-scrub-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.dp-scrub { flex: 1 1 160px; min-width: 130px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.dp-scrub:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.dp-scrub-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-variant-numeric: tabular-nums;
+  color: var(--ink-mute, #6d6252); min-width: 4ch; text-align: right;
+}
+
+.dp-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; letter-spacing: 0.01em;
+  padding: 0.36rem 0.75rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dp-btn:hover { border-color: var(--signal, #1f56de); }
+.dp-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.dp-btn--primary { border-color: var(--signal, #1f56de); color: var(--signal, #1f56de); }
+
+/* reduced motion: the JS loop already skips auto-replay; kill button transitions too */
+@media (prefers-reduced-motion: reduce) {
+  .dp-btn { transition: none; }
+}

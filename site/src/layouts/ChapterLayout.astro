@@ -12,13 +12,18 @@ import SidebarNav from "../components/SidebarNav.astro";
 import SearchOverlay from "../components/search/SearchOverlay.tsx";
 import HelpOverlay from "../components/HelpOverlay.tsx";
 import { discoverChapters } from "../lib/curriculum.ts";
+// KaTeX stylesheet for the server-rendered display equations (Rec 4). Imported
+// here so Astro/Vite BUNDLES the CSS and its web fonts into _assets/ — entirely
+// self-hosted, same-origin, no CDN and no external fetch (CSP-safe). The math
+// HTML itself is baked into each page server-side, so equations render JS-off;
+// this stylesheet only supplies the glyphs + layout.
+import "katex/dist/katex.min.css";
 
 interface Props {
   title: string;
   currentSlug?: string;
-  draft?: boolean;
 }
-const { title, currentSlug, draft = false } = Astro.props;
+const { title, currentSlug } = Astro.props;
 const chapters = discoverChapters();
 ---
 
@@ -44,17 +49,6 @@ const chapters = discoverChapters();
   <body class="book" data-slug={currentSlug}>
     <div class="progress" aria-hidden="true"><div class="progress__bar" id="reading-progress"></div></div>
 
-    {
-      draft && (
-        <div class="bk-ribbon" role="note" aria-label="Draft — pending author voice pass">
-          <b>draft</b>
-          <span class="bk-ribbon-src">
-            pending author voice pass
-            <span class="bk-ribbon-tail"> · rendered verbatim from curriculum/**/prose/chapter.draft.md</span>
-          </span>
-        </div>
-      )
-    }
 
     <a class="skip-link" href="#content">Skip to content</a>
 

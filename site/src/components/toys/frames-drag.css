@@ -130,6 +130,69 @@
 }
 .fd-status[data-wrong="true"] { color: var(--alert); }
 
+/* the right column: the transform matrix T stacked over the code panel */
+.fd-side { display: grid; gap: 0.9rem; align-content: start; min-width: 0; }
+
+/* the homogeneous transform T — the second linked representation. Colour by
+   MEANING: the rotation 2×2 is neutral ink, the translation column wears the
+   tee's --entity-block (magenta), the [0 0 1] affine row is faint; the whole
+   block turns --alert red when the wrong quaternion convention feeds it. */
+.fd-matrix {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--signal) 2.5%, #fdfbf6);
+  font-family: var(--font-mono);
+}
+.fd-mx-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.fd-mx-title { font-size: 0.74rem; font-weight: 600; color: var(--ink); letter-spacing: 0.01em; }
+.fd-mx-sub { font-size: 0.62rem; color: var(--ink-mute); }
+
+/* the 3×3 grid, framed as a matrix with bracket rules on either side */
+.fd-mx-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.16rem 0.35rem;
+  margin: 0.55rem 0 0.5rem;
+  padding: 0.3rem 0.55rem;
+  border-left: 2px solid var(--rule-strong);
+  border-right: 2px solid var(--rule-strong);
+  border-radius: 3px;
+}
+.fd-mx-cell {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  text-align: right;
+  color: var(--ink-soft);
+}
+.fd-mx-rot { color: var(--ink); }                                   /* rotation block */
+.fd-mx-trans { color: var(--entity-block); font-weight: 600; }      /* translation column */
+.fd-mx-affine { color: var(--ink-mute); opacity: 0.55; }            /* [0 0 1] affine row */
+.fd-mx-grid.fd-mx--wrong { border-color: color-mix(in srgb, var(--alert) 45%, transparent); }
+.fd-mx-grid.fd-mx--wrong .fd-mx-rot { color: var(--alert); }
+
+/* p_world = T · p_body — the SAME point in both frames, spelled out */
+.fd-mx-eq, .fd-mx-nums {
+  display: flex; align-items: baseline; gap: 0.45rem;
+  font-size: 0.72rem; font-variant-numeric: tabular-nums;
+}
+.fd-mx-eq { color: var(--ink-mute); font-size: 0.64rem; }
+.fd-mx-nums { margin-top: 0.15rem; }
+.fd-mx-op { color: var(--ink-mute); }
+.fd-mx-lhs, .fd-mx-pw { color: var(--entity-pusher); font-weight: 600; }
+.fd-mx-rhs, .fd-mx-pb { color: var(--ink); font-weight: 600; }
+.fd-mx-pb.fd-bad { color: var(--alert); }
+
+/* the composition line: chain two transforms, recover the pusher's world pose */
+.fd-mx-compose {
+  margin-top: 0.6rem; padding-top: 0.55rem;
+  border-top: 1px dashed var(--rule-strong);
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+  font-size: 0.64rem; color: var(--ink-mute);
+}
+.fd-mx-compose b { color: var(--entity-block); }
+.fd-mx-compose-val { color: var(--ink); font-variant-numeric: tabular-nums; }
+
 /* code panel — the third linked representation */
 .fd-code {
   margin: 0;

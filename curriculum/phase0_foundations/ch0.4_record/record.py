@@ -94,9 +94,11 @@ def build_features(video: bool) -> dict:
 # (that's the browser demo); a mouse drag produces exactly an `action` — a
 # target velocity [vx, vy]. We can't replay a live mouse deterministically, so
 # here a tiny scripted controller stands in for your hand: get behind the block,
-# then shove it toward the target. It won't always succeed — teleop data is
-# imperfect, and that honesty is part of the lesson — but every step it produces
-# a real (obs, action) pair, which is all an episode is.
+# then shove it toward the target. It is crude on purpose — it drives the block's
+# POSITION home but never squares up its ORIENTATION, so it essentially never
+# trips the env's success latch and every episode runs to the time limit. That
+# imperfection is the lesson: teleop data is messy. What matters is that every
+# step emits a real (obs, action) pair, and a list of those pairs is an episode.
 def scripted_drive(obs: np.ndarray) -> np.ndarray:
     pusher, tee, target = obs[0:2], obs[2:4], obs[6:8]
     to_target = target - tee
@@ -112,8 +114,9 @@ def scripted_drive(obs: np.ndarray) -> np.ndarray:
 
 def record_local(episodes: int, seed: int, smoke: bool, video: bool, generator, repo_id: str):
     """Drive the env `episodes` times, collecting one frame per control step.
-    Mirrors gen_demos' loop: record the pre-step obs, THEN step (so we never
-    store the terminal obs — the last stored action is what ended the episode)."""
+    Mirrors gen_demos' loop: record the pre-step obs, THEN step — so we store the
+    obs we acted ON, never the terminal obs the episode ended in. Storing the
+    terminal frame is a classic off-by-one that quietly corrupts a dataset."""
     env = PushTEnv()
     max_len = 40 if smoke else PushTEnv.MAX_STEPS  # smoke length is FIXED so CI can diff runs
     recorded = []
@@ -129,7 +132,7 @@ def record_local(episodes: int, seed: int, smoke: bool, video: bool, generator, 
             if video:
                 frames["observation.image"].append(env.render_frame(IMG_HW, IMG_HW))
             obs, _, done, _ = env.step(action)
-            if done and not smoke:           # a real run ends when success latches; smoke stays fixed-length
+            if done and not smoke:           # stop when the env signals done — success latch OR the MAX_STEPS limit (this crude driver always hits the limit); smoke ignores done and stays fixed-length so CI can diff runs
                 break
         recorded.append(frames)
     config = {"repo_id": repo_id, "fps": PushTEnv.CONTROL_HZ, "robot_type": "pusher_2d",

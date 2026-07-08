@@ -8,6 +8,10 @@ blow up here — it blows up three chapters later, when chapter 1.1's behavior
 cloning tries to train on rows that are the wrong width, or (worse) trains
 quietly on the wrong columns and never works.
 
+Before you correct the number, write one sentence: if this nine-wide schema
+shipped, what exactly breaks in chapter 1.1's training loop — and why wouldn't
+it break here, where you wrote it?
+
 Find the wrong number, fix it, and re-run checks.py until the schema matches the
 training-data contract again. The observation layout is documented in
 pusht_env.py and the chapter's Features region.
@@ -37,7 +41,7 @@ def build_features() -> dict:
     return {
         "observation.state": {
             "dtype": "float32",
-            "shape": (9,),   # <-- one of these numbers disagrees with the obs layout
+            "shape": (9,),
             "names": STATE_NAMES,
         },
         "action": {

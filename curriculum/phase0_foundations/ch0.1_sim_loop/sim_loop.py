@@ -104,26 +104,30 @@ if args.rerun:
     rr.log("world/objects/box", rr.Boxes3D(half_sizes=[[0.05, 0.05, 0.05]], colors=[[217, 76, 64]]), static=True)
     rr.log("world/robot/pusher", rr.Boxes3D(half_sizes=[[0.04, 0.12, 0.05]], colors=[[64, 115, 217]]), static=True)
 
-mujoco.mj_forward(model, data)  # compute body poses from qpos WITHOUT advancing time, so step 0 is loggable
-box_pos_at_push = data.xpos[box.id].copy()
+# mj_forward fills in the derived state — body poses, contact lists — from qpos
+# WITHOUT advancing time. mj_step would recompute all of it anyway, but calling
+# it here means the first frame we log below is the true rest pose at t=0, not
+# the state after a step has already run. It is how you inspect a world you
+# haven't stepped yet.
+mujoco.mj_forward(model, data)
 
 for step in range(num_steps):
-    data.ctrl[0] = 1.0  # full throttle on the slide motor — in chapter 1.1, a policy writes this line
-
     in_shove = args.perturb and push_start <= step < push_start + push_steps
-    data.xfrc_applied[box.id, :3] = push_force if in_shove else 0.0  # write 0 explicitly, or the shove sticks forever
     if step == push_start:
-        box_pos_at_push = data.xpos[box.id].copy()  # .copy(): xpos is a view into mjData and mj_step overwrites it
+        box_pos_at_push = data.xpos[box.id].copy()  # .copy(): xpos is a view into mjData and the next mj_step overwrites it in place
 
-    mujoco.mj_step(model, data)  # one timestep: collision, contact, actuation, integration — the whole pipeline
-
-    if args.rerun and step % 5 == 0:  # logging every step quintuples file size and teaches nothing extra
+    if args.rerun and step % 5 == 0:  # log the state ENTERING this step; logging every step quintuples file size and teaches nothing extra
         rr.set_time("sim_time", duration=data.time)
         # MuJoCo stores quaternions wxyz; rerun wants xyzw — hence the reindex.
         rr.log("world/objects/box", rr.Transform3D(translation=data.xpos[box.id], quaternion=data.xquat[box.id][[1, 2, 3, 0]]))
         rr.log("world/robot/pusher", rr.Transform3D(translation=data.xpos[pusher.id]))
         shove_arrow = push_force * (0.02 if in_shove else 0.0)  # scaled to scene size; zero-length when inactive
         rr.log("world/objects/box/shove", rr.Arrows3D(origins=[data.xpos[box.id]], vectors=[shove_arrow]))
+
+    # The rhythm every later chapter repeats: write intent, write interference, step.
+    data.ctrl[0] = 1.0  # full throttle on the slide motor — in chapter 1.1, a policy writes this line
+    data.xfrc_applied[box.id, :3] = push_force if in_shove else 0.0  # write 0 explicitly, or the shove sticks forever
+    mujoco.mj_step(model, data)  # one timestep: collision, contact, actuation, integration — the whole pipeline
 # --- endregion ---
 
 # --- region: inspect ---

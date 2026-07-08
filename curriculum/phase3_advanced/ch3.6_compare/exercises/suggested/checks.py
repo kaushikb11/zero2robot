@@ -10,8 +10,10 @@ Conventions (mirroring ch3.3-3.5):
 - The smoke-signature check runs compare.py --smoke — HERMETIC (a fresh seeded
   untrained policy, no checkpoint, no dataset), so it always runs in CI and is
   bitwise deterministic (numpy engine + torch-CPU eval).
-- The trained-policy checks (ex1, ex3) SKIP when no trained ch1.1 checkpoint is on
+- The trained-policy checks (ex1, ex3) SKIP when no REAL ch1.1 checkpoint is on
   disk (CI is hermetic): the FULL-CIRCLE numbers need a policy the learner trains.
+  A smoke checkpoint at ch1.1's default path is treated as none (find_policy reads
+  its sibling metrics.json), so these checks SKIP rather than fail on smoke numbers.
 - Reference bands + provenance live in meta.yaml exercise_checks — read them.
 """
 
@@ -74,7 +76,9 @@ def test_smoke_signature_reproduces():
 def test_ex1_transfer_is_partial():
     policy = ex1.find_policy()
     if policy is None:
-        pytest.skip("no trained ch1.1 policy on disk — train one to check the full-circle transfer")
+        pytest.skip("no trained (non-smoke) ch1.1 policy on disk — a smoke checkpoint at the "
+                    "default path is treated as none; train ch1.1's canonical 500-demo policy "
+                    "to check the full-circle transfer")
     m = ex1.run_compare(policy, "--episodes", "50")
     # The policy transfers IMPERFECTLY: engine success is below MuJoCo's, and the
     # block poses diverge (angle divergence is real, not ~0). Ordering, not exact number.
@@ -122,7 +126,9 @@ def test_ex2_obs_assembly_matches():
 def test_ex3_gap_closes_with_drag():
     policy = ex3.find_policy()
     if policy is None:
-        pytest.skip("no trained ch1.1 policy on disk — train one to check the gap knob")
+        pytest.skip("no trained (non-smoke) ch1.1 policy on disk — a smoke checkpoint at the "
+                    "default path is treated as none; train ch1.1's canonical 500-demo policy "
+                    "to check the gap knob")
     low = ex3.divergence_at_damp(policy, ex3.LOW_DAMP)
     high = ex3.divergence_at_damp(policy, ex3.HIGH_DAMP)
     floor = CHECKS["ex3"]["divergence_ratio_min"]

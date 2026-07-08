@@ -22,9 +22,10 @@ Run it:      python compare.py --policy outputs/ch1.1-bc/bc_policy.ts.pt --seed 
              python compare.py --policy <ts.pt> --episodes 50 --block_damp 20
 CI smoke:    python compare.py --smoke --seed 0 --no-rerun   # fresh policy, two runs byte-identical
 
-No trained policy yet? Make one (ch1.1) first:
-  python curriculum/common/envs/pusht/gen_demos.py --episodes 300 --seed 0 --out outputs/ch3.6-demos --no-video
-  python curriculum/phase1_imitation/ch1.1_bc/bc.py --data outputs/ch3.6-demos --out outputs/ch3.6-bc --device cpu --no-rerun
+No trained policy yet? Train ch1.1's OWN canonical policy (500 demos) — this chapter
+runs that exact checkpoint, it does NOT train its own:
+  python curriculum/common/envs/pusht/gen_demos.py --episodes 500 --seed 0 --out outputs/pusht-demos --no-video
+  python curriculum/phase1_imitation/ch1.1_bc/bc.py --data outputs/pusht-demos --out outputs/ch1.1-bc --device cpu --no-rerun
 """
 
 # --- region: setup ---
@@ -93,12 +94,13 @@ def load_policy(path: Path) -> torch.nn.Module:
     if not args.smoke:
         print(f"WARNING: no policy at {path} — using a FRESH UNTRAINED policy. "
               "Transfer numbers are meaningless until you point --policy at a trained bc_policy.ts.pt.")
-    # Fresh seeded MLP, structurally identical to ch1.1's BCPolicy, with
-    # identity-ish normalization (smoke never needs it to be GOOD, only deterministic).
+    # A small MLP standing in for ch1.1's policy (smoke determinism only). It is NOT
+    # ch1.1's BCPolicy — no in-model normalization, a narrower net — and never needs to
+    # be: smoke only checks the pipeline runs and two runs match byte-for-byte.
     global BCPolicy
     import torch.nn as nn
 
-    class BCPolicy(nn.Module):  # noqa: F811  (mirrors ch1.1 bc.py; self-contained per doctrine)
+    class BCPolicy(nn.Module):  # noqa: F811  (smoke-only stand-in; self-contained per doctrine)
         def __init__(self):
             super().__init__()
             self.net = nn.Sequential(
@@ -369,6 +371,15 @@ for episode in range(num_episodes):
 
 mj_rate = mj_successes / num_episodes
 eng_rate = eng_successes / num_episodes
+# Stale-checkpoint guard: ch1.1's canonical policy (500 demos) scores ~0.62 in MuJoCo —
+# the sim it TRAINED in. If a loaded (non-smoke) checkpoint scores 0 there, it is untrained
+# or STALE (e.g. a 3-epoch toy run left at the default path), NOT a sim-to-sim gap. Say
+# so loudly rather than silently report a meaningless 0/0 transfer.
+if not args.smoke and args.policy.is_file() and mj_rate == 0.0:
+    print(f"WARNING: the loaded policy {args.policy} scored 0% even in MuJoCo — the sim it was "
+          "TRAINED in (ch1.1's canonical reference is ~0.62). This checkpoint looks UNTRAINED or STALE; "
+          "re-train ch1.1 to convergence and point --policy at its bc_policy.ts.pt. The sim-to-sim "
+          "numbers below measure a broken policy, not your engine's dynamics gap.")
 metrics = {
     "episodes": num_episodes,
     "seed": args.seed,

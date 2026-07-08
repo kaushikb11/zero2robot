@@ -12,8 +12,8 @@
 demo: narrow_vs_randomized_across_the_gap
 scene: quadruped           # curriculum/common/envs/quadruped/quadruped.xml, verbatim
 policy:
-  narrow: dr_narrow.onnx        # PENDING export; the width-0 PPO actor,     contract v1: obs float32[1,23] -> action float32[1,8]
-  randomized: dr_randomized.onnx  # PENDING export; the width-1 PPO actor, same contract
+  narrow: dr_narrow.onnx        # exported; the width-0 PPO actor,     contract v1: obs float32[1,23] -> action float32[1,8]
+  randomized: dr_randomized.onnx  # exported; the width-1 PPO actor, same contract
 # The dynamics shift is applied in the RUNTIME, not the policy: the embed scales
 # the compiled model's body mass / foot friction / gravity exactly as dr.py's
 # apply_scales does, on top of the pinned contact solver. No re-export to reshift.
@@ -29,7 +29,7 @@ interaction: dynamics-slider  # visitor drags mass_scale 0.6..1.8; watch each po
 hud:
   - sim_time
   - torso_height           # the state that decides survival (falls below FALL_HEIGHT => down)
-  - mass_scale             # the knob; the actuator-limited cliff sits past ~1.2x (measured)
+  - mass_scale             # the knob; the actuator-limited cliff sits past ~1.2x on seed 0
 notes: >
   The HONEST teaching beat (see prose): on this free-tier quadruped STAND, the two
   policies behave alike across most of the slider — standing is a stable

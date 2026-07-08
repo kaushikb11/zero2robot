@@ -1,0 +1,83 @@
+/* ch2.4 reward hacking — the LIVE side-by-side toy (RewardHackLive.tsx).
+ *
+ * Namespaced `rh-*`. Hardcoded-LIGHT lab instrument. The two panels render the SAME
+ * navy robot; the ONLY colour difference is the per-panel accent (green = walks,
+ * amber = games the reward) carried by the caption + the head nub / start line.
+ */
+.rh-live-stack { display: grid; gap: 1.6rem; }
+.rh { display: grid; gap: 0; }
+
+.rh-figure {
+  position: relative;
+  margin: 0;
+  border: 1px solid #dcd0b6;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;
+}
+.rh-figure:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+
+.rh-poster { display: block; }
+.rh-poster[hidden] { display: none; }
+.rh-poster-svg { display: block; width: 100%; height: auto; }
+.rh-arena { fill: #fbf9f3; stroke: #c8bc9e; stroke-width: 1.5; }
+.rh-ground { stroke: #c8bc9e; stroke-width: 2; }
+.rh-torso { fill: #333e6b; }
+.rh-head { fill: #1f56de; }
+.rh-leg { fill: none; stroke: #3a4576; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.rh-poster-lbl { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600; fill: #473f34; }
+.rh-poster-sub { font-family: ui-monospace, monospace; font-size: 10px; fill: #6d6252; }
+
+/* live: two panels side by side */
+.rh-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.rh-panels[hidden] { display: none; }
+.rh-panel { position: relative; border-right: 1px solid #e4dcc7; }
+.rh-panel:last-child { border-right: none; }
+.rh-canvas { display: block; width: 100%; height: auto; }
+
+.rh-cap {
+  position: absolute; left: 0.5rem; bottom: 0.5rem; right: 0.5rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+  font-family: ui-monospace, monospace; font-size: 0.66rem;
+  background: color-mix(in srgb, #fdfbf6 84%, transparent);
+  border: 1px solid #c8bc9e; border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.rh-cap-title { font-weight: 600; color: #23201b; }
+.rh-cap-num { font-variant-numeric: tabular-nums; color: #473f34; }
+.rh-cap--shaped { border-left: 3px solid #0c7d5f; }
+.rh-cap--shaped .rh-cap-num { color: #0c7d5f; }
+.rh-cap--hack { border-left: 3px solid #b0560f; }
+.rh-cap--hack .rh-cap-num { color: #b0560f; }
+
+.rh-status {
+  padding: 0.5rem 0.7rem;
+  border-top: 1px solid #e4dcc7;
+  font-family: ui-monospace, monospace; font-size: 0.62rem;
+  color: #6d6252;
+  display: flex; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap;
+}
+.rh-status[data-failed="true"] { color: #c0362a; }
+
+.rh-controls { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; padding: 0.85rem 0.1rem 0.1rem; }
+.rh-btn {
+  font-family: ui-monospace, monospace; font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem; border: 1px solid #c8bc9e; border-radius: 100px;
+  background: #f7f3ea; color: #473f34; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.rh-btn:hover { border-color: #1f56de; color: #23201b; }
+.rh-btn:focus-visible { outline: 2px solid #1f56de; outline-offset: 2px; }
+.rh-btn--primary { background: #1f56de; color: #fff; border-color: #1f56de; box-shadow: 0 1px 4px -1px rgba(31, 86, 222, 0.4); }
+.rh-btn--primary:hover { color: #fff; background: color-mix(in srgb, #1f56de 90%, #000); }
+.rh-btn:disabled { opacity: 0.5; cursor: default; }
+.rh-control-note { font-family: ui-monospace, monospace; font-size: 0.64rem; color: #6d6252; margin-left: auto; }
+
+@media (max-width: 34rem) {
+  .rh-panels { grid-template-columns: 1fr; }
+  .rh-panel { border-right: none; border-bottom: 1px solid #e4dcc7; }
+  .rh-control-note { display: none; }
+}

@@ -353,6 +353,9 @@ def run_design(name):
     print(f"\n=== design '{name}': training PPO under r_{name} "
           f"({num_iterations} iters x {batch_size} steps) ===")
     agent, history = train(REWARD_DESIGNS[name])
+    demo_stem = {"shaped": "shaped_walk", "hack": "height_hack"}.get(name)
+    if demo_stem is not None:  # persist these two for the site ONNX demo (export_rewards_onnx.py)
+        torch.save(agent.state_dict(), args.out / f"{demo_stem}.pt")
     metrics = evaluate(agent, REWARD_DESIGNS[name], name)
     curve = [v for v in history["design_return"] if v == v]  # drop nan (no episode finished yet)
     metrics["train_return_first"] = round(curve[0], 4) if curve else float("nan")

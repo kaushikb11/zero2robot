@@ -18,12 +18,15 @@ thing between them:
 
 Then it does the honest part: EVALUATE BOTH across a sweep of SHIFTED test
 dynamics — the "gap" — with ch1.6 error bars (mean return +- std over held-out
-episodes). The headline DR PROMISES (and you will TEST, not assume): the narrow
-policy peaks at nominal and degrades as the test dynamics move away; the randomized
-policy gives up a little at nominal (the insurance premium) to hold up across the
-gap. Whether it actually does at THIS free-tier budget is the measurement — and the
-honest answer here is nuanced: the off-nominal edge sits within the seed band (see
-reference_run + the SCOPE NOTE below). The eval sweep is the "break-the-policy" demo.
+episodes). This is the promise DR makes, and the one you TEST rather than assume:
+the narrow policy peaks at nominal and should degrade as the test dynamics move
+away; the randomized policy gives up a little at nominal (the insurance premium)
+to hold up across the gap. Whether it actually does at THIS free-tier budget is
+the measurement — and the honest answer is nuanced. The off-nominal survival
+edge sits INSIDE the seed band (-0.02, +0.22, -0.09 across seeds 0-2): DR helps on
+one seed and not the others, so the mean benefit is not yet a demonstrated win. That
+within-band result is the lesson (the ch1.6 "single numbers lie" trap in an RL
+costume), and the eval sweep is the "break-the-policy" demo that surfaces it.
 
 Determinism: we randomize ON TOP of the quadruped's pinned contact solver (we
 only scale physical params — body mass/inertia, foot friction, gravity — never
@@ -307,7 +310,8 @@ def evaluate_at(agent: Agent, knob: str, scale: float) -> dict:
     scales[knob] = scale  # move ONE axis; hold the others nominal so the curve is attributable
     returns, survived = [], []
     for ep in range(args.eval_episodes):
-        env.reset(seed=EVAL_SEED0 + args.seed + ep)  # reset first, then pin the test dynamics
+        # Pin the test dynamics on the MODEL (mj_resetData in rollout resets the
+        # DATA — qpos/qvel — but never these model params, so the scale persists).
         apply_scales(env, nominal, scales)
         ret, ok = rollout(agent, env, EVAL_SEED0 + args.seed + ep)
         returns.append(ret)
@@ -326,6 +330,8 @@ print(f"[ch2.7-dr] training NARROW (dr_width 0) then RANDOMIZED (dr_width {args.
       f"on the quadruped; sweep knob = {args.sweep_knob}")
 narrow = train_policy(0.0, "narrow")
 randomized = train_policy(args.dr_width, "randomized")
+torch.save(narrow.state_dict(), args.out / "dr_narrow.pt")            # for the site ONNX demo (export_dr_onnx.py)
+torch.save(randomized.state_dict(), args.out / "dr_randomized.pt")    # for the site ONNX demo (export_dr_onnx.py)
 
 narrow_curve, rand_curve = sweep(narrow), sweep(randomized)
 nominal_idx = sweep_grid.index(1.0)  # the point both policies trained AROUND
@@ -343,11 +349,12 @@ for name, curve in [("narrow", narrow_curve), ("randomized", rand_curve)]:
 
 # The lesson as numbers: compare on-nominal (both trained AROUND here) to the
 # off-nominal test points (the gap). A robust policy holds its survival across the
-# gap; a brittle one falls. HONEST NOTE (see prose): on this quadruped STAND at
+# gap; a brittle one falls. Honest caveat for this env: on the quadruped STAND at
 # free-tier the gap DR can reach is narrow — standing is a stable equilibrium a
 # nominal policy already handles across the controllable range, and beyond it the
 # +-12 Nm servos saturate and BOTH policies fall. So measure the edge; do not
-# assume it.
+# assume it. The reported edge sits inside the seed band (seeds 0-2), which is the
+# finding, not a bug.
 off = [i for i in range(len(sweep_grid)) if i != nominal_idx]
 def summarize(curve: list[dict]) -> dict:
     return {"nominal_survival": curve[nominal_idx]["survival"],

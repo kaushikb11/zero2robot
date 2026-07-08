@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 import yaml
 
 HERE = Path(__file__).resolve().parent
@@ -30,6 +31,7 @@ sys.path.insert(0, str(REPO))
 
 import ex1_predict_hack as ex1  # noqa: E402
 import ex2_completion_fix_hack as ex2  # noqa: E402
+import ex3_bughunt_gae_truncation as ex3  # noqa: E402
 
 # Reference bands live in the chapter meta.yaml with provenance (exercise-spec:
 # no bare magic numbers) — read them, don't inline.
@@ -93,3 +95,40 @@ def test_ex2_fixed_reward_is_not_the_height_hack():
     assert a != b, (
         "your reward ignores forward_vel entirely — that is still the height-only "
         "hack; add a term that depends on forward progress")
+
+
+# --- ex3: bug-hunt, DETERMINISTIC (GAE on a hand-built trajectory, no training) -
+
+def test_ex3_prediction_recorded():
+    if ex3.PREDICTION is None:
+        pytest.skip("PREDICTION not set — call which env's last-step advantage is "
+                    "larger in ex3_bughunt_gae_truncation.py first")
+    assert ex3.PREDICTION == "env0", (
+        "measured it yet? the TRUNCATED env keeps its future value, so its advantage "
+        "must exceed the terminated env's — run ex3 and read the two columns")
+
+
+def test_ex3_gae_bootstraps_truncation():
+    """SKIP while the injected bug is present (the truncated episode is scored as a
+    terminal, so both envs come out identical), assert the correct GAE once fixed.
+
+    The correct closed-form (gamma 0.99, lambda 0.95) is deterministic — no seeds,
+    no training. Bands + provenance live in meta.yaml (no bare magic numbers)."""
+    band = CHECKS["ex3"]
+    adv, ret = ex3.compute_gae(*ex3.build_trajectory())
+    trunc, term = adv[:, 0], adv[:, 1]  # env0 truncated, env1 terminated
+    if torch.allclose(trunc, term, atol=band["equal_atol"]):
+        pytest.skip("ex3 still has the injected bug — the truncated episode gets no "
+                    "bootstrap, so it scores identically to the terminated one. Find "
+                    "the mask that conflates `done` (out-of-time) with `terminated` "
+                    "(fell).")
+    # A correct fix credits the truncated last step with the discarded future value...
+    assert trunc[1].item() == pytest.approx(band["trunc_last_adv"], abs=band["abs"]), (
+        f"truncated last-step advantage should bootstrap V(next): got {trunc[1]:.4f}, "
+        f"expected {band['trunc_last_adv']}")
+    assert trunc[0].item() == pytest.approx(band["trunc_first_adv"], abs=band["abs"])
+    # ...and must leave the genuine terminal path untouched (future really is zero).
+    assert term[1].item() == pytest.approx(band["term_last_adv"], abs=band["abs"]), (
+        "you changed the TERMINATED path — a real fall must NOT bootstrap. Only the "
+        "truncation mask was broken; fix only that.")
+    assert term[0].item() == pytest.approx(band["term_first_adv"], abs=band["abs"])

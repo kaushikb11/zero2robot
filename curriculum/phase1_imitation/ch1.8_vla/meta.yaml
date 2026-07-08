@@ -1,6 +1,6 @@
 id: ch1.8-vla
 title: "The Tiny VLA II: Train It"
-artifact: vla.py             # target ~400 LOC (built to 444: a from-scratch tiny-VLM fusion backbone + the ch1.5 flow-matching action head + multi-task masked training + ch1.6-style error-bar eval, one file)
+artifact: vla.py             # target ~400 LOC (built to 449, hard cap 450: a from-scratch tiny-VLM fusion backbone + the ch1.5 flow-matching action head + multi-task masked training + ch1.6-style error-bar eval, one file)
 task: multi-task            # trains on ch1.7's pusht+aloha pile; evaluates on curriculum/common/envs/pusht AND aloha_cube
 
 # NOTE (doctrine): this is a "tiny VLA" chapter, but the VLM backbone (token embedding
@@ -37,13 +37,13 @@ scale_lab: true
 #     tok_embed + from-scratch attention -> CLS -> flow velocity head).
 # site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: <author pins: huggingface/lerobot (SmolVLA)>
-#   commit: <author pins a real sha>
-#   focus:
-#     - the VLM backbone that fuses image + language (real: pretrained SigLIP + LM; ours: a frozen random CNN feature + a from-scratch token embedding, fused by from-scratch attention)
-#     - how the action expert is conditioned on the fused representation (real + ours: a flow-matching velocity head — the ch1.5 mechanism)
-#     - the tokenizer (real: a pretrained subword tokenizer; ours: ch1.7's 46-word fixed vocab)
+rtrt:
+  repo: huggingface/lerobot
+  commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (SmolVLA source present at src/lerobot/policies/smolvla/; matches the course-pinned lerobot); pinned 2026-07-07
+  focus:
+    - "the VLM backbone that fuses image + language (real: pretrained SigLIP + LM; ours: a frozen random CNN feature + a from-scratch token embedding, fused by from-scratch attention)"
+    - "how the action expert is conditioned on the fused representation (real + ours: a flow-matching velocity head — the ch1.5 mechanism)"
+    - "the tokenizer (real: a pretrained subword tokenizer; ours: ch1.7's 46-word fixed vocab)"
 
 demo: vla_rollout           # a PushT rollout of the language-conditioned policy + the CLS-attention bar; BLOCKED on the flow-sampler contract v2 (ch1.5), same as the flow policy panel
 
@@ -57,7 +57,7 @@ demo: vla_rollout           # a PushT rollout of the language-conditioned policy
 # sighted PushT). ALOHA's bimanual handoff it cannot do (0.0 every seed). That is the
 # case for a PRETRAINED backbone (the SmolVLA Scale Lab).
 reference_run:
-  provenance: "seed 0 on cpu; default config (model_dim 64, layers 2, heads 4, hidden 128, flow_steps 6, epochs 200, episodes_per_task 60, eval_episodes 12); measured 2026-07-06"
+  provenance: "seed 0 on cpu; default config (model_dim 64, layers 2, heads 4, hidden 128, flow_steps 6, epochs 200, episodes_per_task 60, eval_episodes 12); measured 2026-07-06. ARCHITECTURE-SENSITIVITY (unlike the state-based Phase-1 chapters): this VLA trains on rendered IMAGE features, and MuJoCo rasterization is NOT bitwise across CPU architectures, so over 200 epochs the exact PushT % can vary with the CPU rasterizer (measured ~0.58 on BOTH the reference x86 run and an Apple Silicon arm64 CPU run — treat the % as approximate, not the ~0.25 an earlier non-default setup produced). The ROBUST, reproducible claim the exercise gates assert is the DIRECTION — trained >> untrained 0.0 every seed/platform, ALOHA 0.0 — NOT the exact 0.58. Same-machine runs are byte-deterministic."
   num_examples: 2984                 # ch1.7 pipeline re-run at 60 episodes/task (the VLA needs more than ch1.7's 12-episode inspection default)
   vocab_size: 46                     # ch1.7's from-scratch word-level vocab
   feature_dim: 64                    # ch1.7's frozen CNN width; rebuilt here to featurize live eval frames
@@ -125,9 +125,12 @@ exercise_checks:
   ex4:                             # ex4_completion_attention.py (code-completion, fast)
     abs_tol: 1.0e-5              # a correct scaled-dot-product attention matches the reference within this
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records
-# them on first render; do not hand-write them.
+# region_hashes: sha256 of each include-by-region span in the chapter artifact, checked
+# by check_prose_code_drift against the artifact. Populated at chapter-build time;
+# re-render (or re-run the drift gate) if the artifact's regions change.
+
+notebook_hash: 19d1383183565de7db9871bd62860545a20b202ab63d6240538a12888b3856ea        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 2e17100968bb630181b96761a2a1fdae25f285f67aad9b1c09e346bb3d550b05   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 43dec9d630d5d1b8a62abb6c7d0ab9a9f983fe22416ffe633633790b9e8f7012
@@ -136,7 +139,4 @@ region_hashes:
   model: 1e76bbfeba8eb33eae7feaab379ee75f3e3001dd549028abec8a9ee93fd80804
   train: a93333ea0ed1b194fb72adc56b413b1500bda8acface83fa36734ccabfe62c95
   eval: 88fc24f6aa404609fc5a56d1dd3924cea98c627eabb74dc69063443cb64339dd
-  report: 0f7ff014486ebe4246123db9559d7a6b6930bdc43cbc25352c4b74b85a624768
-
-notebook_hash: a150ae3ccd4bb401d02bef21eb08775ba32cb77a37e9986814f1169eb2e446a3        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 51be1be21396448aaf23c37ddff3860cdf6cfe2271b8a68720126717149c079c   # sha256 of the generated notebook bytes; mismatch => hand-edited
+  report: 1cabaf65d920831cc67aa6b5522a4576a783c714bfa17a9f9723af08df7cf2d2

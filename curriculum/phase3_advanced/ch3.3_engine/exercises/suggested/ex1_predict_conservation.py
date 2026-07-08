@@ -16,6 +16,11 @@ flies apart. Which one is it?
   C) semi-implicit (symplectic) Euler
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run: in one sentence, write WHY you expect that integrator's energy to
+behave as it will — what is it about how each integrator forms its next position
+(which velocity does it reuse, and when) that decides whether energy drifts or holds?
+
 Estimated learner time: 10 minutes.
 """
 

@@ -11,7 +11,7 @@
 # for un-standardizing). It is contract-v2-shaped, SAME as ch1.4 — but strictly
 # CHEAPER to drive: the sampler is x <- x + dt*v with NO schedule and NO injected
 # noise (contrast ch1.4's DDPM posterior). If playground builds the ch1.4 sampler
-# runtime, this one is a few lines less. This embed is BLOCKED on that contract-v2
+# runtime, this one is a few lines less. This embed's live panel now ships on that contract-v2
 # path; ship it only after playground/src/policy/contracts.ts gains the sampler-aware
 # policy type.
 #
@@ -41,7 +41,7 @@ panels:
       a slider if playground exposes flow_steps to the toy sampler.
     source: flow.rrd
   - id: pusht_policy
-    kind: mujoco-wasm             # BLOCKED on contract v2 (sampler-aware runtime)
+    kind: mujoco-wasm             # LIVE via the contract-v2 sampler runtime
     scene: pusht                  # curriculum/common/envs/pusht/pusht.xml, verbatim
     policy: flow_velocity.onnx    # 3-input velocity core — contract v2 (ODE sampler + un-standardize), NOT v1
     runtime:
@@ -59,6 +59,6 @@ notes: >
   Author decides whether the embed ships the toy panels alone (unblocked, pure 2D,
   the strongest teaching artifact — and the step-efficiency panel is the visual that
   distinguishes this chapter from ch1.4) or waits to pair them with the PushT policy
-  panel (blocked on the contract-v2 sampler runtime). Recommendation: ship the two
+  panel (now live via the contract-v2 sampler runtime). Recommendation: ship the two
   toy panels first. The site should render flow.py and ch1.4's diffusion.py side by
   side as a DIFF — that is the chapter's pedagogy; coordinate the diff view with site/.

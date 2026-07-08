@@ -130,6 +130,20 @@ def _rtrt(m: dict) -> dict | None:
     }
 
 
+def _track(m: dict) -> str | None:
+    """The chapter's curriculum track, or None.
+
+    `track: elective` marks a chapter as OFF the main line (0→1→2→4→5) — optional
+    *Depth* the capstone never requires (Phase 3's three self-contained electives
+    declare it). Read VERBATIM from meta.yaml, never synthesized: surfaced only
+    when the author writes a non-empty string, so a chapter without the key is a
+    main-line chapter (null). The site keys its "optional · Depth" treatment off
+    this value; it never hard-codes a phase number.
+    """
+    t = m.get("track")
+    return t.strip() if isinstance(t, str) and t.strip() else None
+
+
 def cmd_meta(root: Path, chapter_rel: str) -> int:
     from lib.chapters import load_chapter
 
@@ -138,8 +152,9 @@ def cmd_meta(root: Path, chapter_rel: str) -> int:
     # `demo` / `task` are additive, optional fields the P1 site engine uses for
     # the "See it work" hero island slot and breadcrumb context. `rtrt` (below)
     # is likewise additive — the "Read the real thing" pointer, null until an
-    # author declares one. None of these affect region hashing or the drift gate;
-    # older callers ignore them.
+    # author declares one. `track` is additive too — the main-line vs optional
+    # Depth marker (see _track). None of these affect region hashing or the drift
+    # gate; older callers ignore them.
     print(json.dumps({
         "id": chapter.id,
         "title": m.get("title"),
@@ -147,6 +162,7 @@ def cmd_meta(root: Path, chapter_rel: str) -> int:
         "objectives": [_objective_str(o) for o in (m.get("objectives") or [])],
         "demo": m.get("demo"),
         "task": m.get("task"),
+        "track": _track(m),
         "readTheRealThing": bool(m.get("read_the_real_thing")),
         "rtrt": _rtrt(m),
     }, ensure_ascii=False))

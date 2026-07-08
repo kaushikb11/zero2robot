@@ -19,6 +19,11 @@ PREDICT before you run: what do you expect?
      identical — the system is deterministic even though it is unpredictable
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run: in one sentence, write how the same system can be perfectly deterministic
+(same seed → same bytes) yet completely unpredictable (a 0.05-rad nudge changes
+everything).
+
 Estimated learner time: 15 minutes.
 """
 

@@ -437,8 +437,13 @@ metrics = {
     "vocab_size": int(len(vocab)),
 }
 (args.out / "metrics.json").write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
+# Save the trained policy so downstream chapters (3.8, 4.2) can LOAD this VLA instead of
+# re-training it. Whole-module torch.save as ch1.1 bc.py does — reloadable where THIS file's
+# TinyVLA is importable; its STATS buffers ride along (normalization included). outputs/ is
+# gitignored and metrics.json above is untouched, so the smoke byte-compare stays deterministic.
+torch.save(policy, args.out / "vla_policy.pt")
 print(f"\nPushT trained {pusht_rate:.2f} vs untrained {base_rate:.2f}; ALOHA trained {aloha_rate:.2f}")
-print(f"metrics: {args.out / 'metrics.json'}")
+print(f"policy: {args.out / 'vla_policy.pt'}  |  metrics: {args.out / 'metrics.json'}")
 if args.rerun:
     print(f"recording: {args.out / 'vla.rrd'} — open it with: rerun {args.out / 'vla.rrd'}")
 # --- endregion ---

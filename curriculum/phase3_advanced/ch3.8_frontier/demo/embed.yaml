@@ -1,0 +1,48 @@
+# Demo embed stub — ch3.8 "checkpoint_probe".
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. Like ch1.6 / ch1.9, the subject is NOT a policy to
+# drive in the browser — it is a CHECKPOINT being READ. Every panel is a static or 2D
+# view of numbers probe.py already wrote to metrics.json / probe.rrd. Nothing is blocked
+# on a MuJoCo/WASM runtime or a flow-sampler contract: this embed is fully unblocked.
+demo: checkpoint_probe
+panels:
+  - id: the_architecture
+    kind: table                  # a static parameter table, no browser deps
+    title: "What's inside the file"
+    shows: >
+      The inspect-region readout: every top-level module of the loaded checkpoint with
+      its parameter count and weight shapes (tok_embed, state_proj, attention qkv/proj,
+      norm, action head), and the TOTAL (~7.3K params at the default config). The
+      teaching beat: this is the SAME table you would print for pi0 or GR00T — the moment
+      you open a released checkpoint you enumerate its modules first. Annotate that the
+      fused `norm` layer is the one the next panel probes.
+    source: static               # probe.py stdout (inspect region) / metrics.total_params
+  - id: what_the_layer_encodes
+    kind: bars                   # grouped bars: trained vs random, two probes
+    title: "A probe recovers an input for free; the real read is a computed value"
+    shows: >
+      Two linear probes of the fused layer, TRAINED checkpoint vs a RANDOM-init control:
+      (1) task-id accuracy — ~1.0 for BOTH (the instruction token is a literal input, so
+      any projection carries it; this bar is the CAUTION); (2) routed-coordinate R^2 —
+      ~0.90 trained vs ~0.16 random (this bar is the SIGNAL: only training makes the
+      fused token encode a value the model had to COMPUTE). The honest headline of the
+      whole chapter: distrust a probe that merely recovered an input.
+    source: probe.rrd            # probe/task_id_accuracy + probe/routed_coord_r2 (also in metrics.json)
+  - id: where_cls_looks
+    kind: bars
+    title: "What the fused token attends to"
+    shows: >
+      The CLS-token attention over the input sequence [CLS, state, BOS, task, EOS, PAD]
+      from the checkpoint's one attention block. It peaks on the TASK token — an
+      interpretable read of the fusion (the policy looks at the instruction word to
+      route). The same attention-inspection move you would make on a real VLA's
+      cross-attention between language and action tokens.
+    source: probe.rrd            # forward/cls_attention
+notes: >
+  Author: the strongest teaching artifact is `what_the_layer_encodes` — the trained-vs-
+  random grouped bars that make the chapter's caveat visual: the task-id bars are equal
+  (a probe recovered an input), the routed-coord bars are far apart (training put a
+  computed quantity into the representation). Pair it with `the_architecture` so the
+  reader sees the full "open it, then interrogate it" arc. All three panels are static /
+  pure-2D and UNBLOCKED — no live rollout, no sampler runtime. There is no browser policy
+  to drive here (the subject is a checkpoint on disk, not an env), which is the point.

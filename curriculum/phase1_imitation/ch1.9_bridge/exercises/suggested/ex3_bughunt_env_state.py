@@ -12,6 +12,10 @@ and the model trains on a truncated input — the "silently trains on garbage" t
 Features here are the tiny (type, shape) tuples lerobot's `dataset_to_policy_
 features` produces, so this gate is fast and self-contained (no torch, no lerobot).
 
+Before you read the fix, write one sentence: the key is now
+`observation.environment_state` and every shape still checks out — so why does
+ACT still reject the policy when only the FeatureType is wrong?
+
 FIND THE BUG in `bridge_state_feature` below, then fix it so the bridged feature
 is typed ENV. `checks.py` gates on the signature (the bridged feature is still
 STATE) and then verifies your fix. Estimated learner time: 15 minutes.
@@ -36,7 +40,7 @@ def bridge_state_feature(features: dict[str, tuple[str, tuple[int, ...]]]) -> di
     """
     bridged = dict(features)
     state = bridged.pop("observation.state")           # (type, shape)
-    bridged[ENV_STATE_KEY] = state                     # <-- BUG: type still "STATE"
+    bridged[ENV_STATE_KEY] = state
     return bridged
 
 

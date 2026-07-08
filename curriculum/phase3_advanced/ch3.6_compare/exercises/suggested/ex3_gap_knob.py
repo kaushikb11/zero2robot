@@ -20,6 +20,10 @@ PREDICT before you run: as `--block_damp` rises from 2 to 60, the divergence...
 
 Record your answer in PREDICTION below, then run this file (needs a trained ch1.1
 policy — see ex1.find_policy).
+
+Before you run, write one sentence: WHY — what does raising the block's drag do to how
+far it coasts, and how does that move it toward or away from MuJoCo's quasi-static tee?
+
 Estimated learner time: 15 minutes.
 """
 
@@ -46,11 +50,23 @@ LOW_DAMP, HIGH_DAMP = 2.0, 60.0
 
 
 def find_policy() -> Path | None:
-    for rel in ("outputs/ch3.6-bc/bc_policy.ts.pt", "outputs/ch1.1-bc/bc_policy.ts.pt"):
-        cand = REPO_ROOT / rel
-        if cand.is_file():
-            return cand
-    return None
+    # ch1.1's canonical 500-demo checkpoint — this chapter runs that exact policy.
+    # QUALITY GUARD (see ex1.find_policy): ch1.1's default --out IS this path, so a
+    # `bc.py --smoke` run drops an untrained smoke checkpoint here. Read the sibling
+    # metrics.json and treat a smoke/zero-success checkpoint as NO policy, so the
+    # caller emits the 'train the real ch1.1 policy' guidance instead of a bogus gap.
+    cand = REPO_ROOT / "outputs/ch1.1-bc/bc_policy.ts.pt"
+    if not cand.is_file():
+        return None
+    sib = cand.parent / "metrics.json"
+    if sib.is_file():
+        try:
+            meta = json.loads(sib.read_text())
+        except (json.JSONDecodeError, OSError):
+            meta = {}
+        if meta.get("smoke") or meta.get("success_rate", 0) == 0:
+            return None  # smoke/untrained: not a real full-circle policy
+    return cand
 
 
 def divergence_at_damp(policy: Path, block_damp: float, episodes: int = 30) -> float:

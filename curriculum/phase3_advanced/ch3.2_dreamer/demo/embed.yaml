@@ -1,0 +1,41 @@
+# Demo embed stub — ch3.2 "imagined_vs_real".
+# The site component is a follow-up (playground/ owns rendering); this file declares
+# WHAT the embed shows. The hero is the IMAGINATION GAP: the same policy scored in the
+# dream vs in the true sim. Driven by the .rrd dreamer.py records — no WASM/ONNX needed,
+# so this is a rerun-panel embed, not a live-inference embed.
+demo: imagined_vs_real
+source: rerun               # dreamer.py --seed 0 writes outputs/ch3.2-dreamer/dreamer.rrd
+panels:
+  - id: imagination_gap
+    kind: bar-chart          # two bars: the SAME policy's return, imagined vs real
+    entities:
+      - eval/imagined_return     # what the actor BELIEVES it earns (dream)
+      - eval/real_return         # what it ACTUALLY earns (true PushT sim)
+    caption: >
+      The headline. The policy was trained entirely inside the world model, so it
+      earns a high return in imagination — and a much lower one in reality. That gap
+      is the whole chapter: imagination is only as good as your world model, and this
+      one (from 3.1) got the block dynamics wrong. Measured across seeds 0-2: imagined
+      ~-0.18/step vs real ~-0.39/step; real task success 0%.
+  - id: imagined_return_curve
+    kind: line-chart         # x = policy-gradient iteration, y = mean imagined reward/step
+    entities:
+      - imag/reward_per_step     # rises as the actor learns to game the dream
+    caption: >
+      Proof the policy DID train: the imagined return climbs as the actor learns to
+      drive the (hallucinated) block toward the target. It is learning — just inside a
+      dream whose hard half is wrong, which is why the skill does not transfer.
+  - id: world_model_losses
+    kind: line-chart
+    entities:
+      - wm/recon                 # reconstruction — the easy half, falls fast
+      - wm/dyn                   # the prior learning to match the posterior it can't see
+    caption: "Step 1 (unchanged from 3.1): the world model the actor will later dream inside."
+interaction: none          # the story is the two-bar gap; a horizon scrub belongs to ex2 (imagination horizon vs the gap)
+notes: >
+  Deliberately NOT a live "watch the robot solve PushT" demo — it does not solve it,
+  and pretending otherwise would be the exact dishonesty this chapter exists to prevent.
+  The recorded panels carry the whole lesson: the policy trains in imagination (the
+  rising imagined-return curve), and then the imagined-vs-real bars show the gap that
+  says the dream was only as good as the world model underneath it. A side-by-side of
+  the dreamed rollout vs the real rollout on one seed is the natural site follow-up.

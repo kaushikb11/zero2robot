@@ -9,9 +9,7 @@
      · warm ink on ivory paper for reading;
      · oxblood (--book) for CHROME + primary actions (static "old ink");
      · ONE signal blue kept strictly for the LIVE toy + focus rings (never a
-       static CTA — a landing button is chrome, so it wears oxblood);
-     · the draft band is warm paper + an oxblood keyline (it is NOT interactive,
-       so it is never blue), mirroring the galley-proof .bk-ribbon.
+       static CTA — a landing button is chrome, so it wears oxblood).
 
    Mobile-first: base styles target ~390px; enhancements stack up at min-width
    breakpoints. The hero never overflows its column.
@@ -34,46 +32,6 @@
   flex: 1 1 auto;
   height: 1px;
   background: linear-gradient(90deg, var(--rule-strong), transparent);
-}
-
-/* --- draft band — mirrors the galley-proof .bk-ribbon, but scoped + inline --
-   Honest, deliberately visible: the surrounding COPY is a placeholder pending
-   the DevRel/author voice pass. Warm paper, oxblood keyline; never signal blue. */
-.ln-draft {
-  display: flex;
-  align-items: baseline;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  padding: 0.4rem 0.75rem;
-  margin: 0 0 1.4rem;
-  background: color-mix(in srgb, var(--book) 7%, var(--paper));
-  border: 1px solid var(--rule-strong);
-  border-left: 3px solid var(--book-soft);
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-  line-height: 1.5;
-}
-.ln-draft b {
-  color: var(--book);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-weight: 700;
-}
-.ln-draft__src { color: var(--ink-mute); }
-.ln-draft__src code {
-  font-family: var(--font-mono);
-  color: var(--ink-soft);
-  background: var(--paper-3);
-  border: 1px solid var(--paper-edge);
-  border-radius: 2px;
-  padding: 0.02em 0.28em;
-}
-.ln-draft--inline { margin: 0.4rem 0 1.2rem; }
-/* the long tail reminder folds away on narrow screens (like .bk-ribbon-tail) */
-@media (max-width: 40rem) {
-  .ln-draft__tail { display: none; }
 }
 
 /* ===========================================================================
@@ -274,6 +232,28 @@
   color: var(--book);
   font-variant-numeric: tabular-nums;
 }
+.ln-arc__maplink {
+  margin: 1rem 0 0;
+}
+.ln-arc__maplink a {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  letter-spacing: 0.01em;
+  color: var(--book);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 1px;
+}
+.ln-arc__maplink a:hover,
+.ln-arc__maplink a:focus-visible {
+  color: var(--book-soft);
+  border-bottom-color: var(--book-soft);
+}
+.ln-arc__maplink a:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
 
 /* --- the phase timeline --------------------------------------------------- */
 .ln-phases {
@@ -350,6 +330,12 @@
 .ln-phase__pill[data-state="coming"] {
   color: var(--ink-mute);
   background: color-mix(in srgb, var(--ink-mute) 12%, transparent);
+}
+/* gated: the capstone finale is blocked on infra (hidden-seed grader) — a
+   distinct oxblood chip, never the live signal blue (this is chrome/state). */
+.ln-phase__pill[data-state="gated"] {
+  color: var(--book);
+  background: color-mix(in srgb, var(--book) 10%, transparent);
 }
 .ln-phase__blurb {
   margin: 0 0 0.9rem;
@@ -468,6 +454,42 @@
   font-style: italic;
   color: var(--ink-mute);
   letter-spacing: 0.02em;
+}
+
+/* the honest "gated capstone" marker inside a live-but-unfinished phase. Mirrors
+   the draft band's warm-paper + oxblood-keyline language (state/chrome, never the
+   live signal blue). Carries a draft affordance because its text is author copy. */
+.ln-phase__gate {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--book-soft);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--book) 5%, var(--paper-2));
+}
+.ln-phase__gate-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--book);
+  border: 1px solid var(--book-soft);
+  border-radius: 100px;
+  padding: 0.12rem 0.5rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.ln-phase__gate-text {
+  min-width: 0;
+  flex: 1 1 12rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--ink-soft);
 }
 
 /* --- wider layout: give the phase rail a touch more room ----------------- */

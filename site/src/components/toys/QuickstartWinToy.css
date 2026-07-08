@@ -1,0 +1,267 @@
+/* ========================================================================
+   QuickstartWinToy (.qw-*) — ch0.0 "Your First Robot Policy in Twenty Minutes"
+   concept-toy (demo quickstart_first_win).
+
+   THE FAST WIN as a pure DATA-VIEWER over a recorded seed-0 rollout: a top-down
+   replay of the trained BC policy driving the PushT T-block from a held-out start
+   onto the target, block flipping "reached ✓" as it lands inside the pos_tol ring,
+   with a play/replay + a frame scrubber, and the honest held-out headline
+   (trained 12/25 >> random 0/25). No MuJoCo-WASM, no ONNX, no dynamic import — it
+   reads demo/vizdata.json and draws one path + two entities + two bars. It hydrates
+   only to make play + the scrubber live, so the server-rendered view (the landed
+   reach + the success readout + the honest headline) is a complete JS-off experience.
+
+   COLOUR — a data panel (not a fixed light lab instrument), so it drives every colour
+   from the FLIPPING design tokens (site/public/styles.css) and is correct in light
+   AND dark with no special-case. Mapped by MEANING:
+     · the target T + the pos_tol success ring → --entity-target-ink (green — the goal)
+     · the T-block being driven home            → --entity-block (magenta)
+     · the pusher (the agent)                   → --entity-pusher (amber)
+     · the recorded block trail                 → --entity-block, low opacity
+     · grid / axes / neutral ink                → --ink-mute / --rule
+     · the interactive controls / focus         → --signal (blue)
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — the only animation is the optional play/replay (rAF stepping the recorded
+   frames at rollout fps), gated OFF under prefers-reduced-motion (the button is hidden,
+   scrubbing stays). The only CSS transitions are on the controls + the success flip,
+   also cut under reduced-motion.
+   ======================================================================== */
+.qw {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.qw-head { margin-bottom: 0.1rem; }
+.qw-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.qw-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.qw-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.qw-sub code, .qw-note code, .qw-rates-note code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.95em;
+  color: var(--ink-soft, #4a4437);
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 10%, transparent);
+  padding: 0.02em 0.28em;
+  border-radius: 3px;
+}
+
+/* ---- the top-down replay ------------------------------------------------- */
+.qw-fig {
+  margin: 0;
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  padding: 0.4rem;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 86%, transparent);
+}
+.qw-fig:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.qw-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 120% at 50% 42%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--ink-mute, #6d6252) 6%),
+      var(--paper-2, #f0e9d9));
+}
+.qw-arena { fill: none; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1; }
+.qw-grid line { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent); stroke-width: 1; }
+
+/* the block's whole recorded path — faint magenta, the journey home */
+.qw-trail {
+  fill: none;
+  stroke: var(--entity-block, #a5257d);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
+/* the pos_tol success ring at the origin — neutral until the block lands, then green */
+.qw-ring {
+  fill: color-mix(in srgb, var(--entity-target-ink, #096047) 6%, transparent);
+  stroke: var(--ink-mute, #6d6252);
+  stroke-width: 1.3;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+  transition: stroke 0.2s ease, opacity 0.2s ease;
+}
+.qw-ring[data-reached="true"] {
+  stroke: var(--entity-target-ink, #096047);
+  opacity: 1;
+}
+
+/* the target T — dashed green outline at the origin */
+.qw-target rect {
+  fill: none;
+  stroke: var(--entity-target, #0c7d5f);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+/* the T-block being driven home — filled magenta */
+.qw-tee rect {
+  fill: var(--entity-block, #a5257d);
+  stroke: color-mix(in srgb, var(--entity-block, #a5257d) 55%, var(--ink, #23201b));
+  stroke-width: 0.6;
+  transition: fill 0.2s ease;
+}
+.qw-tee[data-reached="true"] rect {
+  fill: color-mix(in srgb, var(--entity-block, #a5257d) 78%, var(--entity-target-ink, #096047));
+}
+
+/* the pusher — the amber agent */
+.qw-pusher-ring { fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.5; opacity: 0.5; }
+.qw-pusher { fill: var(--entity-pusher, #b0560f); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+
+.qw-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.qw-lab-target { fill: var(--entity-target-ink, #096047); }
+
+.qw-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  color: var(--ink-mute, #6d6252);
+  font-variant-numeric: tabular-nums;
+}
+.qw-cap b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.qw-cap b[data-within="true"] { color: var(--entity-target-ink, #096047); }
+.qw-cap .qw-ok { color: var(--entity-target-ink, #096047); font-weight: 700; }
+.qw-cap .qw-pending { color: var(--ink-mute, #6d6252); }
+
+/* ---- controls: play/replay + frame scrubber ----------------------------- */
+.qw-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.8rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+}
+.qw-play {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.34rem 0.7rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--signal, #1f56de) 12%, var(--paper, #f7f3ea));
+  color: var(--signal-ink-on-paper, var(--signal, #1f56de));
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.qw-play[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--signal, #1f56de) 22%, var(--paper, #f7f3ea));
+}
+.qw-play:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.qw-scrub { display: inline-flex; align-items: center; gap: 0.4rem; flex: 1 1 12rem; min-width: 9rem; }
+.qw-scrub-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.7rem; color: var(--ink-mute, #6d6252); }
+.qw-slider { flex: 1 1 auto; min-width: 6rem; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.qw-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.qw-scrub-out {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; font-variant-numeric: tabular-nums; font-weight: 700;
+  color: var(--ink, #23201b); min-width: 3.6rem; text-align: right;
+}
+.qw-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252); flex-basis: 100%;
+}
+
+/* ---- the held-out headline bars ----------------------------------------- */
+.qw-rates {
+  margin: 0;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+}
+.qw-rates-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; color: var(--ink-mute, #6d6252); margin-bottom: 0.5rem;
+}
+.qw-bars { display: grid; gap: 0.4rem; }
+.qw-bar-row { display: grid; grid-template-columns: 7.5rem 1fr 6rem; align-items: center; gap: 0.5rem; }
+.qw-bar-name { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.68rem; color: var(--ink-mute, #6d6252); }
+.qw-bar-row[data-kind="hero"] .qw-bar-name { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.qw-bar-track {
+  height: 0.62rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.qw-bar-fill { height: 100%; border-radius: 3px; }
+.qw-bar-fill[data-kind="hero"] { background: var(--entity-target-ink, #096047); }
+.qw-bar-fill[data-kind="base"] { background: color-mix(in srgb, var(--ink-mute, #6d6252) 60%, transparent); }
+.qw-bar-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  text-align: right; color: var(--ink-mute, #6d6252);
+}
+.qw-bar-val[data-kind="hero"] { color: var(--entity-target-ink, #096047); }
+.qw-rates-note {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.qw-rates-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the honest framing note -------------------------------------------- */
+.qw-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.6; color: var(--ink-mute, #6d6252);
+}
+.qw-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* visually-hidden live region for screen readers */
+.bk-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* dark-mode brighten for the entity hues (the tokens flip, but the block/target
+   read a touch punchier against the darker paper). */
+@media (prefers-color-scheme: dark) {
+  .qw-trail { opacity: 0.4; }
+  .qw-tee rect { stroke: color-mix(in srgb, var(--entity-block, #a5257d) 40%, var(--paper, #f7f3ea)); }
+}
+:root[data-theme="light"] .qw-trail { opacity: 0.32; }
+:root[data-theme="dark"] .qw-trail { opacity: 0.4; }
+
+@media (max-width: 34rem) {
+  .qw-title { font-size: 0.84rem; }
+  .qw-bar-row { grid-template-columns: 6rem 1fr 5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qw-play, .qw-ring, .qw-tee rect { transition: none; }
+}

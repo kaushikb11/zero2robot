@@ -28,13 +28,13 @@ exercise_checks:
     provenance: "a synthetic 2-episode set (3 + 2 frames) written via the completed writer, checked vs a gen_demos golden schema"
     expected_frames: 5          # 3 + 2 frames across the two synthetic episodes
 
-notebook_hash: d999a7b833dda95d081923c0a295ba8cd8d65d20113af7d02c29d8772325cabe        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 5188f46d165dfc4b43843f606bb708beccc3c5808cb65bc904b3906b4fde95b4   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: aadd25575e22310dd838beabe27534b5bdd6d6938efe5f3bf408817fbb4d1349        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 3cd59d3824900db4b1c69f5ccc5bfa844f8c441fbefb92ec5d3b19b7008622f9   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 382d940f72caab4b6493dfd87366dd2d1d3e6ec3749df349228d8f5201c9f6f9
   features: adb3b7b64cefb1e0d5394f0003aa5f703625030ddcb0f2542b876582e34d43cf
-  teleop: 82865988d54c46fcee99f50d92729ccf9344c13cc939b571b3991f67190efcdf
+  teleop: bc41e68d445c5080b969890317d6fd4ad421639c7f1358fceea6314e593ef3b5
   ingest: f9c4926ea9f7291e911a9fd553a6101d08840dec2a4c66112165b91df9542b0d
   write: d275eb150ffe1bd628aeeca7b1bf6bbfd7fedcb2083df892e2eb7a6d07d74ed3
   run: f23e8c370b740e83170968c224edba2d9572ebff66f2444434c26d31fc1fe637

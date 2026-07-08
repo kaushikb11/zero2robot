@@ -12,11 +12,11 @@ objectives:
   - Ablate the standard PPO tricks (advantage norm, value clipping, GAE-lambda, lr anneal) via flags
 scale_lab: false
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor is CleanRL's single-file
-# ppo_continuous_action.py (~330 LOC) — the reference the learner graduates to,
-# and the LOC sanity check this chapter measures itself against. Do NOT invent a
-# commit sha here; the read-the-real-thing skill pins the real upstream commit.
-#   repo: vwxyz/cleanrl   # PLACEHOLDER — resolve the real org/commit via the skill
+rtrt:
+  repo: vwxyzjn/cleanrl
+  commit: c37a3ec4ef8d33ab7c8a69d4d2714e3817739365   # tag v1.0.0; pinned 2026-07-07 (API-verified)
+  focus:
+    - ppo_continuous_action.py   # the single-file (~330 LOC) PPO this chapter mirrors — the LOC sanity check + the GAE/clipped-surrogate idiom
 demo: cartpole_ppo_balance   # hero: trained PPO balances live; visitor nudges the cart, policy recovers
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
@@ -35,14 +35,14 @@ exercise_checks:
 # region_hashes: recorded from the frozen artifact (the site build records these;
 # check_prose_code_drift recomputes each region's sha256 and gates on drift).
 
+notebook_hash: 6afba6e3f82f4c57345fdcf8c9c3e3f14f743df8c9a5eb474502d71fe1b88236        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 11865b9f36ecf4fd7910b97c526169d5a0e859fcebb611df7640e42ffe2bda41   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
 region_hashes:
-  setup: 6d4f3c6cbe6fd52b5611617b71e27a3aef4cf5e5f8d32c39fd45787818321f5c
+  setup: 9b8667423907f5cfe2a0b5cd66333060594f116a9133228af18b116b7024b226
   envs: 4d2179c4ed1f7a75044cd3b2764dadcb7dd6f25c9883388ec0f9906f62d72ff9
   model: c96b763c0f7d9de9857c27c156b156a5e38e01e13602eeee6122186a815ca36e
   rollout: 0cb390b2185cf7349e6a05cdc749140d84405cb7150e6f7575be62d7b6c7f644
   update: 4fb718e49af354837fea2dc904043495321b40543e6c1f5ba1fb53c9870cb916
   train: b2cd71518063c814bcabc1fb5db03181296529d5bd6654163992a5c80c67e89d
   eval: 5a677cb6f4b1b4f769ee775a97c077bdad06e43b800c4665b65a7a624c68bb9c
-
-notebook_hash: ce756f617001b8004766f42b08c40c4a413804f51c50c352be7b209956d1be67        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 6f334e9396db4a2a9187ed4dc4819abbb3faf4a73ed4e85c120596c1a4abd717   # sha256 of the generated notebook bytes; mismatch => hand-edited

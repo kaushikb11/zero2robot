@@ -1,0 +1,200 @@
+/* ch4 "Offline RL Primer" concept-toy — the BC-vs-AWAC toy.
+ *
+ * Co-located CSS for OfflineRLToy.tsx (imported at the top of that file).
+ * Namespaced `of-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`fr-*` classes. Like ch3.3's energy-drift toy this is PURE
+ * SVG over pre-computed numbers — no WASM — so it drives every colour from the
+ * site's flipping design tokens and is genuinely theme-aware in BOTH light and
+ * dark. Every var carries a light fallback so it still renders if mounted outside
+ * the shell.
+ *
+ * Colour scheme — mapped to tokens by MEANING:
+ *   - --entity-target grn → AWAC (the reward-aware winner; bounded on narrow data)
+ *   - --ink-mute neutral  → BC (the fair baseline clone — not wrong, just capped)
+ *   - --alert red         → naive max-Q (the Break-It that diverges)
+ *   - --signal blue       → the seed selector (the one interactive handle)
+ */
+
+.of { display: grid; gap: 0.6rem; }
+
+/* --- controls: the seed selector (the interactive handle) ---------------- */
+.of-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.of-seg-label,
+.of-seg-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.of-seg-note { color: var(--ink-mute, #6d6252); }
+.of-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.of-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.32rem 0.9rem; min-width: 2.2rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.of-seg-btn:last-child { border-right: 0; }
+.of-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.of-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+/* --- panels -------------------------------------------------------------- */
+.of-panels { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .of-panels { grid-template-columns: 1.5fr 1fr; align-items: stretch; } }
+
+.of-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.5rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.of-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.2rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.of-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.of-svg { display: block; width: 100%; height: auto; }
+
+/* --- shared chart marks --------------------------------------------------- */
+.of-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.of-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 15%, transparent); stroke-width: 1; }
+.of-tick {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.of-axis-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em;
+}
+
+/* the two/three data series, coloured by MEANING */
+.of-bc   { color: var(--ink-mute, #6d6252); }
+.of-awac { color: var(--entity-target, #2f9e44); }
+.of-naive { color: var(--alert, #c0362a); }
+
+.of-bar { fill: currentColor; opacity: 0.82; }
+.of-bar.of-bc { opacity: 0.5; }
+.of-whisk { stroke: color-mix(in srgb, var(--ink, #23201b) 62%, transparent); stroke-width: 1.4; }
+.of-barval {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px; font-weight: 700; fill: currentColor;
+}
+.of-barlab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; fill: var(--ink, #23201b);
+}
+.of-barsub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.of-barsub.of-awac { fill: var(--entity-target, #2f9e44); }
+.of-barsub.of-naive { fill: var(--alert, #c0362a); }
+
+/* --- diff-CI strip (the significance made visible) ----------------------- */
+.of-diff-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; letter-spacing: 0.02em; color: var(--ink-mute, #6d6252);
+  margin: 0.25rem 0 -0.1rem;
+}
+.of-diff-svg { margin-top: 0.1rem; }
+.of-zero { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 60%, transparent); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.of-zero-lab, .of-di-seed {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.of-di-line { stroke: var(--entity-target, #2f9e44); stroke-width: 2.4; opacity: 0.6; stroke-linecap: round; }
+.of-di-cap { stroke: var(--entity-target, #2f9e44); stroke-width: 1.6; opacity: 0.6; }
+.of-di-dot { fill: var(--entity-target, #2f9e44); }
+.of-di-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; fill: var(--ink-mute, #6d6252); font-variant-numeric: tabular-nums;
+}
+.of-di-sel .of-di-line { opacity: 1; stroke-width: 3; }
+.of-di-sel .of-di-cap { opacity: 1; }
+.of-di-sel .of-di-seed, .of-di-sel .of-di-val { fill: var(--ink, #23201b); font-weight: 700; }
+
+/* --- readout HUD + legend ------------------------------------------------- */
+.of-readout {
+  display: grid; gap: 0.26rem;
+  padding: 0.4rem 0.55rem; margin-top: 0.4rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+}
+.of-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+.of-lg { display: inline-flex; align-items: center; gap: 0.35rem; }
+.of-lg::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; }
+.of-l-bc { color: var(--ink-mute, #6d6252); }
+.of-l-awac { color: var(--entity-target, #2f9e44); }
+.of-lg-name { color: var(--ink, #23201b); }
+.of-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.of-v.of-ok { color: var(--entity-target, #2f9e44); }
+
+/* --- the Break-It note ---------------------------------------------------- */
+.of-break-note {
+  margin-top: 0.5rem; flex: 1 1 auto;
+  font-size: 0.76rem; line-height: 1.5; color: var(--ink, #23201b);
+}
+.of-break-note b { font-weight: 600; }
+.of-t-alert { color: var(--alert, #c0362a); }
+
+/* --- the mechanism card, full width -------------------------------------- */
+.of-mech {
+  display: flex; flex-direction: column; gap: 0.45rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.of-mech-h {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+}
+.of-mech-rows { display: grid; gap: 0.3rem; }
+.of-mech-row { display: flex; align-items: flex-start; gap: 0.5rem; }
+.of-chip { flex: 0 0 auto; width: 0.65rem; height: 0.65rem; border-radius: 3px; margin-top: 0.2rem; background: currentColor; }
+.of-chip.of-bc { color: var(--ink-mute, #6d6252); opacity: 0.6; }
+.of-chip.of-awac { color: var(--entity-target, #2f9e44); }
+.of-mech-txt { font-size: 0.78rem; line-height: 1.45; color: var(--ink, #23201b); }
+.of-mech-txt b { font-weight: 600; }
+.of-mech-svg { display: block; width: 100%; height: auto; max-width: 480px; }
+.of-mech-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); stroke-width: 1.4; }
+.of-mech-end {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; fill: var(--ink-mute, #6d6252);
+}
+.of-mech-mk { stroke-width: 2; }
+.of-mech-mk.of-bc { stroke: var(--ink-mute, #6d6252); }
+.of-mech-mk.of-awac { stroke: var(--entity-target, #2f9e44); }
+.of-mech-mklab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 600;
+}
+.of-mech-mklab.of-bc { fill: var(--ink-mute, #6d6252); }
+.of-mech-mklab.of-awac { fill: var(--entity-target, #2f9e44); }
+.of-mech-arrow { stroke: var(--entity-target, #2f9e44); stroke-width: 1.6; fill: none; opacity: 0.85; }
+.of-mech-arrowhead { fill: var(--entity-target, #2f9e44); }
+.of-mech-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; line-height: 1.45; color: var(--ink-mute, #6d6252);
+}
+.of-mech-note em { font-style: italic; color: var(--ink, #23201b); }
+
+/* the persistent honest-note line under everything */
+.of-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.of-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill the only transitions (nothing else animates) */
+@media (prefers-reduced-motion: reduce) {
+  .of-seg-btn { transition: none; }
+}

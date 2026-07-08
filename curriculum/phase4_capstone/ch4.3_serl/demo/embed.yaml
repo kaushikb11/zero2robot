@@ -1,0 +1,53 @@
+# Demo embed stub — ch4.3 serl "serl_sample_efficiency".
+# Playground integration point: playground/ owns the WASM runtime, ONNX
+# inference, and the embed component; this file declares WHAT the embed shows.
+# Coordinate at the contracts.ts level before wiring. NOTE: serl.py saves a torch
+# state_dict for the HIL-SERL best-checkpoint actor (serl_actor.pt); the ONNX
+# export (tensor contract v1: observation float32[1,8] -> action float32[1,2]) is
+# a follow-up the author wires when this chapter graduates from draft to drop.
+demo: serl_sample_efficiency
+kind: chart-plus-rollout        # the HEADLINE is a curve, not just a hero rollout
+scene: pusher_reach             # curriculum/common/envs/pusher_reach/pusher_reach.xml, verbatim (ch2.2's env)
+chart:                          # the sample-efficiency viz — the whole lesson in one plot
+  title: "success (or reach distance) vs online env samples"
+  x: online_env_samples
+  y: eval_final_distance        # lower is better; also expose success_rate toggle
+  series:
+    - id: hil_serl
+      label: "HIL-SERL (corrections prior + online)"
+      source: metrics.json:hil_curve        # (step, eval_dist) pairs incl. step 0 = the prior
+      annotate_x0: "the prior clears the threshold at ZERO online samples"
+    - id: scratch
+      label: "SAC from scratch (no prior, no corrections)"
+      source: metrics.json:scratch_curve
+    - id: threshold
+      label: "threshold"
+      constant_y: 0.10          # --threshold; the samples-to-threshold bar
+  caption: >
+    HIL-SERL starts ON the threshold because the corrections-as-prior already put
+    it there — zero online samples. From-scratch SAC has to discover the reach from
+    nothing and crawls toward the same line over thousands of online samples. The
+    horizontal gap at the threshold IS the sample efficiency the chapter measures.
+rollout:                        # optional side-by-side hero under the chart
+  policies:
+    hil: serl_actor.onnx        # exported; HIL-SERL best checkpoint (the prior, effectively)
+    scratch: scratch_actor.onnx # exported; save + export the from-scratch actor to wire this
+    contract: "obs float32[1,8] -> action float32[1,2]"
+  camera:
+    lookat: [0.0, 0.0, 0.0]
+    distance: 0.6
+    azimuth: 90
+    elevation: -90              # top-down: the planar arm reads cleanest from directly above
+  interaction: move-target      # visitor drags the green target; both arms re-reach
+  layout: side-by-side          # HIL-SERL arm reaches; the equal-online-budget scratch arm still flails
+hud:
+  - fingertip_to_target
+  - online_sample_count         # tick it up live; watch scratch need far more to match HIL-SERL
+notes: >
+  Honest-framing note for the author: the measured win is a SAMPLE-EFFICIENCY gap
+  (HIL-SERL reaches the bar in ~0 online samples vs thousands for scratch), driven
+  by the corrections-as-prior — NOT a "HIL-SERL solves a task scratch can't." On
+  this small dense-reward env both arms top out near the same short-horizon SAC
+  ceiling; the chart should make the SAMPLE-AXIS gap the hero, not a final-height
+  gap. The graded capstone suite (ch4.4, hidden-seed) is where the leaderboard
+  number lives; this public demo shows the mechanism.

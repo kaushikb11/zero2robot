@@ -78,7 +78,7 @@ function clip(text: string, max = 160): string {
 
 /** Read a chapter's draft prose, tolerating a missing draft (fall back to .md). */
 function readChapterProse(chapterDir: string): string {
-  for (const rel of [`${chapterDir}/prose/chapter.draft.md`, `${chapterDir}/prose/chapter.md`]) {
+  for (const rel of [`${chapterDir}/prose/chapter.md`]) {
     try {
       return readProse(rel);
     } catch {

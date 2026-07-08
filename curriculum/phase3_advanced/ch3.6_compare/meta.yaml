@@ -1,7 +1,9 @@
 id: ch3.6-compare
 title: "Full Circle: Run Your ch1.1 Policy in the Engine You Built"
-artifact: compare.py         # 398 LOC, CPU-only; pure-numpy from-scratch engine + torch eval of the ch1.1 BC policy. MuJoCo appears ONLY as the comparison reference (the ground-truth sim), never in the learner's engine.
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: compare.py         # 407 LOC (<=450 cap), CPU-only; pure-numpy from-scratch engine + torch eval of the ch1.1 BC policy. MuJoCo appears ONLY as the comparison reference (the ground-truth sim), never in the learner's engine.
 task: pusht-sim-to-sim       # RE-CREATE PushT in the ch3.3-3.5 engine, run the ch1.1 BC policy in BOTH sims, MEASURE the gap
+policy_reused: ch1.1-bc      # the FULL CIRCLE: runs ch1.1's OWN canonical checkpoint (outputs/ch1.1-bc/bc_policy.ts.pt, the 500-demo 0.62-in-MuJoCo policy) reloaded not retrained — this is the /map/ "full circle" edge back to Phase 1
 objectives:
   - Close the "Build a Physics Engine" arc: RE-CREATE PushT inside the from-scratch numpy engine you built — the pusher (a velocity-servo disk) and the T-block (TWO point masses on a ch3.4 rigid distance link, its yaw EMERGENT from the line between them), pushed by the ch3.5 body-body contact solver (`solve_contacts`, reused wholesale). Match the pusht obs[10]/action[2] contract so the ch1.1 policy plugs straight in.
   - Run the SAME ch1.1 BC policy — trained in MuJoCo, reloaded not retrained — in BOTH the MuJoCo PushT (ground truth) and your-engine PushT (the test), from bit-identical initial states, and see with your own eyes that the thing you have trusted since ch0.1 is something you can now build, and your policy runs in it.
@@ -21,47 +23,48 @@ scale_lab: false
 # a published sim-to-sim / domain-randomization transfer study (the framing that a policy meeting
 # unmodeled dynamics degrades in a MEASURABLE way — the same story as ch2.6 sim-to-real).
 read_the_real_thing: true
-# rtrt:
-#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - mj_step / the integration + constraint pipeline: the reference dynamics this chapter's
-#       two-mass frictionless-contact engine is a stripped-down, honestly-worse approximation of
-#     - the contact/friction model the learner's engine OMITS (Coulomb friction, the friction
-#       cone, the shaped rigid body) — i.e. exactly where the sim-to-sim gap measured here comes from
+rtrt:
+  repo: google-deepmind/mujoco
+  commit: 28009f9105cd92784b7b0b30c0605a5e29107a77   # tag 3.10.0 (matches the course-pinned mujoco); pinned 2026-07-07
+  focus:
+    - "mj_step / the integration + constraint pipeline: the reference dynamics this chapter's two-mass frictionless-contact engine is a stripped-down, honestly-worse approximation of"
+    - "the contact/friction model the learner's engine OMITS (Coulomb friction, the friction cone, the shaped rigid body) — i.e. exactly where the sim-to-sim gap measured here comes from"
 
 demo: pusht_sim2sim          # both sims' block trajectories overlaid + the transfer/divergence comparison; pure numpy engine vs MuJoCo replay
 
-# Reference run: the FULL default comparison (--policy <trained ch1.1 ts.pt> --seed 0 --episodes 50,
-# pusher_mass 4.0, block_damp 6.0, baumgarte 40.0, horizon 300). The BC policy was trained by ch1.1's
-# bc.py (600 epochs, seed 0, cpu) on 300 scripted-expert demos; its MuJoCo eval success is 0.54, and
-# this chapter's MuJoCo-side rollout REPRODUCES that 0.54 exactly (same held-out eval seeds 10000+),
-# which is the cross-check that the ground-truth side is honest. All numbers seed 0 on cpu.
+# Reference run: the FULL default comparison (--policy outputs/ch1.1-bc/bc_policy.ts.pt --seed 0
+# --episodes 50, pusher_mass 4.0, block_damp 6.0, baumgarte 40.0, horizon 300). This chapter RUNS
+# ch1.1's OWN canonical policy — bc.py at 600 epochs / seed 0 / cpu on 500 scripted-expert demos, the
+# exact checkpoint ch1.1's reference run reports (31/50 = 0.62 in MuJoCo, mean return -36.6). It does
+# NOT train a policy of its own. Because compare.py's MuJoCo side draws the SAME held-out eval seeds
+# (10000+) as ch1.1's bc.py eval and CPU MuJoCo is bitwise deterministic, its MuJoCo success
+# REPRODUCES ch1.1's 0.62 exactly — the cross-check that the ground-truth side is honest. seed 0, cpu.
 reference_run:
-  provenance: "seed 0 on cpu; numpy 2.4.6, torch 2.10.0, mujoco 3.10.0; policy = ch1.1 bc.py 600ep/seed0 on 300 scripted demos; compare.py --episodes 50 --pusher_mass 4.0 --block_damp 6.0 --baumgarte 40.0 (horizon 300); measured 2026-07-06"
+  provenance: "seed 0 on cpu; numpy 2.4.6, torch 2.10.0, mujoco 3.10.0; policy = ch1.1's canonical bc.py 600ep/seed0 on 500 scripted demos (outputs/ch1.1-bc/bc_policy.ts.pt, ch1.1 eval 31/50=0.62); compare.py --episodes 50 --pusher_mass 4.0 --block_damp 6.0 --baumgarte 40.0 (horizon 300); measured 2026-07-07"
   # --- TRANSFER: the same policy, two sims (the FULL CIRCLE headline) ---
-  mj_success_rate: 0.54              # ground truth: the ch1.1 BC policy in the sim it trained in (== bc.py's own eval, reproduced)
-  engine_success_rate: 0.18          # the SAME policy in the engine YOU built — it PARTLY works
-  transfer_retained: 0.33            # your engine keeps ~1/3 of MuJoCo's success — an honest, imperfect transfer, NOT a clean match
+  mj_success_rate: 0.62              # ground truth: ch1.1's OWN policy in the sim it trained in (== bc.py's 31/50 eval, reproduced exactly)
+  engine_success_rate: 0.20          # the SAME policy in the engine YOU built — it PARTLY works
+  transfer_retained: 0.32            # your engine keeps ~1/3 of MuJoCo's success — an honest, imperfect transfer, NOT a clean match
   # --- DIVERGENCE: one shared start, MuJoCo's exact actions replayed in your engine (open-loop) ---
-  mean_pos_divergence_m: 0.074077    # mean block-position gap over the episode (the block is ~0.12 m wide, so this is real)
-  mean_ang_divergence_rad: 0.886591  # mean block-YAW gap — the DOMINANT gap: your simplified contact rotates the T much worse than MuJoCo's shaped block does
+  mean_pos_divergence_m: 0.082256    # mean block-position gap over the episode (the block is ~0.12 m wide, so this is real)
+  mean_ang_divergence_rad: 0.944621  # mean block-YAW gap — the DOMINANT gap: your simplified contact rotates the T much worse than MuJoCo's shaped block does
   # HONESTY (author MUST keep this framing — it is the measured truth, and the whole point):
   #  * The policy TRANSFERS IMPERFECTLY, and that is correct. A from-scratch engine of two point
   #    masses + frictionless normal contact is a WORSE PushT than MuJoCo's; a policy trained in one
-  #    and dropped in the other should lose success and drift. It does (0.54 -> 0.18). Do NOT tune
-  #    the knobs to fake a clean 0.54 -> 0.54 — a perfect match here would be a bug or a lie.
+  #    and dropped in the other should lose success and drift. It does (0.62 -> 0.20). Do NOT tune
+  #    the knobs to fake a clean 0.62 -> 0.62 — a perfect match here would be a bug or a lie.
   #  * The ANGLE gap dominates the POSITION gap. That is diagnostic, not incidental: pushing a
   #    two-point-mass dumbbell rotates the T with far less authority than pushing MuJoCo's welded
   #    two-box body, so the policy aligns the block much worse in your engine. Say why, plainly.
-  #  * The engine success (0.18) is noisy at 50 episodes (a coarse 0/1 metric); the DIVERGENCE is
-  #    the smooth, seed-robust number. Lead the honesty with "lower + diverging", not the exact 0.18.
+  #  * The engine success (0.20) is noisy at 50 episodes (a coarse 0/1 metric); the DIVERGENCE is
+  #    the smooth, seed-robust number. Lead the honesty with "lower + diverging", not the exact 0.20.
   #  * Tie it to ch2.6: this is sim-to-SIM, but the mechanism is identical to sim-to-REAL — a policy
   #    meeting dynamics (unmodeled friction, the wrong body shape) its training never showed it.
   # --- The GAP KNOB (ex3): --block_damp is a proxy for the block's (missing) surface friction ---
-  #   Raising it toward MuJoCo's heavily-damped tee CLOSES the divergence, monotonically and
-  #   seed-robustly: mean_pos_divergence  block_damp 2 -> 60 : 0.1083 -> 0.0576 (1.9x); mean_ang
-  #   divergence 0.9246 -> 0.7153. The gap is a modeling choice you can measure yourself moving.
+  #   Raising it toward MuJoCo's heavily-damped tee CLOSES the position divergence, monotonically
+  #   (block_damp 2/6/20/60: 0.1228/0.0823/0.0766/0.0755 m) and seed-robustly: mean_pos_divergence
+  #   block_damp 2 -> 60 : 0.1228 -> 0.0755 (1.6x); mean_ang divergence 1.2044 -> 0.8766. The gap is
+  #   a modeling choice you can measure yourself moving.
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with provenance,
 # not a bare magic number). checks.py reads these instead of inlining tolerances.
@@ -74,20 +77,25 @@ exercise_checks:
     mean_ang_divergence_rad: 0.039209
     reproduce_abs: 1.0e-6            # compare.py's own smoke run reproduces these to well within this band (numpy + torch-CPU eval are deterministic)
   ex1:                               # ex1_predict_transfer.py (predict-then-run: does the BC policy transfer to your engine?)
-    answer: "C"                      # PARTLY — success drops (~0.54 -> ~0.18) and trajectories diverge, most of all in ANGLE (the rotational gap)
+    answer: "C"                      # PARTLY — success drops (~0.62 -> ~0.20) and trajectories diverge, most of all in ANGLE (the rotational gap)
   ex2:                               # ex2_completion_contract.py (code-completion: the yaw-from-two-masses recovery + the obs[10] assembly that lets the policy plug in)
     reproduce_abs: 1.0e-12           # the completed block_yaw + obs assembly must match the reference to within this
   ex3:                               # ex3_gap_knob.py (hyperparameter-investigation: --block_damp closes the sim-to-sim divergence)
     answer: "B"                      # raising the block drag toward MuJoCo's quasi-static tee SHRINKS the divergence
-    divergence_ratio_min: 1.4        # mean_pos_divergence at block_damp 2 is ~1.9x that at block_damp 60; 1.4x is the seed-robust floor
-    provenance: "seed 0 on cpu; block_damp sweep {2,6,20,60}, --episodes 50, trained ch1.1 policy; measured 2026-07-06"
+    divergence_ratio_min: 1.4        # mean_pos_divergence at block_damp 2 is ~1.6x that at block_damp 60; 1.4x is the seed-robust floor
+    provenance: "seed 0 on cpu; block_damp sweep {2,6,20,60} -> mean_pos 0.1228/0.0823/0.0766/0.0755 m, --episodes 50, ch1.1's canonical 500-demo policy; measured 2026-07-07"
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant is not
-# built yet (ch3.6 is an agent draft pending the teaching-pass); notebook-tier-test writes both on
-# generation, and the gate skips a chapter that carries neither key.
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them on first render.
+# Colab notebook variant generated by notebook-tier-test. compare.py CHANGED in this
+# honesty pass (header/comment/prose-sync edits — no logic change; new sha256
+# aa38e0fb9e46988f25fddc83a0c14a102b4c246713d6718cfd69c84dce0c5839), so notebook_hash below is
+# now STALE. REGENERATE the notebook (notebook-tier-test) so both hashes are refreshed.
+notebook_hash: aa38e0fb9e46988f25fddc83a0c14a102b4c246713d6718cfd69c84dce0c5839        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 5e821031eb4710e0d5d60d580efa43a0928a42b19cbc74d12f04ac7fa4ecd8a8   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
-notebook_hash: 57caf5cf138785bf192d19665d9163f12c90bee72829e692548d4b7526642c6e        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 92a9d3466106025547dce483ad5ecef3ecdfe00a48f80ac2a78925b7c6f16f8d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+region_hashes:
+  setup: 3625849e1d6167d675db80c57ba65abce1dd4f7abfb7674ba3277e1945517bbe
+  policy: 7371c9fecfb1094ed0c45b682f44cca839d3fe473f21c490abc46521592a5b94
+  engine: 401f7050d96e485f87467b9f74a278d872dd5e2a9efca29237e035666db038a8
+  rollouts: 7e9bb697613e0280b115d18ef39d1d0ce2ab3308d96f161e049852367a6865b8
+  report: 4358618200800aef36da87f0cc9363f8388c9b964975ae559bbf819b0b539b9d

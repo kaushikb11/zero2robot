@@ -101,6 +101,11 @@ def load_vla_module(data_dir: Path, out_dir: Path):
         spec = importlib.util.spec_from_file_location("ch18_vla_artifact", ARTIFACT)
         mod = importlib.util.module_from_spec(spec)
         assert spec and spec.loader
+        # Register under its name BEFORE exec so vla.py's module-scope
+        # torch.save(policy, ...) (a full-object pickle of TinyVLA) can resolve the
+        # class by reference — pickle re-imports the module to verify class identity,
+        # which fails unless the synthetic module is discoverable in sys.modules.
+        sys.modules[spec.name] = mod
         spec.loader.exec_module(mod)  # trains + evals + writes out_dir/metrics.json
         return mod
     finally:

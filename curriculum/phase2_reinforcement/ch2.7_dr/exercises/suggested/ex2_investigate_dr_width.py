@@ -4,12 +4,7 @@ Objective tested: the MECHANISM behind domain randomization — the width of the
 randomization band, and where it stops helping. The folklore is "randomize more,
 generalize more." This exercise makes you test that against a seed-robust sweep
 (ch2.1 spike, H1): form a directional hypothesis about band width, then read it
-against the numbers. The honest finding for this quadruped: a wider band does buy
-more robustness through the MID gap (on average — it is noisy), and it does so
-without hurting nominal performance — but the DEEPEST gap point stays on the floor
-at EVERY width, because past some load the +-12 Nm servos genuinely cannot hold,
-no matter how often you sample there. Randomization widens the reachable range; it
-does not raise the physical ceiling.
+against the numbers.
 
 THE KNOB. `--dr_width` scales the randomization band. 0 = no randomization (the
 narrow policy). 1 = the chapter's nominal band (mass +-40%, friction +-50%,
@@ -93,5 +88,6 @@ if __name__ == "__main__":
         print(f"{width:>9g}  {nr:>22.0f}  {ds:>26.2f}")
     print("\nReconcile: nominal return should hold roughly steady across widths, and the "
           "DEEPEST-gap survival should stay near the floor no matter how wide you go. A "
-          "wider band widens the range you can reach; it never lifts a load the +-12 Nm "
+          "wider band does buy more robustness through the MID gap (on average — it is "
+          "noisy) and widens the range you can reach; it never lifts a load the +-12 Nm "
           "motors cannot — 'randomize harder' is not a substitute for a stronger robot.")

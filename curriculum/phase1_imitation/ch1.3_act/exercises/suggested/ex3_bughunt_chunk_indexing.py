@@ -10,8 +10,13 @@ THE BUG. `build_chunk_targets` below reshapes per-frame actions into per-frame
 chunks exactly like act.py's data region — but it marks the WHOLE chunk valid,
 including the padded tail. So near every episode's end the policy is trained to
 emit the repeated last action as if it were real data. Nothing crashes; the
-loss curve looks fine; the end-of-episode behavior quietly rots. Find the index
-range that is wrong and fix it so only the real steps are masked in.
+loss curve looks fine; the end-of-episode behavior quietly rots.
+
+Before you touch the index, write one sentence: with the padded tail marked
+valid, what behavior are you training into the last frames of every episode —
+and why will the loss curve stay clean while it rots?
+
+Find the index range that is wrong and fix it so only the real steps are masked in.
 
 The target slice and the pad fill are correct — do not touch them. Only the mask
 range is wrong.
@@ -38,7 +43,5 @@ def build_chunk_targets(actions: np.ndarray, episode_ids: np.ndarray, K: int):
             valid = min(K, len(idx) - j)
             chunk_targets[frame, :valid] = ep_actions[j:j + valid]
             chunk_targets[frame, valid:] = ep_actions[-1]  # pad: repeat the last action
-            # BUG: marks ALL K steps valid, so the padded tail (which is invented
-            # data) still gets a gradient. Only the first `valid` steps are real.
             chunk_mask[frame, :] = 1.0
     return chunk_targets, chunk_mask

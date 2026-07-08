@@ -10,6 +10,7 @@ Notes:
   `allow_transformers: true` (tiny-VLA chapters). The hook checks the sibling
   meta.yaml; CI re-verifies.
 """
+import ast
 import json
 import os
 import re
@@ -18,6 +19,38 @@ import sys
 FORBIDDEN_ALWAYS = ["hydra", "omegaconf", "pytorch_lightning", "stable_baselines3", "gymnasium", "gym"]
 FORBIDDEN_UNLESS_GRANTED = ["transformers"]
 CAP = 450
+
+def imported_top_modules(content):
+    """Top-level module names imported in `content`.
+
+    Uses ast so `import a, gym` / `import a as g` / `import a; import hydra`
+    are all caught. `content` may be an Edit fragment that doesn't parse — then
+    fall back to a per-statement scan (split on ';' and ',') so nothing slips."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        mods = set()
+        for line in content.splitlines():
+            for stmt in line.split(";"):
+                s = stmt.strip()
+                if s.startswith("from "):
+                    m = re.match(r"from\s+([\w.]+)", s)
+                    if m:
+                        mods.add(m.group(1).split(".")[0])
+                elif s.startswith("import "):
+                    for part in s[len("import "):].split(","):
+                        tok = part.strip().split(" as ")[0].strip()
+                        if tok:
+                            mods.add(tok.split(".")[0])
+        return mods
+    mods = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                mods.add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            mods.add(node.module.split(".")[0])
+    return mods
 
 def meta_grants(path, key):
     meta = os.path.join(os.path.dirname(path), "meta.yaml")
@@ -56,12 +89,13 @@ def main():
         and "/tests/" not in path
     )
     if is_chapter:
+        mods = imported_top_modules(content)
         for mod in FORBIDDEN_ALWAYS:
-            if re.search(rf"^\s*(import|from)\s+{mod}\b", content, re.M):
+            if mod in mods:
                 print(f"BLOCKED: '{mod}' is forbidden in chapter code (pedagogical doctrine). See curriculum/CLAUDE.md.", file=sys.stderr)
                 sys.exit(2)
         for mod in FORBIDDEN_UNLESS_GRANTED:
-            if re.search(rf"^\s*(import|from)\s+{mod}\b", content, re.M) and not meta_grants(path, "allow_transformers"):
+            if mod in mods and not meta_grants(path, "allow_transformers"):
                 print(f"BLOCKED: '{mod}' requires `allow_transformers: true` in this chapter's meta.yaml (tiny-VLA chapters only).", file=sys.stderr)
                 sys.exit(2)
         # LOC cap: only meaningful when the tool writes the whole file

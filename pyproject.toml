@@ -17,6 +17,9 @@ dependencies = [
   "lerobot==0.4.4",   # dataset format CODEBASE_VERSION: v3.0 (versioned independently — see 002-pins.md)
 ]
 
+[project.scripts]
+z2r = "grader.__main__:main"   # `z2r check <chapter>` self-check / `z2r score ...` — dispatches grader.__main__
+
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
@@ -35,7 +38,7 @@ markers = [
 
 [project.optional-dependencies]
 dev = ["ruff==0.15.20", "pytest==8.4.2", "pytest-xdist==3.6.1", "pyyaml==6.0.3"]  # pyyaml: CI gates parse meta.yaml without relying on lerobot's transitive tree
-notebooks = ["jupytext~=1.16", "nbclient~=0.10", "nbformat~=5.10"]
+notebooks = ["jupytext~=1.16", "nbclient~=0.10", "nbformat~=5.10", "ipykernel~=7.3"]   # ipykernel: nbclient needs an installed kernel to EXECUTE a notebook (decision 016)
 export = ["onnx~=1.17", "onnxruntime~=1.20"]   # CPU export/parity lane (dev machines, ci-cpu)
 grader = ["fastapi~=0.115", "uvicorn~=0.32", "python-multipart~=0.0.12"]   # leaderboard HTTP shell only (grader/api.py); DRAFT infra/decisions/013 — core grader needs no new dep
 gpu = ["onnx~=1.17", "onnxruntime-gpu~=1.20"]

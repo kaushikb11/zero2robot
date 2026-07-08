@@ -35,14 +35,14 @@ scale_lab: false
 #     -> action example our pipeline mirrors with frozen/from-scratch parts.
 # site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: <author pins: huggingface/lerobot  OR  openvla/openvla>
-#   commit: <author pins a real sha>
-#   focus:
-#     - the multi-task dataset mixing + per-episode language annotation (our TASKS + templating)
-#     - the tokenizer (real code: a pretrained subword tokenizer; ours: a fixed word-level vocab)
-#     - the vision backbone (real code: a PRETRAINED DINOv2/SigLIP; ours: a frozen random conv stack)
-#     - what conditions the action head on image+language (ch1.8 wires this; here we only build the inputs)
+rtrt:
+  repo: huggingface/lerobot
+  commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (matches the course lerobot pin); pinned 2026-07-07 (API-verified). NOTE: at v0.4.4 the package is under src/lerobot/
+  focus:
+    - "the multi-task dataset mixing + per-episode language annotation (our TASKS + templating)"
+    - "the tokenizer (real code: a pretrained subword tokenizer; ours: a fixed word-level vocab)"
+    - "the vision backbone (real code: a PRETRAINED DINOv2/SigLIP; ours: a frozen random conv stack)"
+    - "what conditions the action head on image+language (ch1.8 wires this; here we only build the inputs)"
 
 demo: vla_dataset_browser    # a data-inspection panel (frame + instruction + frozen features + the multi-task mix); no policy, no WASM
 
@@ -117,9 +117,11 @@ exercise_checks:
   ex4:                             # ex4_completion_bagofwords.py (code-completion, fast)
     abs_tol: 1.0e-6              # a correct bag-of-words count matches the reference exactly
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records
-# them on first render; do not hand-write them.
+# region_hashes: sha256 of each include-by-region body (infra/ci/lib/regions.py).
+# check_prose_code_drift recomputes these against vla_data.py; regenerate any that
+# change when the code inside a region is edited.
+notebook_hash: 1aaadf36b60f7ce2d343817c081b03522ff57136dfef9a225a535e97338623ed        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 823df1ae3d2c23b6af8812ca57362c5604fbba200455ab02f0504cfa71094889   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 68126c054d7154a245d9fb8815810e4cdf31b8501309496fde6b21e06d478616
@@ -127,6 +129,3 @@ region_hashes:
   language: d4c70f339236b815612b40b66c8a4ba196ccdc978ea4c78f96587773c407ad44
   vision: 1747f8ae56d3642312d7a7005d627dd4ef6af7fe2c8c89ff62cf3a45e8129217
   pipeline: 3007d91b35edc080806d477face0697eecceea7a8717f7f0f8f7dfcf8870c098
-
-notebook_hash: 1aaadf36b60f7ce2d343817c081b03522ff57136dfef9a225a535e97338623ed        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 823df1ae3d2c23b6af8812ca57362c5604fbba200455ab02f0504cfa71094889   # sha256 of the generated notebook bytes; mismatch => hand-edited

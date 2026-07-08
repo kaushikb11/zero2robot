@@ -1,6 +1,6 @@
 id: ch1.1-bc
 title: "Behavior Cloning: The Dumbest Thing That Works"
-artifact: bc.py           # target ~220 LOC
+artifact: bc.py           # ~270 LOC (well under the 450 hard cap)
 task: pusht               # LeRobot PushT dataset (pretrained path) + learner teleop path
 dataset:
   reference: lerobot/pusht

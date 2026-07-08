@@ -1,6 +1,7 @@
 id: ch3.3-engine
 title: "Build a Physics Engine I: Unconstrained Dynamics"
-artifact: engine.py          # 269 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: engine.py          # 271 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
 task: falling-bodies         # conservative test systems: an orbit, a spring, a freefall — all from-scratch numpy
 objectives:
   - Represent unconstrained rigid-body state as (position q, velocity v, mass m) plus a force law force(q, v), and step it forward yourself — the update mj_step has done for you since chapter 0.1
@@ -16,21 +17,17 @@ scale_lab: false
 # ~O(dt), RK4 ~O(dt^4)); grow --steps and Euler's secular growth pulls away while the
 # symplectic energy band stays put. No Scale Lab.
 
-# READ-THE-REAL-THING: the map pairs this arc with a real integrator/engine reference.
-# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline commit
-# sha and must never invent one. Good candidates: MuJoCo's documentation on its
-# semi-implicit/implicit integrators (Euler / implicitfast / RK4 — the docs literally
-# discuss the same trade this chapter measures), or a numerical-methods text on symplectic
-# integrators (Hairer, Geometric Numerical Integration). site RTRT renders nothing until
-# repo + commit both exist.
+# READ-THE-REAL-THING: the map pairs this arc with MuJoCo's own integrators. The rtrt:
+# block is left un-pinned: it needs a real, verified commit sha (never an invented one),
+# and site RTRT renders nothing until both repo and commit exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - mjModel.opt.integrator (Euler / implicit / implicitfast / RK4): which one is the default and why
-#     - the engine_forward / mj_Euler / mj_RungeKutta source: the same "evaluate the force at which state" choice we make by hand
-#     - the docs' note on stability vs accuracy — MuJoCo's semi-implicit default is exactly this chapter's headline
+rtrt:
+  repo: google-deepmind/mujoco
+  commit: 28009f9105cd92784b7b0b30c0605a5e29107a77   # tag 3.10.0 (matches the course-pinned mujoco); pinned 2026-07-07
+  focus:
+    - "mjModel.opt.integrator (Euler / implicit / implicitfast / RK4): which one is the default and why"
+    - "the mj_Euler / mj_RungeKutta source: the same \"evaluate the force at which state\" choice we make by hand"
+    - "the docs' note on stability vs accuracy — MuJoCo's semi-implicit default is exactly this chapter's headline"
 
 demo: engine_energy_drift    # 2D energy-vs-time panel (3 overlaid curves) + the orbit paths; pure numpy, no WASM/MuJoCo
 
@@ -83,13 +80,15 @@ exercise_checks:
     euler_ratio_hi: 2.4
     rk4_negligible: 1.0e-6        # rk4 drift stays below this at BOTH timesteps and shrinks with dt — 4th-order accuracy
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
-# is not built yet (ch3.3 is an agent draft pending the teaching-pass); notebook-tier-test
-# writes both on generation, and the gate skips a chapter that carries neither key.
-
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
-# on first render; do not hand-write them.
+# region_hashes are recorded by the site build on first render (check_prose_code_drift
+# passes a chapter that carries none); do not hand-write them.
 
 notebook_hash: 1aa192fb760c5f2b9f995c3d20ac65a3ba889b9e33a2118bb1d609aadbd1e9fb        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
 notebook_file_hash: fae9f22a7b8a4c07b5d83aa1bd17e7fb36bd3ff4123c62a8c6cbb068d02cd9fc   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 960f33ebd5718dc2a90a2c95da10f13abbab2fc1c87b723e28392eac63bf0f06
+  systems: 3e3826ee3a92db1407cbab547a2b56472afa2fc59c25a9a5c54b785b17c46399
+  integrators: d537c43f3b0a77643368b97c789edaa810a44c791b8ef847dfa4b76d7bb0c98d
+  simulate: ea9f22ab1da966fd51a2d3cb68ccfcfd5aa7e755237c5134407a146c758e3de0
+  report: 921a124c04ad774e166f91f90373004667c58c1d8be6969f35f140f8ab49ea89

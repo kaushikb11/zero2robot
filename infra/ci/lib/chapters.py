@@ -127,12 +127,28 @@ def select_changed(chapters: list[Chapter], root: Path) -> tuple[list[Chapter], 
 
     Returns (selected, note). If git history is unusable, returns ALL chapters
     (the safe direction for a gate) with a note saying so.
+
+    A change under curriculum/common/ (the shared envs, seeding, and device
+    code every artifact imports) can alter EVERY chapter's behavior — including
+    env-reset determinism (root CLAUDE.md invariant #2) — while touching no
+    chapter directory. Selecting per-directory would then run NO chapters and
+    let a determinism-breaking shared change ship unverified. So any common/
+    change fans out to ALL chapters (the safe direction for a gate).
     """
     paths = changed_paths(root)
     if paths is None:
         return list(chapters), (
             "note: git history unusable (no origin/main and no HEAD~1); "
             "falling back to ALL chapters"
+        )
+    if any(
+        p == "curriculum/common" or p.startswith("curriculum/common/")
+        for p in paths
+    ):
+        return list(chapters), (
+            f"note: curriculum/common/ changed (shared envs/seeding/device) — "
+            f"selecting ALL {len(chapters)} chapters so the determinism check "
+            f"cannot be bypassed (root CLAUDE.md #2)"
         )
     selected = []
     for chapter in chapters:

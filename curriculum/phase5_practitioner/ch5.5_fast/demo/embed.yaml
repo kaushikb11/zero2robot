@@ -1,0 +1,55 @@
+# Demo embed stub — ch5.5 "fast_codec".
+# Playground integration point: playground/ owns the site components; this file declares
+# WHAT the embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json
+# from fast.py; the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# CONTRACT NOTE (author + playground must read): this chapter trains NO policy, exports NO
+# onnx, and runs NO MuJoCo. The artifact is a pure-numpy CODEC. So this embed is a pure
+# DATA-VIEWER over demo/vizdata.json (a precomputed grid of reconstructions + token counts).
+# It needs neither tensor contract v1 nor v2, no WASM, no sim loop, no model weights — the
+# cheapest embed tier. UNBLOCKED as soon as the site can read the JSON and draw the overlays.
+#
+# The HERO is a LIVE CODEC VISUALIZER for one smooth synthetic action chunk: watch the DCT
+# concentrate energy into a few coefficients, drag two sliders (# coefficients kept, and the
+# quantization step), and see the reconstruction snap onto the original while a token counter
+# ticks. The whole DCT->quantize->BPE tradeoff, felt in one figure.
+demo: fast_codec
+vizdata: vizdata.json          # emitted by fast.py (seed 0, default config); schema below
+panels:
+  - id: codec_visualizer
+    kind: canvas-plot           # line plots + a bar chart + two sliders; no MuJoCo/WASM
+    title: "DCT -> quantize -> BPE, live"
+    shows: >
+      LEFT: the original trajectory (vizdata.trajectory, an H x 3 line plot) with the current
+      reconstruction overlaid. MIDDLE: the DCT spectrum (vizdata.dct_coeffs, |coeff| per
+      frequency as a bar chart) with a vertical cutoff line at the "# coefficients kept"
+      slider. RIGHT: a live readout of the token count (DCT+quant+BPE) and the reconstruction
+      RMSE for the current slider setting, next to the naive per-step-per-dim baseline
+      (vizdata.naive_tokens, fixed). Two sliders drive it: keep_coeffs (over vizdata.keep_grid)
+      and q_scale (over vizdata.scale_grid). Each (keep_coeffs, q_scale) pair indexes one entry
+      in vizdata.settings, which carries the precomputed {tokens, rmse, recon} — the JS does NO
+      compute, it just looks up and redraws. The one-line caption to feel: "keep a handful of
+      low-frequency coefficients and the whole smooth motion comes back — from a FRACTION of
+      the tokens per-step binning would spend."
+    interactions:
+      - "drag keep_coeffs -> move the spectrum cutoff line, redraw the reconstruction + token/rmse readout"
+      - "drag q_scale -> recompute the quantization grid (coarser = fewer tokens, higher rmse)"
+      - "watch the token counter vs the fixed naive_tokens baseline as you trade fidelity for tokens"
+schema:                          # demo/vizdata.json, emitted by fast.py's report region
+  horizon: 24                    # H: timesteps per chunk (rows of trajectory / dct_coeffs)
+  act_dim: 3                     # dims plotted (the synthetic toy chunk is 3-D for legibility)
+  q_max: 127                     # integer clip range for the quantizer
+  naive_tokens: "int — per-step-per-dim baseline for the toy chunk (H*act_dim = 72), the number FAST beats"
+  trajectory: "H x 3 float — the original smooth synthetic chunk"
+  dct_coeffs: "H x 3 float — the DCT spectrum (row = frequency, row 0 = DC)"
+  keep_grid: "list[int] — the # coefficients-kept slider stops (e.g. [3, 6, 12, 24])"
+  scale_grid: "list[float] — the quantization-step slider stops (e.g. [0.025, 0.05, 0.1])"
+  settings: "list of {keep_coeffs:int, q_scale:float, tokens:int, rmse:float, recon:H x 3 float} — one precomputed entry per (keep_grid x scale_grid) pair"
+notes: >
+  Ship the codec_visualizer from vizdata.json (unblocked, no WASM, no policy, no weights). The
+  committed vizdata.json is the seed-0 reference for a SMOOTH synthetic chunk (where truncation
+  is cheap and the story is cleanest); regenerate it if the artifact's viz emit changes. There
+  is no rollout and no inference in this chapter by design — do NOT wait on any sampler or
+  contract runtime. A nice optional companion (author): a static two-line figure contrasting
+  the toy's clean compression with the real-chunk numbers from meta.yaml reference_run, to make
+  the data-smoothness caveat concrete.

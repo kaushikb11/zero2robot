@@ -16,7 +16,7 @@ shows:
 interaction: none            # static coverage + bar view for the feasibility draft (author may add scrub)
 hud:
   - source_success           # ~0.08 mean (coverage-starved 12 demos)
-  - augmented_success        # ~0.21 mean (8x re-solved augmentation)
+  - augmented_success        # ~0.25 mean (8x re-solved augmentation)
   - aug_yield                # ~0.98 (fraction of perturbed re-solves the expert still finished)
 notes: >
   The hero image is COVERAGE: a dozen sparse source-demo starts, then the cloud

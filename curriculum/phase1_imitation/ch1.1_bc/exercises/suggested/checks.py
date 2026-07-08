@@ -37,7 +37,9 @@ ANSWER_KEY = {"ex4": "B"}  # kept out of the exercise files to avoid spoilers
 # the policy reliably reaches the block (at smoke scale no rollout touches it
 # and the bug is invisible in every metric — measured).
 EX1_CONFIG = ["--epochs", "80", "--hidden_dim", "128", "--eval_episodes", "5",
-              "--seed", "0", "--no-rerun"]
+              "--seed", "0", "--no-rerun", "--device", "cpu"]  # cpu: matches the
+# meta.yaml reference band's provenance and keeps candidate/reference on the same
+# (deterministic) device, so the comparison is exact rather than device-dependent.
 # Reference signature + seeded bands live in the chapter meta.yaml with their
 # provenance (exercise-spec: no bare magic numbers) — read them, don't inline.
 EX1 = yaml.safe_load((HERE.parents[1] / "meta.yaml").read_text())["exercise_checks"]["ex1"]

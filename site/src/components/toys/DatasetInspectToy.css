@@ -1,0 +1,260 @@
+/* ch0.5 "Inspecting Your Dataset" concept-toy — the DATASET INSPECTOR.
+ *
+ * Co-located CSS for DatasetInspectToy.tsx (imported at the top of that file).
+ * Namespaced `di-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `vb-*`/`ed-*` classes. Like ch1.7's VLA browser this toy has NO
+ * canvas — pure DOM + SVG — so it is genuinely THEME-AWARE for free: it reads the
+ * page's design tokens (--paper*, --ink*, --entity-*, --signal, --alert,
+ * --rule-strong, --font-mono), which the shell flips in dark mode, and every var
+ * carries a light fallback so it still renders if mounted outside the page shell.
+ *
+ * Colour discipline (by MEANING, mirroring the PlateIsland poster):
+ *   - --entity-pusher amber   → the pusher (agent)
+ *   - --entity-block magenta  → the T-block + its recorded trail (the object)
+ *   - --entity-target green   → the target pose + the "reached" readouts
+ *   - ONE --signal blue        → the recorded action arrow + the scrub handle/focus
+ *   - --alert red              → nothing static; reserved for out-of-tolerance
+ *   - neutral ink / paper      → the arena, grid, stats, ranges (data, not signal)
+ */
+
+.di { display: grid; gap: 0.85rem; }
+
+.di-panels { display: grid; gap: 0.7rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .di-panels { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+.di-figure {
+  margin: 0;
+  display: flex; flex-direction: column; gap: 0.55rem;
+  padding: 0.6rem 0.7rem 0.55rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 6px;
+  background: var(--paper-2, #f0e9d9);
+}
+.di-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.di-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------- the arena */
+.di-arena-wrap { border-radius: 5px; }
+.di-arena-wrap:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.di-arena { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 5px; }
+
+.di-bg { fill: var(--paper, #fbf9f3); stroke: var(--rule-strong, #c8bc9e); stroke-width: 1; }
+.di-grid line { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent); stroke-width: 1; }
+
+.di-trail {
+  fill: none;
+  stroke: color-mix(in srgb, var(--entity-block, #a5257d) 42%, transparent);
+  stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
+  stroke-dasharray: 2 3;
+}
+.di-tee { fill: var(--entity-block, #a5257d); }
+.di-target { fill: none; stroke: var(--entity-target, #0c7d5f); stroke-width: 1.8; stroke-dasharray: 4 3; }
+.di-pusher { fill: var(--entity-pusher, #b0560f); }
+.di-pusher-ring { fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.4; opacity: 0.5; }
+.di-action line { stroke: var(--signal, #1f56de); stroke-width: 2.2; stroke-linecap: round; }
+.di-action { color: var(--signal, #1f56de); }
+#di-arrow path { fill: var(--signal, #1f56de); }
+
+.di-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.di-lab-target { fill: color-mix(in srgb, var(--entity-target, #0c7d5f) 85%, var(--ink, #23201b)); }
+
+/* ------------------------------------------------------------------- scrub row */
+.di-scrub { display: flex; align-items: center; gap: 0.45rem; }
+.di-icon {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem; line-height: 1;
+  width: 1.9rem; height: 1.9rem; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease;
+}
+.di-icon:hover { border-color: var(--signal, #1f56de); }
+.di-icon:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.di-play[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; border-color: var(--signal, #1f56de); }
+.di-slider { flex: 1 1 auto; min-width: 90px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.di-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+
+/* ------------------------------------------------------------------- frame readout */
+.di-frame {
+  display: grid; gap: 0.4rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+}
+.di-frame-k, .di-mini-k {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+}
+.di-frame-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem;
+  color: var(--ink-soft, #473f34);
+}
+.di-frame-row b { color: var(--ink, #23201b); font-variant-numeric: tabular-nums; font-weight: 600; }
+.di-ok { color: color-mix(in srgb, var(--entity-target, #0c7d5f) 88%, var(--ink, #23201b)); }
+.di-frame-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.6rem; color: var(--ink-mute, #6d6252); opacity: 0.8; line-height: 1.4;
+}
+
+/* action bars (diverging around centre zero, ±1 scale) */
+.di-actbars { display: grid; gap: 0.3rem; }
+.di-actrow { display: flex; align-items: center; gap: 0.5rem; }
+.di-actlab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252); min-width: 8.5ch;
+}
+.di-acttrack {
+  position: relative; flex: 1 1 auto; height: 12px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  border-radius: 3px;
+}
+.di-actzero { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+.di-actfill { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; background: var(--signal, #1f56de); transition: width 0.15s ease, left 0.15s ease, right 0.15s ease; }
+.di-actfill[data-pos="true"] { border-radius: 0 2px 2px 0; }
+.di-actfill[data-pos="false"] { border-radius: 2px 0 0 2px; background: color-mix(in srgb, var(--signal, #1f56de) 60%, var(--paper, #f7f3ea)); }
+.di-actval {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b); min-width: 5ch; text-align: right;
+}
+
+/* the raw 10-D observation numbers */
+.di-state { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.di-statev {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+  padding: 0.08rem 0.3rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 72%, transparent);
+  color: var(--ink-soft, #473f34);
+}
+
+/* ------------------------------------------------------------------- stats panel */
+.di-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.di-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  padding: 0.45rem 0.3rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+}
+.di-tile-v {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b); line-height: 1;
+}
+.di-tile-k {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.58rem; letter-spacing: 0.02em; color: var(--ink-mute, #6d6252); text-align: center;
+}
+
+/* per-episode length bars */
+.di-lenrow { display: grid; gap: 0.3rem; }
+.di-lens { display: flex; align-items: flex-end; gap: 0.5rem; height: 60px; padding: 0 0.2rem; }
+.di-lenbar {
+  position: relative; flex: 1 1 0; min-width: 0;
+  border: 0; border-radius: 3px 3px 0 0; cursor: pointer;
+  background: color-mix(in srgb, var(--entity-block, #a5257d) 32%, var(--paper-2, #f0e9d9));
+  transition: background 0.15s ease;
+}
+.di-lenbar[data-active="true"] { background: var(--entity-block, #a5257d); }
+.di-lenbar:hover { background: color-mix(in srgb, var(--entity-block, #a5257d) 60%, var(--paper-2, #f0e9d9)); }
+.di-lenval {
+  position: absolute; top: -0.95rem; left: 0; right: 0; text-align: center;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; font-variant-numeric: tabular-nums; color: var(--ink-mute, #6d6252);
+}
+
+/* schema chips */
+.di-schema { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.di-chip {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.01em;
+  padding: 0.18rem 0.5rem; border-radius: 100px;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 70%, transparent);
+  color: var(--ink-soft, #473f34);
+}
+.di-chip.di-muted { color: var(--ink-mute, #6d6252); border-style: dashed; opacity: 0.9; }
+
+/* range rows */
+.di-mt { margin-top: 0.3rem; }
+.di-ranges { display: grid; gap: 0.22rem; }
+.di-rangerow { display: flex; align-items: center; gap: 0.5rem; }
+.di-rangelab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; color: var(--ink-mute, #6d6252); min-width: 10.5ch;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.di-rangetrack {
+  position: relative; flex: 1 1 auto; height: 9px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 10%, transparent);
+  border-radius: 3px;
+}
+.di-rangezero { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); }
+.di-rangebar { position: absolute; top: 1px; bottom: 1px; border-radius: 3px; background: color-mix(in srgb, var(--signal, #1f56de) 52%, transparent); }
+.di-rangemean { position: absolute; top: -1px; bottom: -1px; width: 2px; margin-left: -1px; background: var(--ink, #23201b); border-radius: 2px; }
+.di-rangeval {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; font-variant-numeric: tabular-nums;
+  color: var(--ink-soft, #473f34); min-width: 11ch; text-align: right;
+}
+
+/* ------------------------------------------------------------------- controls */
+.di-controls { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.di-seg-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink, #23201b);
+}
+.di-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.di-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums;
+  padding: 0.32rem 0.8rem; border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+}
+.di-seg-btn:last-child { border-right: 0; }
+.di-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.di-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: -2px; }
+.di-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+}
+
+/* ------------------------------------------------------------------- the lesson */
+.di-lesson {
+  margin: 0;
+  font-size: 0.84rem; line-height: 1.55;
+  color: var(--ink-soft, #473f34);
+  padding: 0.6rem 0.7rem;
+  border-left: 3px solid var(--signal, #1f56de);
+  background: color-mix(in srgb, var(--signal, #1f56de) 5%, transparent);
+  border-radius: 0 5px 5px 0;
+}
+.di-lesson b { color: var(--ink, #23201b); }
+.di-lesson b.di-ok { color: color-mix(in srgb, var(--entity-target, #0c7d5f) 88%, var(--ink, #23201b)); }
+
+/* ------------------------------------------------------------------- dark theme
+ * The design tokens already flip in dark mode (the shell redefines --paper/--ink/…),
+ * so panels + text are theme-aware with no work here. The --entity-* hues are read
+ * live via var(), so they inherit the shell's dark values too. Bump the paper fill
+ * on the SVG arena (an explicit non-token default) toward the token in dark. */
+:root[data-theme="dark"] .di-bg { fill: var(--paper, #191510); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .di-bg { fill: var(--paper, #191510); }
+}
+
+/* ------------------------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .di-actfill, .di-lenbar, .di-icon, .di-seg-btn { transition: none; }
+}

@@ -58,6 +58,20 @@ PINNED_DEPS = [
     "onnxruntime~=1.20",
 ]
 
+# Chapter-specific extra deps. A chapter that opts into the ONE jax excursion
+# (meta.yaml `allow_mjx: true`, decisions/015) needs the jax stack on Colab —
+# the base PINNED_DEPS are torch-only, so without this its setup region's
+# `import jax` would fail. Mirrors pyproject.toml
+# [project.optional-dependencies].mjx, kept in lockstep by hand (a version bump
+# is an upstream-pin-check PR, which re-runs this generator). CPU-by-default:
+# jax installs a CPU jaxlib on Colab; the GPU Scale Lab adds jax[cuda12] itself.
+MJX_EXTRA_DEPS = [
+    "jax~=0.10",
+    "mujoco-mjx==3.10.0",
+    "flax~=0.12",
+    "optax~=0.2",
+]
+
 # GitHub repo the Colab setup cell clones when it is not already inside a
 # checkout. Placeholder org matches datasets/checkpoints (HF `zero2robot/`).
 REPO_URL = "https://github.com/zero2robot/zero2robot"
@@ -132,7 +146,11 @@ def setup_cell(chapter: Chapter) -> str:
     parts = rel.parts
     idx = parts.index("curriculum")
     artifact_relpath = "/".join(parts[idx:])
-    deps = " ".join(f'"{d}"' for d in PINNED_DEPS)
+    # A jax-excursion chapter (allow_mjx) appends the mjx extra so the Colab
+    # install cell has the jax stack its setup region imports; every other
+    # chapter's install cell is byte-unchanged (extra is empty).
+    extra = MJX_EXTRA_DEPS if chapter.meta.get("allow_mjx") else []
+    deps = " ".join(f'"{d}"' for d in PINNED_DEPS + extra)
     return f'''# --- generated setup cell (Colab): pinned installs + repo on path ---
 # On Colab this installs the PINNED deps and clones the repo; inside an existing
 # checkout (CI / local) it reuses what is here (no install, no clone). Either

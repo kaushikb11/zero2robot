@@ -1,0 +1,60 @@
+name: deploy-site
+# Build the interactive-textbook (site/) in Actions and deploy the prebuilt dist/
+# to Cloudflare Pages via Direct Upload. We build here — NOT on Cloudflare's native
+# builder — because the site's prebuild needs Python (region-hash sync + HF model
+# fetch), which a JS-first host builder cannot run. See infra/decisions/017.
+#
+# Runs on the public repo kaushikb11/zero2robot (the only repo with Actions runners,
+# alongside ci-cpu/ci-notebook); it reaches that repo via infra/publish/publish.sh.
+# CLOUDFLARE_* secrets live on that repo. Triggers are push:main + workflow_dispatch
+# only, so the secrets are never exposed to fork PRs.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "curriculum/**"
+      - "site/**"
+      - "checkpoints/models.yaml"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The site build's Python touches only the pure-stdlib region/chapter libs +
+      # yaml (curriculum_bridge imports curriculum.common.wallclock from source),
+      # so we skip the heavy `pip install -e .` (Torch/MuJoCo/LeRobot) that ci-cpu
+      # needs. If the bridge ever grows a heavier dep, switch this to `.[dev]`.
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install "pyyaml>=6" --quiet
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install site deps
+        working-directory: site
+        run: npm ci
+
+      - name: Build site (Astro static; prebuild syncs region hashes + fetches models)
+        working-directory: site
+        env:
+          Z2R_PYTHON: python # curriculum.ts + prebuild scripts use this in place of ../.venv
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site/dist --project-name=zero2robot --branch=main

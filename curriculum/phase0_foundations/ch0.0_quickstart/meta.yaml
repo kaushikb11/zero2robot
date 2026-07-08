@@ -1,0 +1,39 @@
+id: ch0.0-quickstart
+title: "Your First Robot Policy in Twenty Minutes"
+artifact: quickstart.py     # ~205 LOC, CPU; the whole loop on one page (well under the 450 cap)
+task: pusht                 # shared PushT env; scripted-expert demos in memory (no dataset file yet — that's ch0.4)
+builds_on: []               # nothing — this is the very first thing, before any mechanics
+objectives:
+  - Get a win — train a policy that visibly pushes the T-block onto a target it never saw, in a few minutes on a laptop
+  - See the whole loop end to end (demonstrations -> tiny network -> rollout -> a success number vs a random floor) before learning why any piece works
+  - Read a success rate honestly — the trained policy solves ~half of held-out starts, the random floor solves none, and that gap is the point
+  - Leave with the map — every simplification here (scripted demos, in-memory data, plain-MSE MLP) is a real chapter ahead (0.4, 1.1), so Phase 0 reads as "now understand what you just did"
+scale_lab: false
+read_the_real_thing: false
+demo: quickstart_first_win  # recorded replay of the seed-0 policy's first held-out success (demo/vizdata.json)
+
+# Reference metrics + seeded band for the one predict-then-run exercise
+# (exercise-spec: "seeded-run band with provenance", not a bare magic number).
+# checks.py reads these instead of hardcoding tolerances. Re-measure if the
+# stack moves.
+exercise_checks:
+  provenance: "seed 0 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6; measured 2026-07-08"
+  ex1:                        # predict-then-run: "will 5 demos be enough?"
+    answer: B                 # B: it collapses to the random floor — 5 trajectories don't cover the states the policy visits
+    provenance: "quickstart.py --seed 0 --device cpu --demos 5 --epochs 300 --eval_episodes 25; across seeds 0-2 trained solved 0/25, 1/25, 0/25 (0-4%), random floor 0/25"
+    demos: 5                  # the starved run the learner triggers
+    epochs: 300               # short schedule — the file trains in seconds on 5 demos
+    eval_episodes: 25
+    starved_success_rate_max: 0.12   # 5 demos must NOT clear the random floor => prediction "no" confirmed
+    reference_full_success_rate: 0.48 # what the learner already saw at the default 300-demo run (seed 0)
+
+
+notebook_hash: 45a130db19fb735c2be578797c9808f20fb26205a2a6ce41b33074a702f83184        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 15473c5d7dbc5d5b5f69c68da51f2a6b3dd5c750dd3adcfeb8dcce26cc7b24fd   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 5140fab8310f1bb85ac81d5bd906b178fd69fcda0192a054ee69e2386ec4522b
+  demos: df8eee938b2c128e7bcbc45266c42232b17cbb8c495b92d11c6b100f35d91c36
+  model: 8d4a0b3bde34349f16bd03791d56d5eaf50da47d32cc162a1944e83ce410f750
+  train: b3fe213fe766ceb993fd9af78d54a04c7e975f427ed8c9bd48ed40477e3b119b
+  eval: 141cc52dc030ee292e65ae9b1407cebb4672e98e2b880d5e09fb984984e2d56e

@@ -1,0 +1,40 @@
+---
+// Further-reading module route — one page per Phase-5 prose appendix: the
+// practitioner reading track (/further/reading/…) and the graduation "go build"
+// bridge (/further/graduation/…). These are prose-only curriculum modules (no
+// meta.yaml, so discoverChapters skips them); we surface them here so they are
+// reachable, not orphaned.
+//
+// Like the chapter pages, everything reads from curriculum/ via the bridge
+// (readProse) and renders server-side, so the module reads with JavaScript off.
+// The prose is rendered by lib/prose.ts (renderModuleProse) — the same marked +
+// heading-id pipeline the chapter pages use, minus the code-panel machinery.
+import ChapterLayout from "../../../layouts/ChapterLayout.astro";
+import { discoverFurther, readProse, type FurtherModule } from "../../../lib/curriculum.ts";
+import { renderModuleProse } from "../../../lib/prose.ts";
+
+export function getStaticPaths() {
+  return discoverFurther().map((m) => ({
+    params: { track: m.track, module: m.slug },
+    props: { module: m },
+  }));
+}
+
+interface Props {
+  module: FurtherModule;
+}
+const { module } = Astro.props;
+const bodyHtml = renderModuleProse(readProse(module.proseRel));
+---
+
+<ChapterLayout title={`${module.title} — zero2robot`}>
+  <div class="bk-titleblock">
+    <p class="bk-kicker">{module.trackLabel}</p>
+    <h1 class="bk-title">
+      {module.badge && <span class="bk-title-sub">{module.badge}</span>}
+      {module.title}
+    </h1>
+  </div>
+
+  <article class="bk-prose" set:html={bodyHtml} />
+</ChapterLayout>

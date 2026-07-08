@@ -59,10 +59,20 @@ let passed = 0, failed = 0;
 const ok = (n) => { passed += 1; console.log(`  ok   ${n}`); };
 const bad = (n, d) => { failed += 1; console.error(`  FAIL ${n}: ${d}`); };
 
+// Z2R_REQUIRE_PARITY=1 (set by the CI lane that provisions the v2 ONNX) turns a
+// missing artifact into a hard failure. Locally, absent the git-ignored ONNX, the
+// check skips with a warning so `npm test` still runs — but that skip proves
+// nothing, so CI must require it. contracts.ts/sampler.ts are hand-mirrors of the
+// Python; this cross-check is the only guard against Python<->JS sampler drift.
+const REQUIRE_PARITY = process.env.Z2R_REQUIRE_PARITY === '1';
 if (!existsSync(ONNX)) {
-  console.warn(`  (skipped: no contract-v2 ddpm ONNX at ${ONNX}\n` +
-    `   provision it: HF_HUB_OFFLINE=1 HF_TOKEN= .venv/bin/python ` +
-    `curriculum/phase1_imitation/ch1.4_diffusion/export_diffusion_onnx.py)`);
+  const how = `provision it: HF_HUB_OFFLINE=1 HF_TOKEN= .venv/bin/python ` +
+    `curriculum/phase1_imitation/ch1.4_diffusion/export_diffusion_onnx.py`;
+  if (REQUIRE_PARITY) {
+    console.error(`  FAIL (Z2R_REQUIRE_PARITY=1): no contract-v2 ddpm ONNX at ${ONNX} — ${how}`);
+    process.exit(1);
+  }
+  console.warn(`  (skipped: no contract-v2 ddpm ONNX at ${ONNX}\n   ${how})`);
   process.exit(0);
 }
 
@@ -146,6 +156,11 @@ for (let oi = 0; oi < OBS.length; oi++) {
 // --- Python reference: diffusion.py's make_schedule + p_sample_loop over the ONNX
 const py = resolve(repoRoot, '.venv', 'bin', 'python');
 if (!existsSync(py)) {
+  if (REQUIRE_PARITY) {
+    console.error('  FAIL (Z2R_REQUIRE_PARITY=1): .venv python not found — the ' +
+      'Python reference cross-check could not run, so parity is unproven.');
+    process.exit(1);
+  }
   console.warn('  (.venv python not found — JS sampler ran, but the Python reference ' +
     'cross-check was skipped; run in an env with the repo venv to prove parity.)');
   console.log(`\n${failed === 0 ? 'PASS' : 'FAIL'} — ${failed} failure(s).`);

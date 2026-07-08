@@ -1,0 +1,54 @@
+# Demo embed stub — ch5.3 "pixels_load_bearing_vision".
+# Playground integration point: playground/ owns the WASM runtime and embed components;
+# this file declares WHAT the embed shows. Coordinate at the contracts.ts level before wiring.
+#
+# CONTRACT NOTE (author + playground must read): unlike ch1.1's pusht_bc_recovery (which
+# runs bc_policy.onnx live in the browser under tensor contract v1: state[1,10] -> action),
+# THIS policy's contract-v1 observation is a FLATTENED 64x64x3 IMAGE (obs_dim 12288). A LIVE
+# in-browser rollout therefore needs offscreen RGB rendering to featurize each frame — which
+# MuJoCo-WASM does not expose (the same block ch1.8 documents for its VLA). Until that lands,
+# ship the RECORDED geometry replay from demo/vizdata.json (emitted by pixels.py). The
+# exported pixels_policy.onnx is still real and parity-checked (< 1e-4); it is the deployable
+# artifact once the runtime can supply frames.
+#
+# The HERO mirrors ch1.1's pusht_bc_recovery: same perturbed start, TWO policies side by side.
+demo: pixels_load_bearing_vision
+scene: pusht                # curriculum/common/envs/pusht/pusht.xml, verbatim
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.1
+  azimuth: 90
+  elevation: -60
+panels:
+  - id: side_by_side_rollout
+    kind: replay               # recorded geometry from vizdata.json; live pixel rollout BLOCKED (see note)
+    title: "Same pixels, two encoders"
+    shows: >
+      One perturbed PushT start; two policies roll out from PIXELS ALONE. LEFT = the
+      ALIGNED-encoder policy, RIGHT = the RANDOM-encoder policy (identical ViT, never
+      aligned). vizdata.json.aligned.frames vs vizdata.json.random.frames — each frame is
+      [pusher_x, pusher_y, tee_x, tee_y, tee_yaw]. HONEST caption (do NOT claim the aligned
+      policy succeeds): at free-tier BOTH rollouts floor (0/12 success), so this replay shows
+      two floored trajectories, not a win — it is the Scale-Lab bar, present for context only.
+      The REPRODUCIBLE claim leads on the probe panel below: aligned features are more
+      control-useful than random (probe val_mse gap, seeds 0/1/2). From pixels with no state,
+      the encoder is the whole policy — the measured answer to ch1.8's --break blind is the
+      PROBE direction, not this rollout.
+    source: vizdata.json
+  - id: saliency
+    kind: heatmap              # optional: the aligned encoder's CLS attention over the patch grid
+    title: "What the aligned encoder looks at"
+    shows: >
+      vizdata.json.saliency: an 8x8 grid of the aligned ViT's CLS-token attention over the
+      image patches for the last frame — concentrated on the block/pusher region, the
+      geometry the alignment taught it to encode. (Optional: occlude a patch -> the action
+      changes; the random encoder's attention is diffuse by comparison.)
+    source: vizdata.json
+notes: >
+  Recommendation: ship the side_by_side_rollout from the recorded vizdata.json (unblocked)
+  and render saliency as a static heatmap. Do NOT wait on a live in-browser pixel rollout —
+  it needs offscreen RGB rendering MuJoCo-WASM does not expose, strictly more than ch1.1's
+  state policy. Caption on the PROBE DIRECTION (aligned features are more control-useful than
+  random — lower probe val_mse), never the rollout (both floor 0/12) and never an absolute
+  % — MuJoCo raster is not bitwise across CPU arches (see meta.yaml). Reset re-seeds the
+  perturbed start; author regenerates vizdata via pixels.py at the reference config.

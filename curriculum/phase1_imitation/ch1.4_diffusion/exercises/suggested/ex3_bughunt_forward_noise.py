@@ -13,7 +13,13 @@ the denoiser against noise levels that don't match the ones the sampler will use
 
 THE BUG. `forward_noise` below has ONE wrong coefficient. It still runs, still
 returns the right shape, and training still produces a falling loss — the model
-just learns the wrong noising and samples badly. Find it and fix it so the check
+just learns the wrong noising and samples badly.
+
+Before you fix the coefficient, write one sentence: why does the loss keep
+falling while the samples get worse — what is the denoiser cheerfully learning
+to do instead?
+
+Find it and fix it so the check
 passes (do NOT touch the signal term; only one coefficient is wrong).
 
     pytest curriculum/phase1_imitation/ch1.4_diffusion/exercises/suggested/checks.py -k ex3
@@ -33,5 +39,5 @@ def forward_noise(x0: np.ndarray, acp_t: np.ndarray, noise: np.ndarray) -> np.nd
     needs the signal and noise powers to sum to 1 at every level.
     """
     signal = np.sqrt(acp_t)[:, None] * x0
-    noise_term = (1.0 - acp_t)[:, None] * noise   # <-- one coefficient here is wrong
+    noise_term = (1.0 - acp_t)[:, None] * noise
     return signal + noise_term

@@ -10,7 +10,7 @@
 # these chained through the reverse DDPM loop (a stateful sampler the runtime must
 # own, plus the action mean/std for un-standardizing). The browser embed therefore
 # needs a contract-v2-style path: run the denoiser T times per control step in JS,
-# stepping the DDPM posterior. This embed is BLOCKED on that contract; ship it only
+# stepping the DDPM posterior. This embed is now LIVE via that contract (the sampler runtime shipped);
 # after playground/src/policy/contracts.ts gains a sampler-aware policy type.
 #
 # The HERO of this chapter's embed is the 2D TOY, not the robot — it is where the
@@ -29,7 +29,7 @@ panels:
     source: diffusion.rrd         # entities toy/target, toy/diffusion, toy/regression, toy/forward
     timeline: denoise_step
   - id: pusht_policy
-    kind: mujoco-wasm             # BLOCKED on contract v2 (sampler-aware runtime)
+    kind: mujoco-wasm             # LIVE via the contract-v2 sampler runtime
     scene: pusht                  # curriculum/common/envs/pusht/pusht.xml, verbatim
     policy: diffusion_denoiser.onnx   # 3-input denoiser core — contract v2 (sampler + un-standardize), NOT v1
     runtime:
@@ -47,7 +47,7 @@ panels:
 notes: >
   Author decides whether the embed ships the toy panel alone (unblocked, pure 2D,
   the strongest teaching artifact) or waits to pair it with the PushT policy panel
-  (blocked on the contract-v2 sampler runtime). Recommendation: ship the toy panel
+  (now live via the contract-v2 sampler runtime). Recommendation: ship the toy panel
   first — it carries the multimodality lesson end-to-end with no WASM and no new
   contract, and it is the thing a learner should see move. Coordinate the sampler
   runtime with playground/ before wiring the second panel.

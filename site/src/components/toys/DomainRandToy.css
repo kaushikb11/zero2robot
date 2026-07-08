@@ -1,0 +1,170 @@
+/* ch2.7 "Randomize to Generalize" concept-toy — the DOMAIN RANDOMIZATION toy.
+ *
+ * Co-located CSS for DomainRandToy.tsx (imported at the top of that file).
+ * Namespaced `dr-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`eb-*`/`fr-*`/`sl-*` classes. Like ch3.3's EngineDriftToy
+ * this toy is PURE SVG over pre-computed dr.py numbers — no WASM — so it drives
+ * every colour from the site's flipping design tokens and is genuinely theme-aware
+ * in BOTH light and dark. Every var carries a light fallback so it still renders
+ * if mounted outside the shell.
+ *
+ * Colour scheme — two policies, mapped to tokens by MEANING:
+ *   - --entity-block magenta  → NARROW  (the overfit-to-nominal baseline)
+ *   - --entity-target green   → RANDOMIZED (the policy under test — the promise)
+ *   - --alert red             → the actuator ceiling where BOTH fall
+ *   - --signal blue           → the ONE interactive handle (the seed selector)
+ */
+
+.dr { display: grid; gap: 0.6rem; }
+
+/* --- controls: the seed selector (the single control) -------------------- */
+.dr-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.dr-seg-label, .dr-seg-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.dr-seg-hint { color: var(--ink-mute, #6d6252); }
+.dr-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.dr-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.8rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dr-seg-btn:last-child { border-right: 0; }
+.dr-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.dr-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.dr-seg-btn:disabled { cursor: default; opacity: 0.75; }
+
+/* --- panels -------------------------------------------------------------- */
+.dr-panels { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .dr-panels { grid-template-columns: 1.5fr 1fr; align-items: stretch; } }
+
+.dr-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.45rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.dr-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.2rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.dr-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.dr-svg { display: block; width: 100%; height: auto; }
+
+/* --- gap-sweep chart marks ------------------------------------------------ */
+.dr-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.dr-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 15%, transparent); stroke-width: 1; }
+.dr-tick, .dr-axis-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.dr-axis-title { letter-spacing: 0.03em; }
+
+/* nominal guide — the point both policies trained around */
+.dr-nominal { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 40%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.dr-nominal-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em;
+}
+
+/* the actuator ceiling — where BOTH policies fall (DR cannot lift it) */
+.dr-ceiling { fill: color-mix(in srgb, var(--alert, #c0362a) 8%, transparent); }
+.dr-ceiling-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; letter-spacing: 0.02em;
+  fill: color-mix(in srgb, var(--alert, #c0362a) 80%, var(--ink, #23201b));
+}
+
+/* the two policy series — colour by meaning */
+.dr-narrow { color: var(--entity-block, #a5257d); }
+.dr-rand   { color: var(--entity-target, #0c7d5f); }
+
+/* the seed BAND (±std error region) — translucent so the two OVERLAP visibly */
+.dr-band { fill: currentColor; opacity: 0.18; stroke: none; }
+.dr-band--ghost { opacity: 0.09; }
+/* the whisker caps + mean line + dots */
+.dr-whisker { stroke: currentColor; stroke-width: 1.4; opacity: 0.7; }
+.dr-line { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.dr-line--seed { stroke-width: 2.4; }
+.dr-dot { fill: currentColor; stroke: var(--paper-2, #f0e9d9); stroke-width: 1; }
+
+/* --- legend --------------------------------------------------------------- */
+.dr-legend {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.68rem;
+}
+.dr-lg { display: inline-flex; align-items: center; gap: 0.35rem; }
+.dr-lg::before { content: ""; width: 0.7rem; height: 0.32rem; border-radius: 2px; background: currentColor; }
+.dr-lg-name { color: var(--ink, #23201b); }
+.dr-lg-note { color: var(--ink-mute, #6d6252); margin-left: auto; }
+
+/* --- insurance-premium readout ------------------------------------------- */
+.dr-readout {
+  display: grid; gap: 0.3rem;
+  padding: 0.5rem 0.55rem; margin-top: 0.15rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem;
+}
+.dr-ro-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: baseline; }
+.dr-ro-head { color: var(--ink-mute, #6d6252); font-size: 0.66rem; }
+.dr-ro-head .dr-ro-narrow, .dr-ro-head .dr-ro-rand { min-width: 5ch; text-align: right; }
+.dr-ro-k { color: var(--ink-mute, #6d6252); }
+.dr-ro-v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; min-width: 5ch; }
+.dr-ro-narrow { color: var(--entity-block, #a5257d); }
+.dr-ro-rand { color: var(--entity-target, #0c7d5f); }
+.dr-ro-edge {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem;
+  margin-top: 0.15rem; padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--rule-strong, #c8bc9e) 70%, transparent);
+}
+.dr-ro-edgev { font-variant-numeric: tabular-nums; font-weight: 700; }
+.dr-up   { color: var(--entity-target, #0c7d5f); }
+.dr-down { color: var(--alert, #c0362a); }
+.dr-flat { color: var(--ink-mute, #6d6252); }
+
+/* the per-seed edge chips — the spread that keeps the mean within-band */
+.dr-chips { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.dr-chips-lab {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.64rem;
+  color: var(--ink-mute, #6d6252); margin-right: 0.1rem;
+}
+.dr-chip {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+  padding: 0.12rem 0.4rem; border-radius: 100px;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.dr-chip[data-active="true"] {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  border-color: currentColor; font-weight: 700;
+}
+.dr-premium-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+  margin-top: 0.5rem;
+}
+.dr-premium-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* --- the persistent honest note ------------------------------------------ */
+.dr-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.55; color: var(--ink-mute, #6d6252);
+}
+.dr-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill the button colour transitions */
+@media (prefers-reduced-motion: reduce) {
+  .dr-seg-btn { transition: none; }
+}

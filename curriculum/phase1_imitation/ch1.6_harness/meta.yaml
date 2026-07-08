@@ -1,36 +1,35 @@
 id: ch1.6-harness
 title: "Evaluation Is Hard"
-artifact: harness.py         # target ~250 LOC (built to 387: the from-scratch CI math + seeded suites + a two-policy overlap demo + a held-out variant, one file)
+artifact: harness.py         # 397 LOC: from-scratch CI math + seeded suites + a two-policy overlap demo + a held-out variant, one file
 task: pusht                  # evaluates BC policies on curriculum/common/envs/pusht; the statistics are the subject, not the robot
 objectives:
-  - Explain why a single-number success rate over 20 episodes is a point estimate with a wide band, and read the ch1.3/1.4/1.5 headlines (ACT/flow/diffusion "0.40 vs 0.30") as the noise they are
+  - Explain why a single-number success rate over 20 episodes is a point estimate with a wide band, and read the ch1.3/1.4/1.5 headlines (ACT/flow/diffusion "0.40 vs 0.25") as the noise they are
   - Build a Wilson score confidence interval on a success rate FROM SCRATCH in numpy (no scipy), understand why it beats the naive Wald interval at the boundary (k=0/k=n), and cross-check it against a percentile bootstrap
   - Show that two real policies whose 20-episode point estimates differ can have OVERLAPPING confidence intervals — the ranking is NOT established at that N — and that growing N is what makes a real gap significant (or exposes that there is none)
   - Run a LIBERO-style held-out eval on a start distribution the policy never trained on, and measure the generalization gap WITH its own confidence interval
 
 scale_lab: false
-# The map's ch1.6 row is CPU+T4 and calls for no distinct Scale Lab. This DRAFT ships
-# the free-tier core only (the whole run is 0.6 min on cpu-laptop). The scale knobs
-# (--eval_episodes, --n_seeds, --num_demos) are the on-ramp: the chapter's OWN lesson
-# is that bigger N buys a tighter CI, so "scaling" here means turning --n_seeds up and
-# watching the diff CI separate. If the author later wants a T4 study (a bigger policy,
-# thousands of eval episodes), set scale_lab: true + a ref and have wallclock-bench
-# MEASURE it — do not assert a scaling claim.
+# The map's ch1.6 row is CPU+T4 and calls for no distinct Scale Lab. The whole run is
+# 0.6 min on cpu-laptop. The scale knobs (--eval_episodes, --n_seeds, --num_demos) are
+# the on-ramp: the chapter's OWN lesson is that bigger N buys a tighter CI, so "scaling"
+# here means turning --n_seeds up and watching the diff CI separate. A future T4 study
+# (a bigger policy, thousands of eval episodes) would set scale_lab: true + a ref and
+# have wallclock-bench MEASURE it — never assert a scaling claim.
 
 # READ-THE-REAL-THING: the map pairs this chapter with LIBERO-style held-out variants.
-# The rtrt: block is LEFT FOR THE AUTHOR to pin — I did not have a verified offline
-# commit sha and must never invent one. The real repo is LIBERO (Liu et al., "LIBERO:
-# Benchmarking Knowledge Transfer for Lifelong Robot Learning", NeurIPS 2023 Datasets
-# & Benchmarks), Lifelong-Robot-Learning/LIBERO. site RTRT.astro renders nothing until
-# repo + commit both exist.
+# The real repo is LIBERO (Liu et al., "LIBERO: Benchmarking Knowledge Transfer for
+# Lifelong Robot Learning", NeurIPS 2023 Datasets & Benchmarks),
+# Lifelong-Robot-Learning/LIBERO. The rtrt: block below is left un-pinned: it needs a
+# real, verified commit sha (never an invented one), and site RTRT.astro renders
+# nothing until both repo and commit exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: Lifelong-Robot-Learning/LIBERO   # author: confirm + pin a real commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - the held-out task suites (LIBERO-Object / -Goal / -Spatial): what is varied and what is held fixed
-#     - the evaluation loop + how success is aggregated across tasks and seeds
-#     - the reported metrics: mean success across N rollouts vs our per-suite CI (they average; we band)
+rtrt:
+  repo: Lifelong-Robot-Learning/LIBERO
+  commit: 8f1084e3132a39270c3a13ebe37270a43ece2a01   # default-branch HEAD (no tags in repo); pinned 2026-07-07
+  focus:
+    - "the held-out task suites (LIBERO-Object / -Goal / -Spatial): what is varied and what is held fixed"
+    - "the evaluation loop + how success is aggregated across tasks and seeds"
+    - "the reported metrics: mean success across N rollouts vs our per-suite CI (they average; we band)"
 
 demo: harness_eval_bands     # 2D stats panels (the swing + the two-policy overlap + the held-out gap); no MuJoCo/WASM needed
 
@@ -67,25 +66,26 @@ reference_run:
   heldout_pooled_ci_lo: 0.049841
   heldout_pooled_ci_hi: 0.125989
   heldout_gap_significant: true       # train-dist 0.225 vs held-out 0.08, gap CI +0.08..+0.21 excludes 0
-  # Seed robustness (default config, cpu): the N=20 ranking is NOT significant on ANY
-  # seed (0/1/2) — 20 episodes never resolves it, the robust core lesson. The N=200
-  # ranking is significant when the true gap is real: seed0 (strong 0.225 vs weak 0.105)
-  # SIG, seed2 (0.14 vs 0.07) SIG, seed1 (0.11 vs 0.08 — the strong policy trained weaker
-  # that seed, so the true gap shrank) NOT SIG. That is the honest truth and it REINFORCES
-  # the lesson: significance tracks the real gap, not the seed you happened to pick.
-  # Break-It signature (same seed 0, measured 2026-07-06 cpu):
+  # Seed robustness (default config, cpu; seeds 0/1/2 measured): the N=20 ranking is NOT
+  # significant on ANY seed — 20 episodes never resolves it, which is the robust core
+  # lesson. The N=200 ranking is significant exactly when the true gap is real: seed0
+  # (strong 0.225 vs weak 0.105) SIG, seed2 (0.14 vs 0.07) SIG, seed1 (0.11 vs 0.08 —
+  # the strong policy trained weaker that seed, so the true gap shrank) NOT SIG.
+  # Significance tracks the real gap, not the seed you happened to pick — that reinforces
+  # the lesson rather than undercutting it.
+  # Break-It signature (same seed 0, cpu):
   break_too_few_episodes: 5           # --break too_few shrinks every suite to 5 episodes
   break_too_few_small_diff_width: 0.92 # the strong-vs-weak diff CI at N=5 is ~0.92 wide and spans 0 — a number, but not evidence
-  # HONESTY (author MUST keep this framing — it is the measured truth):
-  #  * The demonstration is the ROCK: N=20 diff CI [-0.17, +0.35] overlaps 0, N=200 diff
-  #    CI [+0.05, +0.19] excludes 0. Reproducible (twice-run byte-identical on cpu). Lead with it.
-  #  * Do NOT claim the strong policy is "better" without the N. At 20 episodes it is not
+  # The framing below is the measured truth this chapter rests on:
+  #  * The demonstration is the anchor: N=20 diff CI [-0.17, +0.35] overlaps 0, N=200 diff
+  #    CI [+0.05, +0.19] excludes 0. Reproducible (twice-run byte-identical on cpu); lead with it.
+  #  * The strong policy is not "better" without an N. At 20 episodes the ranking is not
   #    established — that is the entire point, and it is exactly the ch1.3/1.4/1.5 thread.
-  #  * The policy absolute numbers (0.1-0.3) are modest because BC on the tight, low-diversity
-  #    scripted demos saturates low. That is not a defect: the chapter grades the METHOD of
+  #  * The absolute numbers (0.1-0.3) are modest because BC on the tight, low-diversity
+  #    scripted demos saturates low. Not a defect: the chapter grades the METHOD of
   #    evaluation, and low, close rates are the HARD case where single numbers lie loudest.
-  #  * Wilson and bootstrap agreeing is a FEATURE to show, not a coincidence — two independent
-  #    derivations of the same band.
+  #  * Wilson and bootstrap agreeing is a feature to show, not a coincidence — two
+  #    independent derivations of the same band.
 
 # Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
 # provenance, not a bare magic number). checks.py reads these instead of inlining
@@ -111,21 +111,19 @@ exercise_checks:
   ex4:                             # ex4_bughunt_boundary_ci.py (bug-hunt, fast)
     provenance: "self-contained numpy fixture; the fix replaces the Wald interval (which collapses to zero width at k=0/k=n, claiming certainty from a handful of trials) with the Wilson interval"
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
-# is not built yet (ch1.6 is a draft pending the teaching-pass); notebook-tier-test writes
-# both on generation, and the gate skips a chapter that carries neither key (never a
-# PENDING placeholder, which reads as stale).
-
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
-# on first render; do not hand-write them.
+# Region hashes: sha256 of each region body (infra/ci/lib/regions.py), checked by
+# check_prose_code_drift against the include-by-region spans in prose. Re-record on any
+# region-body edit.
+# NOTE: harness.py bytes changed in this edit, so the Colab notebook must be regenerated
+# (notebook-tier-test) — it rewrites BOTH keys below atomically. They are intentionally
+# left at their prior values so the drift gate FIRES and forces the regen; do not
+# hand-edit them.
+notebook_hash: c7193cde79f226e07fdbc998167aee9fd639c1301df7c8302cf5a492d883f2c3        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 12a0729861419d84401e8294abbe1bb13ee398093a2af4d1c1212ba4ba06d804   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
-  setup: 9eb776ffc521d74790e879069553a9156244ef173055aabbe4f41899f1e0c4f4
+  setup: b382c81d70ca93727e739f9c3461c989740116eb2646d31cc7d98ae87baa4ebd
   stats: d1d3d92b176e761e9b7e03c06baac07101caff77bdd6b5d2100889c31d7b5972
   policy: ce93d549a94b14a9787ded1988d0426b24b09c94280a131d0bd1acfedd501098
   eval: f442e4b1b5d9d950dc0a308dc156610662b492afb0006b7ae33e32c29eaf575a
-  report: 8f82307441452a16e165c278c960bc4335168665f9cd8cf5e9cb3bcb97961435
-
-notebook_hash: 52d4f5969c64236e80776cabdbbc5a21002cc32e54cac19b53a9d2b81ce35b32        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 135c4ffbe6e0bbcc522405440c86345e97153ce60cd456f0b037e351237db976   # sha256 of the generated notebook bytes; mismatch => hand-edited
+  report: 5cda9218abe91fefe10e3b0c238a1d79b6ed80b470ba4242a07c6bc1dbac2889

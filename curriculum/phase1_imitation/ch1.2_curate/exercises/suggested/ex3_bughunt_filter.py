@@ -6,6 +6,10 @@ prints; the run completes and writes metrics.json. The tell is the payoff — th
 "curated" policy comes out NO BETTER than raw, sometimes worse, and the delta
 that was supposed to be positive is not.
 
+Before you flip a character, write one sentence: the curated policy is no better
+than raw, so which of the two outcome groups is the filter actually keeping —
+and what does that make the data you kept?
+
 Find it by asking the one question the curate region turns on: of the two
 groups the outcome signal splits your episodes into, WHICH ONE is the good
 data, and which one is `curate.py` actually keeping? Fix the line, then re-run

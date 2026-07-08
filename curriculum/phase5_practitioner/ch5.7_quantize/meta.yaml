@@ -1,0 +1,137 @@
+id: ch5.7-quantize
+builds_on:  # for the /map/ dependency graph (documented in the curriculum map; nothing is imported)
+  - ch1.1   # the PushT BC MLP it quantizes
+  - ch2.8   # the real-time deploy loop
+title: "Quantize a Policy by Hand: INT8 Is a Scale, Not a Rounding"
+artifact: quantize.py        # target ~360 LOC (built to 449, hard cap 450: BC train + from-scratch symmetric int8 weights (per-tensor + per-channel) + static activation calibration + full-integer inference + the deployment triangle with Wilson CIs, one file)
+task: pusht                  # the ch1.1 behavior-cloning MLP over PushT (curriculum/common/envs/pusht); small (hidden 128) so quant error is visible
+
+# NOTE (doctrine): the int8 path is built FROM SCRATCH in numpy — a symmetric scale
+# (r/127), round-to-int8, clamp, integer matmul (int8 @ int8 -> int32), dequantize. NO
+# torch.quantization, NO onnxruntime PTQ, NO bitsandbytes. `allow_transformers` stays UNSET
+# (unused here); the forbidden-imports gate runs at full strictness. A real fused-kernel int8
+# runtime (TensorRT / onnxruntime QNN) is the read-the-real-thing + the deploy scale lab.
+
+objectives:
+  - Quantize a weight matrix to symmetric INT8 from scratch — compute a scale from its range (r/127), round to the int8 grid, clamp, and dequantize — and measure the round-trip error. Then refine the scale PER OUTPUT CHANNEL (one per row) and show most of that error vanishes, because one fat-tailed channel no longer sets the step size for the whole tensor.
+  - Kill the misconception "quantizing = rounding weights to int8." Rounding with NO scale collapses a policy whose weights live in (-0.5, 0.5) — ~95% of them round to zero. The SCALE, not the rounding, is the whole idea.
+  - Build the static-activation path — run a CALIBRATION set through the fp32 net, collect each layer's activation range (min-max, then a percentile clip that ignores one freak outlier), derive an activation scale, and run the WHOLE forward pass in integers (int8 @ int8 -> int32 accumulate).
+  - Measure the deployment triangle honestly — model size (KB) vs action-error-vs-fp32 (MSE) vs CPU latency (ms), across FP32 -> per-tensor INT8 -> per-channel INT8, each rolled out with ch1.6 rigor (a task-success delta only counts once its Wilson interval clears fp32's). State the two honest limits: the SIZE win is guaranteed (~4x); the LATENCY win is NOT (naive int8 on a laptop CPU without a fused kernel is often SLOWER — dequant overhead).
+  - Feel why calibration is fragile — `--break bad_calib` calibrates activation scales on a narrow near-goal slice the policy never deploys in; the scales come out too small, real activations saturate at +-127, and the full-integer error explodes (measured 14-53x). The fix is calibrating on representative data (and a percentile clip for the outlier flavor).
+
+scale_lab: true
+# The free-tier core is a tiny BC MLP (hidden 128) quantized by hand in numpy — all CPU, all
+# bitwise (int8 arithmetic is exact). The scale lab is the honest next step: a REAL int8
+# deploy runtime where the latency win actually materializes.
+# Author: wire scale_lab_ref to a study that exports this policy and runs it under a fused
+# int8 kernel (onnxruntime QNN/QLinear, or TensorRT on an NVIDIA GPU), then have
+# wallclock-bench MEASURE the latency there — the number this chapter honestly CANNOT show on
+# a laptop CPU. Do NOT assert a speedup here; the lesson is precisely that naive int8 is not
+# automatically faster, and that a fused kernel is what changes it.
+
+# READ-THE-REAL-THING: the arc pairs this chapter with a production PTQ toolkit. The rtrt:
+# block is LEFT FOR THE AUTHOR to pin — I do not invent a commit sha. The honest candidate
+# (repo + a REAL commit the author verifies):
+#   * microsoft/onnxruntime — onnxruntime/python/tools/quantization/: quantize.py (static PTQ
+#     entry point), calibrate.py (CalibrationDataReader — the same "run a calibration set,
+#     collect activation ranges" this chapter does by hand, incl. the percentile/entropy
+#     calibrators), onnx_quantizer.py (per-channel weight scales — our quantize_weight, in
+#     production form). The exact pieces this chapter builds, at scale.
+read_the_real_thing: true
+rtrt:
+  repo: microsoft/onnxruntime
+  commit: 8f0278c77bf44b0cc83c098c6c722b92a36ac4b5   # microsoft/onnxruntime tag v1.27.0 (2026-06-12); pinned 2026-07-08 (API-verified in onnxruntime/python/tools/quantization/: calibrate.py [CalibrationDataReader + MinMax/Percentile/Entropy], onnx_quantizer.py [per-channel weight quant], quantize.py [quantize_static, QuantType.QInt8]). NEVER invent a sha.
+  focus:
+    - "calibrate.py CalibrationDataReader + MinMax/Percentile/Entropy calibrators — the production form of our calibrate(): run a calibration set, collect per-tensor activation ranges, derive scales"
+    - "onnx_quantizer.py per-channel weight quantization (is_per_channel / axis) — our per-output-channel scale, the recovery in this chapter"
+    - "quantize.py quantize_static end-to-end (QuantType.QInt8, activation vs weight quant) — the whole deployment path we built by hand, and where a fused int8 kernel finally makes it FASTER (the latency win we honestly can't show on a laptop CPU)"
+
+demo: quantization_dial   # a slider FP32 -> per-tensor INT8 -> per-channel INT8 driving three live bars (size drops ~4x, action-MSE spikes then RECOVERS for per-channel, latency). Static vizdata (demo/vizdata.json); no WASM, no policy inference in the browser.
+
+# All reference metrics: seed 0, cpu, default config; torch 2.10.0 / numpy 2.4.6 (course
+# pins). EVERYTHING here is bitwise-reproducible: CPU numpy fp32 + exact int8/int32 integer
+# arithmetic, seeded torch-CPU training, deterministic MuJoCo resets. The smoke metrics.json
+# is byte-identical twice-run (latency is skipped under --smoke since wall clock never is).
+# THE HONEST HEADLINE is a DIRECTION that reproduces on every seed: per-tensor INT8 spikes
+# the action error, per-channel INT8 recovers most of it (2-7x lower MSE), at ~3.6x smaller
+# size. Task-success CIs OVERLAP fp32 at this N — quantization here is task-indistinguishable
+# from fp32 (the honest ch1.6 read); the gated claim is the deterministic action-error
+# direction + the size win, NOT a success-rate drop.
+reference_run:
+  provenance: "seed 0 on cpu; default config (demos 80, epochs 300, hidden 128, calib_episodes 8, eval_episodes 24, calib percentile); measured 2026-07-08. FULLY DETERMINISTIC (bitwise) on CPU: int8/int32 integer arithmetic is exact and MuJoCo resets are bitwise, so same seed reproduces byte-for-byte on the same machine. The ROBUST claim the exercise gates assert is the DIRECTION (per-channel MSE < per-tensor MSE every seed; the size win; int8 not faster on this CPU), with conservative margins — NOT an exact MSE."
+  # --- part (1): weight round-trip error, per-tensor vs per-channel (guaranteed direction) ---
+  weight_roundtrip_err_per_tensor: 0.00193171    # mean |W - dequant(quant(W))| over the 3 layers, one scale each
+  weight_roundtrip_err_per_channel: 0.00112197   # per-output-channel scale: ~1.7-2.0x smaller EVERY seed (a strict refinement)
+  naive_round_zero_frac: 0.9542                  # rounding weights with NO scale collapses ~95% of them to zero — the misconception, killed
+  # --- part (3): the deployment triangle (WEIGHT-ONLY int8: the dominant real-world PTQ mode) ---
+  fp32_size_kb: 71.008
+  per_tensor_size_kb: 18.52                       # int8 weights (1 byte) + fp32 bias + 1 scale/tensor
+  per_channel_size_kb: 19.516                     # + one fp32 scale per output channel; still ~3.6x smaller than fp32
+  size_ratio_fp32_over_int8: 3.639               # the GUARANTEED win (~4x; short of 4 only by the fp32 bias + scales)
+  fp32_action_mse: 0.0                           # vs itself, by definition
+  per_tensor_action_mse: 0.00050349              # per-tensor weight quant SPIKES the action error
+  per_channel_action_mse: 0.00024391             # per-channel RECOVERS it
+  mse_recovery_ratio: 2.064                      # per_tensor_mse / per_channel_mse; > 1 every seed (seed0 2.1, seed1 2.2, seed2 6.6)
+  int8_faster_than_fp32: false                   # HONEST: naive int8 is ~6x SLOWER on this CPU (dequant overhead, no fused kernel). PROVISIONAL: platform-dependent; a fused kernel flips it (scale lab)
+  # --- part (2): the full-integer path (per-channel weights + STATIC calibrated activations) ---
+  full_int8_action_mse: 0.00189634               # calibrated activations add a modest floor over weight-only per-channel
+  # Seed robustness (default config, cpu, measured 2026-07-08): mse_recovery_ratio
+  # seed0 2.06; seed1 2.19; seed2 6.60. weight-roundtrip per-channel < per-tensor and
+  # int8_faster_than_fp32=False on EVERY seed. That direction is the rock.
+  # --- the --break (seed 0): calibration from the wrong distribution ---
+  break_bad_calib_full_int8_action_mse: 0.00846811  # narrow near-goal calibration -> activations saturate -> full-integer error EXPLODES (seed0 4.5x, seed1 10.6x, seed2 24.2x over good calibration). The weight-only triangle is UNAFFECTED (the break only attacks the activation path).
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The SIZE win is guaranteed and exact. The LATENCY win is NOT — measured, naive int8 is
+  #    SLOWER on a laptop CPU (dequant overhead, no fused int8 kernel). Do NOT claim a speedup;
+  #    the honest lesson is why deployment reaches for TensorRT / a fused QLinear kernel.
+  #  * The deployment triangle is WEIGHT-ONLY int8 (weights int8, dequantized on the fly) —
+  #    the dominant real-world PTQ mode (llama.cpp Q8, HF int8 weight quant). It is where the
+  #    per-tensor->per-channel recovery is cleanest and most seed-robust.
+  #  * NO success-rate claim: the task-success Wilson CIs OVERLAP fp32 at N=24. Quantization
+  #    here is task-INDISTINGUISHABLE from fp32 at this N. Report the deterministic action-MSE
+  #    direction + the size win, never a success-rate drop that hasn't cleared the band.
+  #  * per-channel weights do NOT fix activation saturation (the --break). When activations
+  #    clamp, weight granularity is irrelevant — the fix is a representative calibration set
+  #    (+ a percentile clip for the outlier flavor). Keep these two failure modes distinct.
+
+# Reference bands + provenance for the exercise checks. PROVISIONAL: measured on ONE machine
+# (2026-07-08); author RE-VERIFIES on the reference tier and finalizes provenance before drop
+# (per the arc contract, bands + provenance land as PENDING from the drafting agent). Gates
+# assert the DIRECTION with conservative margins, never an exact MSE. ex1/ex3 run quantize.py
+# via subprocess (trains the MLP, ~15-25 s CPU) so they are @pytest.mark.slow — excluded from
+# `make check`; ex2 (quantize_weight completion) is a FAST self-contained numpy gate.
+exercise_checks:
+  exercise_config:
+    demos: 40
+    epochs: 150
+    calib_episodes: 6
+    eval_episodes: 12
+    provenance: "PENDING author reverification. Measured 2026-07-08, quantize.py at this reduced config, seeds 0/1/2, cpu: mse_recovery_ratio 3.16/3.03/5.51; weight round-trip per-channel < per-tensor every seed; naive_round_zero_frac ~0.99; int8_faster_than_fp32=False; --break bad_calib full_int8 mse 14-53x the good-calibration value. CPU int8 arithmetic is deterministic so each seed reproduces byte-for-byte; the checks assert the DIRECTION (per-channel recovers; size shrinks ~4x; int8 not faster; bad calibration explodes), seed-robust across 0/1/2."
+    min_mse_recovery_ratio: 1.5       # ex1: per_tensor_mse / per_channel_mse must exceed this (measured 3.0-5.5; conservative floor)
+    min_size_ratio: 3.0               # ex1: fp32 must be >= this x larger than int8 (measured ~3.6-3.8)
+    min_break_explosion: 3.0          # ex3: --break full_int8 mse must be >= this x the good-calibration full_int8 mse (measured 14-53x)
+    weight_rt_strict_improvement: true  # ex2/ex1: per-channel weight round-trip error must be strictly < per-tensor
+    min_naive_round_zero_frac: 0.9    # ex2: rounding with no scale must collapse >= this fraction of weights to zero (measured 0.99)
+  ex1:                                # ex1_predict_triangle.py (predict-then-run; SLOW)
+    answer: "C"                       # per-channel INT8 has the LOWEST action error of the two int8 configs, at ~4x smaller size, and int8 is NOT faster than fp32 on this CPU
+  ex2:                                # ex2_completion_quantize.py (code-completion, fast)
+    abs_tol: 1.0e-6                   # a correct symmetric quantize_weight matches the reference exactly; per-channel round-trip < per-tensor; naive no-scale rounding collapses to zeros
+  ex3:                                # ex3_predict_calib_break.py (predict-then-run + learner-generated failure; SLOW)
+    answer: "B"                       # narrow (near-goal) calibration makes real activations SATURATE, so the full-integer error EXPLODES; the weight-only triangle is unaffected
+
+# region_hashes: OMITTED here — the site records them at chapter-build time (per the arc
+# contract). notebook_hash PENDING (regenerate via notebook-tier-test once code is frozen).
+
+# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). ~20 s on the drafting CPU at default config, the banner prints it; the root invariant (never ESTIMATE) held —
+# wallclock-bench MEASURES it on the reference tier (root invariant: never estimate wall-clock).
+
+notebook_hash: 44fcb239da87e21b3920d8afdbb13ff6a2a9e41edd70ad4b0aa7edae6bd0bcfa        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 7a19f161ff6f2493d6a93b0df3364480a7449ef8a118181a91053b1f38acf72d   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: f60c9c06ee002ec89ab0796bda9417e29a4c96c1a994fe1f61f76b1119dea556
+  data: 5f1afebd20b3df3bb901a958a3d1e95255a8d8294aa43d64e6bd9615a39fd05a
+  train: 057002ffb5a108f557bc929b4f3530746439f6a005b51e81840f8ac9e5ec9a35
+  quantize: 08a1bf18984d539184d7490c005bdaa0c400339e22dd1be93583900228e549f3
+  deploy: dae6bc7af920b1040de3c04ed667c5b1cb47b5cd1a622a769d9cea3312e96b11
+  report: aebf7ee9e911ca93b7a5aaa108a6d19b61a0b39816b15b570589beb47b7a9e9b

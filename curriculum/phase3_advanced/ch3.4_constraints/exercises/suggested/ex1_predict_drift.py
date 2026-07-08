@@ -19,6 +19,10 @@ error do over the run?
      energy
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run: in one sentence, write WHY enforcing only the acceleration condition
+g̈=0 lets the length error g itself drift.
+
 Estimated learner time: 10 minutes.
 """
 

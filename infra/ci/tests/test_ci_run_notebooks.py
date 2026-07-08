@@ -112,3 +112,54 @@ def test_str2bool_rejects_garbage():
 
     with pytest.raises(argparse.ArgumentTypeError):
         run_notebooks.str2bool("maybe")
+
+
+# --- skip-with-reason (decision 016): absent dataset/checkpoint is not a fail ---
+
+
+def test_skip_reason_missing_dataset_path():
+    err = "FileNotFoundError: [Errno 2] No such file or directory: 'outputs/pusht-demos'"
+    assert run_notebooks.skip_reason(err) is not None
+
+
+def test_skip_reason_hub_unreachable():
+    assert run_notebooks.skip_reason("HfHubHTTPError: 404 for repo") is not None
+
+
+def test_skip_reason_missing_file_without_artifact_hint_is_not_skip():
+    # A missing file that is NOT a dataset/checkpoint artifact stays a real fail.
+    assert run_notebooks.skip_reason("FileNotFoundError: 'config.yaml'") is None
+
+
+def test_skip_reason_plain_error_is_not_skip():
+    assert run_notebooks.skip_reason("ValueError: shape mismatch (3,) vs (4,)") is None
+    assert run_notebooks.skip_reason("RuntimeError: synthetic cell failure") is None
+
+
+def test_absent_dataset_notebook_skips_not_fails(tmp_path, monkeypatch, capsys):
+    def _execute(path, timeout):
+        if path.name.startswith("nodata_"):
+            raise FileNotFoundError("No such file or directory: 'datasets/foo.parquet'")
+
+    monkeypatch.setattr(run_notebooks, "execute_notebook", _execute)
+    put_notebook(tmp_path, "ch1.1-bc.ipynb")
+    put_notebook(tmp_path, "nodata_ch9.ipynb")
+    code, data = run(tmp_path)
+    assert code == 0  # a skip must NOT fail the lane
+    assert data["notebooks/ch1.1-bc.ipynb"]["status"] == "pass"
+    skipped = data["notebooks/nodata_ch9.ipynb"]
+    assert skipped["status"] == "skip"
+    assert skipped["reason"]
+    assert "1 skipped" in capsys.readouterr().out
+
+
+def test_real_cell_bug_still_fails(tmp_path, monkeypatch):
+    def _execute(path, timeout):
+        if path.name.startswith("bug_"):
+            raise ValueError("tensor shape mismatch")
+
+    monkeypatch.setattr(run_notebooks, "execute_notebook", _execute)
+    put_notebook(tmp_path, "bug_ch3.ipynb")
+    code, data = run(tmp_path)
+    assert code == 1
+    assert data["notebooks/bug_ch3.ipynb"]["status"] == "fail"

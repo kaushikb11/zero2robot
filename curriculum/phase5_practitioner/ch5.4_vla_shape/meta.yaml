@@ -1,0 +1,133 @@
+id: ch5.4-vla-shape
+builds_on:  # for the /map/ dependency graph (documented in the curriculum map; nothing is imported)
+  - ch1.5   # the flow action head
+  - ch1.8   # the single-tower TinyVLA this graduates
+title: "The Production VLA Shape: Prefix, Suffix, and the Action Expert"
+artifact: vla_shape.py       # 449 LOC (hard cap 450): a two-tower prefix/suffix VLA — the block-attention mask, the pi0 per-tower "mixture" expert, and the ch1.5 flow head over an H-action chunk — trained on ch1.7's PushT pile, with a byte-reproducible held-out flow-MSE headline + a PushT rollout, one file.
+task: pusht                  # ch1.7's data recipe, PushT-only (ALOHA eval dropped — the sanctioned LOC cut); curriculum/common/envs/pusht
+
+# NOTE (doctrine): the whole two-tower stack is FROM SCRATCH — the block-attention mask, the shared
+# scaled-dot-product attention with SEPARATE per-tower Q/K/V/MLP (the pi0 mixture), the ch1.5 flow
+# head. NO transformers, NO einops. `allow_transformers` stays UNSET; the forbidden-imports gate runs
+# at full strictness. The real pretrained VLA (pi0 / SmolVLA) is the read-the-real-thing + scale lab.
+
+objectives:
+  - 'Graduate ch1.8''s single-tower TinyVLA into the production TWO-TOWER shape — a PREFIX (the VLM: vision + state + instruction tokens, bidirectional among themselves, no CLS readout) and a SUFFIX (the ACTION EXPERT: H learned action-query tokens that carry the noised action chunk + the flow time). Read the action off the SUFFIX, not a CLS vector.'
+  - 'Build the BLOCK-ATTENTION MASK by hand — prefix<->prefix full; suffix->prefix full (the cross-attention); suffix<->suffix intra-chunk; and prefix NEVER reads suffix (so the prefix is action-independent and KV-cacheable, pi0''s trick). Fifteen lines that ARE the architecture.'
+  - 'Build the action expert as SEPARATE WEIGHTS on the suffix positions (the pi0 "mixture"): ONE shared scaled-dot-product attention over the joint [prefix|suffix] sequence, but the prefix tokens use the VLM tower''s Q/K/V/MLP and the suffix tokens use the expert tower''s — two parameter sets, one attention op, NOT a layer stacked on a CLS vector. Then the ch1.5 FLOW HEAD on each expert token''s output emits a CHUNK of H actions (ch1.3), not ch1.8''s single action.'
+  - 'Measure, and frame honestly, the MECHANISM (not a task score, ch1.8''s honesty): the expert''s ONLY window onto the state, pixels, and words is the suffix->prefix cross-attention. CUT that block at inference (--break cut_cross) and the trained expert''s HELD-OUT VELOCITY FIT collapses toward the unconditional prior — routing, not just parameters, is load-bearing. The seed-robust, byte-reproducible flow-MSE gap is the gated headline; the PushT ROLLOUT is the higher bar and FLOORS for both masks (from-scratch on ch1.7''s frozen-random backbone can''t drive PushT, exactly as ch1.8 warned). ch5.2''s aligned encoder is the upgrade that would make the pixels load-bearing.'
+
+scale_lab: true
+# The free-tier core is a DELIBERATELY tiny two-tower VLA (model_dim 64, 2 blocks, H=8) on ~700 cached
+# 64x64 PushT frames — enough to make the mask, the per-tower expert, and the routing collapse
+# measurable on a CPU laptop in ~2-3 min. TWO honest scale steps: (1) ch5.2's ALIGNED encoder in the
+# vision slot (this chapter's cross-arc payoff — the frozen RANDOM CNN is why PushT rollout floors and
+# why --break's collapse is carried by the STATE, not the pixels); (2) a real pretrained VLA (pi0 /
+# SmolVLA: a SigLIP tower + a pretrained-LM tokenizer + this exact prefix/suffix flow-expert) on a
+# consumer GPU. Author: wire scale_lab_ref and have wallclock-bench MEASURE the GPU tier — do NOT
+# assert a scaling claim. The lesson is the SHAPE + the routing mechanism, measured from scratch.
+
+# READ-THE-REAL-THING: the arc pairs this chapter with the two production references that invented the
+# shape this chapter builds. The rtrt commit is LEFT FOR THE AUTHOR to pin — I never invent a SHA.
+# Both candidates below are real; pin ONE (or both) at a verified offline commit:
+#   * Physical-Intelligence/openpi — src/openpi/models/pi0.py: make_attn_mask (the exact block-attention
+#     mask — prefix bidirectional, suffix reads prefix + itself, prefix blind to suffix) and the Gemma
+#     ACTION EXPERT (the per-tower "mixture": one attention, separate expert weights on the action
+#     tokens). This is the production form of this chapter's block_mask + ExpertBlock + flow head.
+#   * huggingface/lerobot — src/lerobot/policies/smolvla/modeling_smolvla.py: embed_prefix / embed_suffix
+#     (the same prefix = VLM tokens, suffix = action-expert tokens split) — the in-ecosystem, already
+#     course-pinned option (matches the ch1.8 lerobot pin).
+# site RTRT.astro renders nothing until repo + commit both exist.
+read_the_real_thing: true
+rtrt:
+  repo: Physical-Intelligence/openpi
+  commit: 15a9616a00943ada6c20a0f158e3adb39df2ccac   # openpi default-branch HEAD (matches ch3.8/5.5 pin); pinned 2026-07-08 (API-verified: src/openpi/models/pi0.py present — make_attn_mask + Gemma flow action expert). NEVER invent a sha.
+  focus:
+    - "make_attn_mask: the block-attention mask (prefix bidirectional; suffix attends to prefix + suffix; prefix NEVER attends to suffix -> action-independent, KV-cacheable) — ours: block_mask()"
+    - "the Gemma action expert as a per-tower 'mixture': one shared attention over the joint sequence, SEPARATE weights on the action (suffix) tokens — ours: ExpertBlock's qkv_pre/qkv_suf, mlp_pre/mlp_suf"
+    - "the flow-matching action expert: the suffix tokens carry the noised action + the flow time and output the velocity of an action CHUNK — ours: TwoTowerVLA.forward + the ch1.5 flow head"
+  # Companion (author may pin instead/also): huggingface/lerobot @ (the course-pinned lerobot sha) —
+  # src/lerobot/policies/smolvla/modeling_smolvla.py embed_prefix / embed_suffix.
+
+demo: prefix_suffix_attention   # an interactive block-attention-mask heatmap: toggle a cell (cut suffix->prefix) and the recorded rollout + the flow-MSE/return delta replay. Static vizdata (demo/vizdata.json); no WASM, no policy contract.
+
+# All reference metrics: seed 0, cpu, mujoco 3.10.0 / torch 2.10.0 / numpy 2.4.6 (course pins). Env
+# resets are bitwise on CPU; every init is seeded. Determinism, tiered HONESTLY (root invariant 2):
+# the `--smoke --seed 0 --no-rerun` metrics.json is BYTE-IDENTICAL twice-run (verified). At the full
+# config, training is STATISTICALLY reproducible: same seed -> flow_mse_full and final_train_loss match,
+# and flow_mse_cut is stable to ~1e-5 (CPU BLAS reduction order jitters the last ulp). So the GATED
+# claim is the DIRECTION — flow_mse_gap > 0, seed-robust (+0.56..+0.98) — NEVER an exact MSE. The PushT
+# ROLLOUT additionally renders frames (MuJoCo rasterization is not bitwise across CPU arches) and FLOORS
+# for both masks regardless, so nothing gradeable rides on it.
+reference_run:
+  provenance: "seed 0 on cpu; measured 2026-07-08 at the exercise_config (episodes 50, epochs 100, eval_episodes 8, model_dim 64, layers 2, heads 4, horizon 8, flow_steps 6). PROVISIONAL: the drafting agent measured on ONE machine; author RE-VERIFIES on the reference tier and at the default config (episodes 60, epochs 150) before drop. The gated claim is the DIRECTION (flow_mse_gap > 0, seed-robust), never an exact MSE."
+  num_frames: 740                     # ~700-750 cached 64x64 PushT frames (50 episodes, stride 2)
+  prefix_len: 14                      # 1 vision + 1 state + 12 instruction tokens
+  horizon: 8                          # the action expert emits a chunk of 8
+  final_train_loss: 0.972             # masked flow-matching velocity MSE over the chunk (per-step averaged)
+  # --- THE HEADLINE (byte-reproducible, seed-robust DIRECTION): cutting suffix->prefix collapses the fit ---
+  flow_mse_full: 1.5663               # held-out velocity MSE, full routing
+  flow_mse_cut: 2.5432                # held-out velocity MSE, the SAME weights with suffix->prefix SEVERED
+  flow_mse_gap: 0.9769                # cut - full; > 0 every seed == routing is load-bearing (the gated claim)
+  # Seed robustness (exercise_config, cpu, measured 2026-07-08): flow_mse full/cut/gap
+  # seed0 1.566 / 2.543 / +0.977; seed1 1.557 / 2.121 / +0.564; seed2 1.556 / 2.415 / +0.860.
+  # The GAP is POSITIVE on every seed (routing collapse reproduces); the exact MSE is platform-noisy.
+  # --- the higher bar: PushT rollout FLOORS for both masks (the honest free-tier ceiling) ---
+  reported_success_rate: 0.0          # full-mask rollout, N=8, Wilson 95% CI [0.0, ~0.32]
+  reported_mean_return: -118.48       # full ~= cut (both near the untrained drift) — the frozen-random backbone can't drive PushT
+  # HONESTY (author MUST keep this framing — it is the measured truth):
+  #  * The HEADLINE is a MECHANISM, not a task %. NO success rate is gated. The result is that the
+  #    trained expert's held-out velocity fit DEPENDS on the suffix->prefix cross-attention: sever it and
+  #    the fit collapses (+0.6..+1.0 MSE, every seed). That is "routing is load-bearing," measured.
+  #  * WHY it reproduces where ch1.8's --break blind did not: the action expert's ONLY window onto the
+  #    STATE (which determines the PushT action) is the cross-attention — the suffix tokens carry only a
+  #    noised action + a clock. So the model is FORCED to route state through that block; cutting it MUST
+  #    hurt. ch1.8's --break zeroed only VISION, and PushT is state-solvable, so it didn't move.
+  #  * The PushT ROLLOUT floors at 0 for BOTH masks. A from-scratch tiny two-tower on ch1.7's FROZEN
+  #    RANDOM vision backbone cannot drive PushT to success (chunked flow control from a random-feature
+  #    prefix). This is the honest ceiling ch1.8 warned about — do NOT claim the two-tower "solves" PushT.
+  #  * The vision here is NOT load-bearing (frozen random CNN, PushT is state-solvable): the cross-
+  #    attention's payload is the STATE. ch5.2's ALIGNED encoder in the vision slot is the upgrade that
+  #    would make the pixels carry signal too — the cross-arc payoff (reference it; do not build it here).
+  #  * --break cut_cross severs at INFERENCE (the same trained weights, re-masked). A model TRAINED blind
+  #    instead just fits the marginal (~1.49 MSE, no collapse) — the collapse is about DENYING a trained-
+  #    dependent path, the standard pi0-style mask ablation. Keep the inference-sever framing.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with provenance, no
+# bare magic numbers). PROVISIONAL: measured on ONE machine (2026-07-08); author RE-VERIFIES on the
+# reference tier and finalizes before drop (bands land PENDING from the drafting agent). The gate asserts
+# the DIRECTION (flow_mse_gap >= a conservative floor) — byte-reproducible, seed-robust. ex1/ex2 TRAIN
+# the two-tower (~90 s CPU each) so they are @pytest.mark.slow; ex3 (mask completion) is a FAST,
+# self-contained numpy gate that runs in `make check`.
+exercise_checks:
+  exercise_config:
+    episodes: 50
+    epochs: 100
+    eval_episodes: 8
+    horizon: 8
+    model_dim: 64
+    layers: 2
+    heads: 4
+    provenance: "PENDING author reverification. Measured 2026-07-08, vla_shape.py at this config, seed 0, cpu: flow_mse full 1.566, cut 2.543, gap +0.977; PushT rollout 0/8 (floors, full ~= cut). CPU training is statistically reproducible (flow_mse_full/train_loss exact; flow_mse_cut stable to ~1e-5); the checks assert the DIRECTION (flow_mse_gap > 0 by a margin), seed-robust across seeds 0/1/2 (gaps +0.56 / +0.86 / +0.98)."
+    min_flow_mse_gap: 0.30            # ex1: cutting suffix->prefix must raise held-out flow MSE by >= this (measured +0.56..+0.98; conservative floor well under the min seed)
+  ex1:                               # ex1_predict_cut_cross.py (predict-then-run; SLOW)
+    answer: "B"                      # severing the expert's cross-attention to the VLM collapses its held-out velocity fit (it loses its only path to the state)
+  ex2:                               # ex2_predict_rollout_floor.py (predict-then-run; SLOW)
+    answer: "C"                      # the PushT rollout floors for BOTH masks — a frozen-random backbone can't drive it; the mechanism lives in the flow-MSE gap, not a task %
+  ex3:                               # ex3_completion_block_mask.py (code-completion, fast)
+    abs_tol: 0                       # a correct block mask matches the reference exactly; the "expert reads everything" bug (suffix<->all) is detectably != reference
+
+# region_hashes: OMITTED here — the site records them at chapter-build time (per the arc contract).
+notebook_hash: d33afc01bc409d4d830b184ca422eb9bf47a39685f096bf5f44ce2e021be89d6        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: f7060f832865d8784e99fad87cb15d639ae2366443c19158e473a0ac776d5ab7   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+# wall-clock: MEASURED (cpu-laptop; see curriculum/common/wallclock.csv). ~2-3 min on the drafting CPU at the exercise_config; NO number ships until
+# wallclock-bench MEASURES it on the reference tier (root invariant: never estimate wall-clock).
+
+region_hashes:
+  setup: 561a4905d57d2e58bbdd797627a7e4e07045b3bf19fcbb1811c11e41b60c1a42
+  data: 09ea7423c39735f27044149e888cba442de66f35cb1fd7d784d6e044a20c8ca9
+  model: 212b2e90cc8a8d66902c493bddbfe05cb39dd4fe3699e5c81d373456c71e621c
+  train: 3874e29aa98b4863b9f63c5e92df0928d7fd275feab407deb19807092a3416a1
+  eval: c804db7db00cb82497a4a31eec17168673af0e1b1c6236fd6a4d3826f9872daa
+  report: 4a229e995fe3eaf1f79ce0cdba998e87f8bc4a3daac46999fe43c7415d90a564

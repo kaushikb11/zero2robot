@@ -576,6 +576,22 @@
 .bk-ent-target { border-color: var(--entity-target); }
 
 /* ---------------------------------------------------------------------------
+   Display math — the one defining equation above its code region (Rec 4).
+   Server-rendered by KaTeX (static HTML+MathML, so it reads JS-off). The wrapper
+   sits just above its code panel and scrolls a wide equation inside its own box
+   so the page body never scrolls sideways.
+   ------------------------------------------------------------------------ */
+.bk-math {
+  max-width: var(--page);
+  margin: 1.5rem auto 0.4rem;   /* hugs the code panel that follows it */
+  overflow-x: auto;
+  overflow-y: hidden;
+  color: var(--ink);
+}
+.bk-math .katex-display { margin: 0.35rem 0; }
+.bk-math .katex { font-size: 1.08em; }
+
+/* ---------------------------------------------------------------------------
    Code panels — crisp DARK lab instruments (the sharp, central element)
    ------------------------------------------------------------------------ */
 .bk-panel {
@@ -1356,7 +1372,7 @@ body.book > * { position: relative; z-index: 1; }
 /* the sim/poster stages + HUD chips are hardcoded-LIGHT instruments in BOTH
    themes (see the comment above); hold their TEXT at light-theme token values so
    the flipped dark tokens don't render labels/HUD/status light-on-light. */
-:root[data-theme="dark"] .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud) {
+:root[data-theme="dark"] .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud, .fd-figure, .fd-side) {
   --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
   --signal: #1f56de; --alert: #c0362a;
 }
@@ -1391,7 +1407,7 @@ body.book > * { position: relative; z-index: 1; }
   :root:not([data-theme="light"]) .book .bk-ent-block  { border-color: var(--entity-block-hi); }
   :root:not([data-theme="light"]) .book .bk-ent-target { border-color: var(--entity-target-hi); }
   :root:not([data-theme="light"]) .book .sidebar__link[data-read="true"] .sidebar__title::after { color: var(--entity-target-hi); }
-  :root:not([data-theme="light"]) .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud) {
+  :root:not([data-theme="light"]) .book :is(.bk-stage, .bk-svg, .ct-figure, .bk-hud, .ct-hud, .cp-figure, .cp-hud, .fl-figure, .fl-hud, .df-figure, .df-hud, .fd-figure, .fd-side) {
     --ink: #23201b; --ink-soft: #473f34; --ink-mute: #6d6252;
     --signal: #1f56de; --alert: #c0362a;
   }

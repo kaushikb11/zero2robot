@@ -14,6 +14,10 @@ Success regions:
     obs[4:6] sin(tee_yaw), cos(tee_yaw)
     obs[6:8] target_x, target_y      obs[8:10] sin/cos target_yaw
 
+Before you fix the index, write one sentence: which two points is pos_err
+supposed to measure between, and what would a block sitting exactly on the
+target read as if you were secretly measuring from the pusher instead?
+
 Find the wrong index, fix it, and re-run checks.py until the reading matches the
 contract (block on target -> reached; block adrift -> not reached).
 
@@ -45,7 +49,7 @@ def frame_errors(state: np.ndarray) -> tuple:
     """(pos_err, ang_err) for one observation. pos_err is the block's distance
     from the TARGET; ang_err is the block's yaw error vs the (zero) target yaw."""
     tee_xy = state[2:4]
-    target_xy = state[0:2]   # <-- one of these index pairs points at the wrong thing
+    target_xy = state[0:2]
     pos_err = float(np.hypot(tee_xy[0] - target_xy[0], tee_xy[1] - target_xy[1]))
     ang_err = float(abs(wrap_angle(math.atan2(float(state[4]), float(state[5])))))
     return pos_err, ang_err

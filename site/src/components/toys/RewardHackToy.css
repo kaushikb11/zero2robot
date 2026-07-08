@@ -1,0 +1,193 @@
+/* ch2.4 "Reward Design Is Programming" concept-toy — the REWARD-HACKING hero.
+ *
+ * Co-located CSS for RewardHackToy.tsx (imported at the top of that file).
+ * Namespaced `rh-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`sg-*` classes. Like the ch3.3 / ch3.6 recorded toys this
+ * is PURE SVG over pre-computed rewards.py data — no WASM — so it drives every
+ * colour from the site's flipping design tokens and is genuinely theme-aware in
+ * BOTH light and dark. Every var carries a light fallback so it still renders if
+ * mounted outside the shell.
+ *
+ * Colour by MEANING:
+ *   - --alert red         → the HACK (the cautionary specification-gaming exploit)
+ *   - --entity-target grn → the SHAPED walk (the behaviour you actually wanted)
+ *   - neutral ink         → floor / ground marks / axes (a map, not an entity)
+ */
+
+.rh { display: grid; gap: 0.9rem; }
+
+/* --- panels --------------------------------------------------------------- */
+.rh-panel {
+  margin: 0;
+  display: grid; gap: 0.55rem;
+  padding: 0.7rem 0.75rem 0.75rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.rh-head { display: grid; gap: 0.2rem; }
+.rh-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9rem; font-weight: 700; letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+}
+.rh-sub { margin: 0; font-size: 0.8rem; line-height: 1.45; color: var(--ink-mute, #6d6252); }
+.rh-sub b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* meaning-coloured inline emphasis, shared everywhere */
+.rh-ink-hack { color: var(--alert, #c0362a); font-weight: 700; }
+.rh-ink-shaped { color: var(--entity-target, #2f9e44); font-weight: 700; }
+
+/* --- PANEL 1: the two recorded rollouts ----------------------------------- */
+.rh-arenas { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .rh-arenas { grid-template-columns: 1fr 1fr; } }
+
+.rh-arena {
+  margin: 0;
+  display: grid; gap: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+}
+.rh-arena--hack { border-color: color-mix(in srgb, var(--alert, #c0362a) 40%, var(--rule-strong, #c8bc9e)); }
+.rh-arena--shaped { border-color: color-mix(in srgb, var(--entity-target, #2f9e44) 40%, var(--rule-strong, #c8bc9e)); }
+.rh-svg { display: block; width: 100%; height: auto; }
+
+/* floor + scrolling ground marks (neutral ink — a map, not an entity) */
+.rh-floor { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); stroke-width: 1.4; }
+.rh-tickmark { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 30%, transparent); stroke-width: 1.3; }
+
+/* the nominal ride-height reference line */
+.rh-ride { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 34%, transparent); stroke-width: 1; stroke-dasharray: 4 4; }
+.rh-ride-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em;
+}
+
+/* the robot: legs + feet neutral, the torso wears the design's meaning-colour */
+.rh-leg { fill: none; stroke: color-mix(in srgb, var(--ink, #23201b) 62%, transparent); stroke-width: 3.2; stroke-linejoin: round; stroke-linecap: round; }
+.rh-foot { fill: color-mix(in srgb, var(--ink, #23201b) 72%, transparent); }
+.rh-torso { stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.rh-arena--shaped .rh-torso { fill: var(--entity-target, #2f9e44); }
+.rh-arena--hack .rh-torso { fill: var(--alert, #c0362a); }
+
+.rh-arena-cap {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+}
+.rh-arena-name { color: var(--ink, #23201b); font-weight: 600; }
+.rh-arena-tag { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.01em; }
+.rh-tag--shaped { color: var(--entity-target, #2f9e44); }
+.rh-tag--hack { color: var(--alert, #c0362a); }
+
+/* --- controls ------------------------------------------------------------- */
+.rh-controls { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.rh-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.rh-btn--primary { background: var(--signal, #1f56de); border-color: var(--signal, #1f56de); color: #fff; }
+.rh-btn:disabled { opacity: 0.55; cursor: default; }
+.rh-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.rh-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+}
+.rh-why-line { margin: 0; font-size: 0.76rem; line-height: 1.45; color: var(--ink-mute, #6d6252); }
+.rh-why-line b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* --- PANEL 2: the mismatch chart ------------------------------------------ */
+.rh-chart { display: block; width: 100%; height: auto; }
+.rh-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.rh-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent); stroke-width: 1; }
+.rh-tick { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); }
+.rh-tick--reward { fill: color-mix(in srgb, var(--alert, #c0362a) 85%, var(--ink, #23201b)); }
+.rh-tick--fwd { fill: color-mix(in srgb, var(--entity-target, #2f9e44) 85%, var(--ink, #23201b)); }
+.rh-axtitle { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; letter-spacing: 0.02em; }
+.rh-axtitle--reward { fill: var(--alert, #c0362a); font-weight: 600; }
+.rh-axtitle--fwd { fill: var(--entity-target, #2f9e44); font-weight: 600; }
+
+/* the hero: the hack's self-reward climbing (red — the cautionary number) */
+.rh-reward-line { fill: none; stroke: var(--alert, #c0362a); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.rh-reward-dot { fill: var(--alert, #c0362a); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+
+/* forward distance: flat near zero (task not done) + the shaped-walk reference */
+.rh-fwd-line { stroke: var(--entity-target, #2f9e44); stroke-width: 2; }
+.rh-fwd-dot { fill: var(--entity-target, #2f9e44); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.rh-fwd-lab { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: color-mix(in srgb, var(--entity-target, #2f9e44) 88%, var(--ink, #23201b)); }
+.rh-shaped-ref { stroke: color-mix(in srgb, var(--entity-target, #2f9e44) 55%, transparent); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.rh-shaped-lab { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: color-mix(in srgb, var(--entity-target, #2f9e44) 75%, var(--ink, #23201b)); }
+
+/* the verdict strip */
+.rh-verdict {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px dashed color-mix(in srgb, var(--alert, #c0362a) 45%, var(--paper-edge, #ded3ba));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--alert, #c0362a) 6%, var(--paper, #f7f3ea));
+  font-size: 0.76rem; line-height: 1.45; color: var(--ink, #23201b);
+}
+.rh-verdict-tag {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase;
+  color: #fff; background: var(--alert, #c0362a);
+  padding: 0.14rem 0.45rem; border-radius: 100px; white-space: nowrap;
+}
+.rh-verdict em { font-style: italic; color: var(--ink, #23201b); }
+
+/* --- PANEL 3: shaping / curriculum bars ----------------------------------- */
+.rh-bars { display: grid; gap: 0.4rem; }
+.rh-bar-row { display: grid; grid-template-columns: 5.5rem 1fr 4.5rem; align-items: center; gap: 0.6rem; }
+.rh-bar-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink, #23201b);
+}
+.rh-bar-track {
+  height: 0.7rem; border-radius: 100px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.rh-bar-fill { height: 100%; border-radius: 100px; }
+.rh-bar--walk { background: var(--entity-target, #2f9e44); }
+.rh-bar--hack { background: var(--alert, #c0362a); }
+.rh-bar--muted { background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+.rh-bar-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  text-align: right; color: var(--ink, #23201b);
+}
+.rh-val--walk { color: var(--entity-target, #2f9e44); }
+.rh-val--hack { color: var(--alert, #c0362a); }
+.rh-val--muted { color: var(--ink-mute, #6d6252); }
+.rh-bars-note { margin: 0.15rem 0 0; font-size: 0.72rem; line-height: 1.5; color: var(--ink-mute, #6d6252); }
+.rh-bars-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* --- the persistent honest-scope note ------------------------------------- */
+.rh-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.55; color: var(--ink-mute, #6d6252);
+}
+.rh-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* screen-reader-only live region (visually hidden, still announced) */
+.rh-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* honour reduced-motion: kill button transitions; the replay is JS-gated off
+   separately (play() jumps straight to the end pose under reduced motion). */
+@media (prefers-reduced-motion: reduce) {
+  .rh-btn { transition: none; }
+}

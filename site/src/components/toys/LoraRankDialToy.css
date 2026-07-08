@@ -1,0 +1,241 @@
+/* ========================================================================
+   LoraRankDialToy (.lr-*) — ch5.6 "LoRA From Scratch" concept-toy
+   (demo lora_rank_dial).
+
+   THE RANK DIAL as a pure DATA-VIEWER over a precomputed 7-point rank sweep from
+   lora.py's vizdata.json — no MuJoCo-WASM, no ONNX, no dynamic import. A single
+   slider turns the LoRA rank r (0,1,2,4,8,16); two synced readouts move with it —
+   "% of base weights trained" CLIMBS, while "held-out skill fit (R²)" RISES then
+   PLATEAUS onto the dashed full-fine-tune ceiling. The visible KNEE is the elbow:
+   at r=4 you train ~1.3% of the weights and recover ~84% of full-FT's gain. A muted
+   third trace shows task_A fit FALLING (LoRA does not prevent forgetting). It
+   hydrates only to make the dial, the forgetting-trace toggle, and the aria-live
+   readout, so the server-rendered view (curve + ceiling/floor refs + both readouts
+   at the elbow + the note) is a complete JS-off experience.
+
+   COLOUR — a data panel (not a fixed light lab instrument), so it drives every
+   colour from the FLIPPING design tokens (site/public/styles.css) and is correct in
+   light AND dark with no special-case. Mapped by MEANING:
+     · held-out fit, the new-skill hero      → --signal  (blue — the skill snapping in)
+     · task_A fit, the forgetting trace       → --alert   (red — the old skill leaving)
+     · the full-FT ceiling (the goal)         → --entity-target-ink  (green)
+     · frozen floor / graph paper / cursor    → neutral --ink-mute / --rule
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — no animation; the sole interaction is the rank slider (state, not rAF),
+   and the only CSS transitions are on the controls / meters, gated under
+   prefers-reduced-motion.
+   ======================================================================== */
+.lr {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.lr-head { margin-bottom: 0.1rem; }
+.lr-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.lr-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.lr-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the rank-sweep chart ------------------------------------------------ */
+.lr-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid color-mix(in srgb, var(--signal, #1f56de) 30%, var(--paper-edge, #ded3ba));
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 120% at 50% 25%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--ink-mute, #6d6252) 6%),
+      var(--paper-2, #f0e9d9));
+}
+.lr-axis { stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.4; }
+.lr-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 13%, transparent); stroke-width: 1; }
+.lr-tick { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; fill: var(--ink-mute, #6d6252); }
+.lr-axis-cap { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.lr-yaxis-cap { font-weight: 600; }
+
+/* full-FT ceiling — the goal the held-out fit plateaus onto (green) */
+.lr-ceil { stroke: var(--entity-target-ink, #0c7d5f); stroke-width: 1.4; stroke-dasharray: 5 3; }
+.lr-ceil-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; fill: var(--entity-target-ink, #0c7d5f); font-weight: 700; }
+.lr-ceil-sub { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8.5px; fill: color-mix(in srgb, var(--entity-target-ink, #0c7d5f) 80%, var(--ink-mute, #6d6252)); }
+
+/* frozen floor — where a wholly frozen base sits (neutral) */
+.lr-floor { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.lr-floor-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; fill: var(--ink-mute, #6d6252); font-weight: 700; }
+.lr-floor-sub { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8.5px; fill: var(--ink-mute, #6d6252); }
+
+/* the selected-rank cursor — the one live guide (SSR draws it at the elbow) */
+.lr-cursor { stroke: var(--ink, #23201b); stroke-width: 1.6; opacity: 0.5; }
+
+/* the elbow annotation at the headline rank */
+.lr-elbow circle {
+  fill: none;
+  stroke: var(--signal, #1f56de);
+  stroke-width: 1.6;
+}
+.lr-elbow-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; font-weight: 700; fill: var(--ink, #23201b);
+}
+.lr-elbow-sub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; font-weight: 600; fill: var(--signal, #1f56de);
+}
+
+/* the two curves — task_A under (muted), held-out on top (the hero) */
+.lr-curve { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.lr-curve--held { stroke: var(--signal, #1f56de); }
+.lr-curve--task { stroke: var(--alert, #c0362a); stroke-width: 1.8; stroke-dasharray: 4 3; opacity: 0.72; }
+.lr-dot--held { fill: var(--signal, #1f56de); stroke: var(--paper-2, #f0e9d9); stroke-width: 1.2; }
+.lr-dot--held[data-sel="true"] { stroke: var(--paper, #f7f3ea); stroke-width: 1.6; }
+.lr-dot--task { fill: var(--alert, #c0362a); opacity: 0.72; }
+
+/* chart legend */
+.lr-legend {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+.lr-leg { display: inline-flex; align-items: center; gap: 0.4rem; }
+.lr-leg::before { content: ""; width: 0.85rem; height: 0; border-top-width: 3px; border-top-style: solid; border-radius: 2px; }
+.lr-leg.lr-leg--held::before { border-top-color: var(--signal, #1f56de); }
+.lr-leg.lr-leg--task::before { border-top-color: var(--alert, #c0362a); border-top-style: dashed; }
+.lr-leg.lr-leg--ceil::before { border-top-color: var(--entity-target-ink, #0c7d5f); border-top-style: dashed; }
+.lr-leg b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the one control: the rank dial -------------------------------------- */
+.lr-controls {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+}
+.lr-slider-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252); white-space: nowrap;
+}
+.lr-slider {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+  accent-color: var(--signal, #1f56de);
+  cursor: pointer;
+}
+.lr-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.lr-rank-out {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums;
+  color: var(--ink-mute, #6d6252); white-space: nowrap;
+  min-width: 8.5rem; text-align: right;
+}
+.lr-rank-out b { color: var(--ink, #23201b); font-weight: 700; }
+
+/* ---- the synced readouts ------------------------------------------------- */
+.lr-readouts {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+}
+.lr-card {
+  display: grid; gap: 0.25rem; align-content: start;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.lr-card--params { border-left: 3px solid var(--ink-soft, #4a4437); }
+.lr-card--fit { border-left: 3px solid var(--signal, #1f56de); }
+.lr-card--forget { border-left: 3px solid var(--alert, #c0362a); }
+.lr-card-k { font-size: 0.64rem; color: var(--ink-mute, #6d6252); line-height: 1.3; }
+.lr-card-v {
+  font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  line-height: 1.05; color: var(--ink, #23201b);
+}
+.lr-card--params .lr-card-v { color: var(--ink-soft, #4a4437); }
+.lr-card--fit .lr-card-v { color: var(--signal, #1f56de); }
+.lr-card--forget .lr-card-v { color: var(--alert, #c0362a); }
+.lr-card-sub { font-size: 0.63rem; line-height: 1.4; color: var(--ink-mute, #6d6252); }
+
+/* the little meters under the params + fit cards */
+.lr-meter {
+  height: 6px; border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent);
+}
+.lr-meter-fill {
+  height: 100%; border-radius: 3px;
+  background: var(--ink-soft, #4a4437);
+  transition: width 120ms ease;
+}
+.lr-meter--fit .lr-meter-fill { background: var(--signal, #1f56de); }
+.lr-card--fit[data-plateau="true"] .lr-meter--fit .lr-meter-fill { background: var(--entity-target-ink, #0c7d5f); }
+.lr-card--fit[data-plateau="true"] .lr-card-v { color: var(--entity-target-ink, #0c7d5f); }
+
+/* ---- the forgetting-trace toggle ----------------------------------------- */
+.lr-toggle-row {
+  display: flex; align-items: center; gap: 0.5rem 0.9rem; flex-wrap: wrap;
+}
+.lr-toggle {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 700;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 4px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.lr-toggle:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.lr-toggle[data-on="true"] {
+  background: color-mix(in srgb, var(--alert, #c0362a) 14%, var(--paper, #f7f3ea));
+  border-color: var(--alert, #c0362a);
+  color: var(--alert, #c0362a);
+}
+.lr-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+  margin-left: auto;
+}
+
+/* ---- the honest framing note --------------------------------------------- */
+.lr-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.6; color: var(--ink-mute, #6d6252);
+}
+.lr-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* visually-hidden live region for screen readers */
+.lr-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 40rem) {
+  .lr-readouts { grid-template-columns: 1fr; }
+  .lr-title { font-size: 0.84rem; }
+  .lr-control-note { margin-left: 0; }
+  .lr-rank-out { min-width: 7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lr-toggle, .lr-meter-fill { transition: none; }
+}

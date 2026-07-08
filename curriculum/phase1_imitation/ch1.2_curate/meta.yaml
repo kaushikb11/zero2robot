@@ -1,6 +1,6 @@
 id: ch1.2-curate
 title: "Data Is the Policy"
-artifact: curate.py        # target ~200 LOC (built to 339: scores + filters + re-trains 1.1 twice in one file)
+artifact: curate.py        # 341 LOC: scores + filters + re-trains 1.1's BC twice in one file (doctrine cap 450)
 task: pusht                # LeRobot PushT datasets: your ch0.4 recordings (curated) + the reference expert
 dataset:
   reference: lerobot/pusht
@@ -63,13 +63,13 @@ exercise_checks:
   ex4:                            # ex4_completion_disagreement.py (code-completion)
     rel_tol: 1.0e-6               # completed frame_disagreement must match the reference on the fixture
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/
-# Colab variant is not built yet (ch1.2 is a draft pending the teaching-pass);
-# notebook-tier-test writes both on generation, and the gate skips a chapter
-# that carries neither key (never a PENDING placeholder, which reads as stale).
-
 # region_hashes recorded from curate.py's six regions (check_prose_code_drift
 # verifies them); re-render the chapter page after any edit to the artifact.
+# notebook_hash / notebook_file_hash below are written by notebook-tier-test on
+# generation (notebooks/ch1.2-curate.ipynb); drift => regenerate.
+
+notebook_hash: 0fcc62f5f0f660eba45f4adae197cef51be1325485e16a4ed042285818ce0fd7        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 4fe47e80f2b24e760321ebbd3ef2d6d11d53cd49b6c8c65e3cb3bab6523188c0   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: d5f4efa450247cfdccbbf6188583a3207771009bcb42b7d67c647eff78609165
@@ -78,6 +78,3 @@ region_hashes:
   curate: 73dc924711fd9d99e5462eb33e2f3d6abaad5aea90708c7604f3e94e022f2853
   train: ee611bf3111028e990877ccf19c7eed6a0506e4afa26d342e34541db2bf722cf
   report: 623630eb461c24d585a72876db953dc46ffe8bcbffb913309cffd2c698a01e69
-
-notebook_hash: 0fcc62f5f0f660eba45f4adae197cef51be1325485e16a4ed042285818ce0fd7        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 4fe47e80f2b24e760321ebbd3ef2d6d11d53cd49b6c8c65e3cb3bab6523188c0   # sha256 of the generated notebook bytes; mismatch => hand-edited

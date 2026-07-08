@@ -42,6 +42,53 @@ EXPECTED_HEADER = [
 ]
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+# A wall-clock claim in FINISHED prose: a number + minute-unit immediately tagged
+# "(measured...)". The root-CLAUDE.md invariant is that such a number must equal a
+# MEASURED value in wallclock.csv for that chapter — never estimated. Only
+# prose/chapter.md is the single canonical prose file (rendered by the site and
+# cross-checked here against the ledger).
+PROSE_CLAIM_RE = re.compile(
+    r"(?P<val>\d+(?:\.\d+)?)\s*(?:min|mins|minute|minutes)\b\s*"
+    r"\(measured(?P<tail>[^)]*)\)",
+    re.IGNORECASE,
+)
+TIER_IN_TAIL_RE = re.compile(r"\b(cpu-laptop|t4|l40s|4090|mps)\b")
+
+
+def scan_prose(
+    chapters, measured: dict[str, dict[str, float]], root: Path
+) -> list[str]:
+    """Every '(measured)' wall-clock number in a chapter's finished prose must
+    match a MEASURED wallclock.csv value for that chapter (root CLAUDE.md)."""
+    failures: list[str] = []
+    for chapter in chapters:
+        prose = chapter.directory / "prose" / "chapter.md"
+        if not prose.is_file():
+            continue  # no finished prose to check
+        text = prose.read_text(encoding="utf-8")
+        rows = measured.get(chapter.id, {})
+        for m in PROSE_CLAIM_RE.finditer(text):
+            val = float(m.group("val"))
+            where = f"{prose.relative_to(root).as_posix()}"
+            tier_m = TIER_IN_TAIL_RE.search(m.group("tail") or "")
+            if tier_m:  # claim names a tier — check that exact tier
+                tier = tier_m.group(1)
+                have = rows.get(tier)
+                if have is None or abs(have - val) > 1e-9:
+                    failures.append(
+                        f"{where}: prose claims '{val:g} min (measured, {tier})' "
+                        f"but wallclock.csv has {chapter.id}/{tier} = "
+                        f"{have if have is not None else 'PENDING/absent'} "
+                        "(root CLAUDE.md: prose numbers must match the ledger)"
+                    )
+            elif not any(abs(v - val) <= 1e-9 for v in rows.values()):
+                failures.append(
+                    f"{where}: prose claims '{val:g} min (measured)' but no "
+                    f"MEASURED wallclock.csv row for {chapter.id} equals {val:g} "
+                    f"(measured tiers: {rows or 'none'})"
+                )
+    return failures
+
 
 def validate_measured_row(row: dict[str, str], where: str) -> list[str]:
     """Rule checks for a MEASURED row; returns failure messages."""
@@ -118,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
     failures: list[str] = []
     warnings: list[str] = []
     csv_ids: set[str] = set()
+    measured: dict[str, dict[str, float]] = {}  # chapter id -> {tier: minutes}
 
     with csv_path.open(newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
@@ -164,7 +212,12 @@ def main(argv: list[str] | None = None) -> int:
                     "(root CLAUDE.md: never estimated)"
                 )
         elif status == "MEASURED":
-            failures.extend(validate_measured_row(row, where))
+            row_failures = validate_measured_row(row, where)
+            failures.extend(row_failures)
+            if not row_failures:  # record clean measured values for the prose check
+                measured.setdefault(chapter_id, {})[row["tier"].strip()] = float(
+                    row["wallclock_min"].strip()
+                )
         else:
             failures.append(
                 f"{where}: status '{status}' is not PENDING or MEASURED"
@@ -177,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
                 f"{csv_path.name} — every chapter needs a wall-clock entry, "
                 "even PENDING (curriculum/CLAUDE.md definition of done)"
             )
+
+    # The other half of the invariant: prose numbers must trace to the ledger.
+    failures.extend(scan_prose(chapters, measured, root))
 
     for warning in warnings:
         print(warning, file=sys.stderr)
@@ -191,9 +247,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {failure}", file=sys.stderr)
         return 1
 
+    prose_count = sum(
+        1 for c in chapters if (c.directory / "prose" / "chapter.md").is_file()
+    )
     print(
         f"check_wallclock_provenance: {len(csv_ids)} chapter id(s) across "
-        f"{len(rows) - 1} row(s) valid — OK"
+        f"{len(rows) - 1} row(s) valid; {prose_count} finished-prose file(s) "
+        "cross-checked against the ledger — OK"
     )
     return 0
 

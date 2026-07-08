@@ -1,6 +1,6 @@
 id: ch0.1-sim-loop
 title: "The Simulation Loop"
-artifact: sim_loop.py       # target ~120 LOC, CPU-only
+artifact: sim_loop.py       # ~160 LOC, CPU-only (hook cap 450)
 task: empty-scene-pusher    # inline MJCF: plane + free box + one slide-actuated pusher (scene authorship is ch0.2)
 objectives:
   - Hold the mjModel/mjData distinction — the compiled world that never changes vs the state that changes every step
@@ -22,12 +22,12 @@ exercise_checks:
     ref_lateral_drift_abs: 0.01  # a correct fix reproduces sim_loop.py within these bands
     ref_box_final_pos_abs: 0.01
 
-notebook_hash: d5d07e0e1349379cfa78d085a75ff4153dc9a92fb0589330ba525a4dd6fe0622        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: ab1d177fb32dcc11218d65e233be1110351e797d3709dee2c7c62e58426040f1   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 0548d5a105de2aa70d656547ff0286e68d18c6b3b6b88efca780eef7766b6845        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 8ca5a8f586c58bc184fdc3a8ac74445659298e84e4d400565269ce5ab430b015   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 3c978285295525de8befe41d263f323f73d8cdbd0ea9c599b70376275d29831c
   scene: e1cc421e0b2b5902a08f0b946a28511e14e1d60c4f23635faa7c66738f22f9c2
   perturb: 072ff321d9fedad038ffed70d20e49e462d90390ff47ddfd391e73c82c25f063
-  loop: 8b073fb40f409956e5c28a01f1cc828f59e26239e733df5ad64889f7358ba0e8
+  loop: 3c36a8c2ae2471f7bbd6e8d1ef6a67aa9a3cf728e9f80cdb5425eb2880618615
   inspect: e6933c737f63d79bc3e3a41533f9b96d8d2ece2cc87dc88a455ecaa0a7f0c4c7

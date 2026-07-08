@@ -1,0 +1,279 @@
+/* ========================================================================
+   SacReachToy (.sr-*) — ch2.2 "SAC and the Off-Policy Bargain" concept-toy
+   (demo pusher_sac_reach).
+
+   THE OFF-POLICY BARGAIN as one figure: the SAC-trained pusher-reach arm driving
+   its fingertip onto a held-out target (a recorded rollout replay), and the
+   sample-efficiency headline — eval distance-to-target vs ENVIRONMENT STEPS for
+   SAC (off-policy, replay reuse) vs a compact on-policy PPO. SAC clears the solve
+   bar at 18k env steps; PPO never clears it inside its 200k budget → ~11x fewer
+   env steps. Pure 2D / inline SVG over REAL curves + a REAL recorded rollout from
+   sac.py + compare_ppo_sac.py (seed 0, cpu) — no MuJoCo-WASM, no model run, no
+   dynamic import; it hydrates only to enable the reach replay, so the
+   server-rendered view (full fingertip trail + end pose + both curves + the note)
+   is a complete JS-off experience.
+
+   COLOUR — a data/replay panel (not a fixed light lab instrument), so it drives
+   every colour from the FLIPPING design tokens (site/public/styles.css) and is
+   correct in light AND dark with no special-case. Mapped by MEANING:
+     · SAC, the off-policy hero          → --signal   (blue; the arm + its curve)
+     · PPO, the on-policy reference       → --alert     (red; the slower curve)
+     · the target + success ring          → --entity-target-ink  (green — the goal)
+     · the fingertip trail / graph paper  → neutral --ink-mute / --rule
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — the only animation is the reach replay (rAF over the recorded frames),
+   started by the user and skipped entirely under prefers-reduced-motion (the JS
+   logic jumps to the end pose); the sole CSS transitions are likewise gated.
+   ======================================================================== */
+.sr {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.sr-panel {
+  margin: 0;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.sr-head { margin-bottom: 0.6rem; }
+.sr-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.sr-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+}
+.sr-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- panel 1: the reaching arena ---------------------------------------- */
+.sr-arena-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+}
+@media (min-width: 34rem) {
+  .sr-arena-wrap { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+}
+
+.sr-arena { margin: 0; max-width: 22rem; }
+.sr-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border: 1px solid color-mix(in srgb, var(--signal, #1f56de) 40%, var(--paper-edge, #ded3ba));
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 120% at 50% 42%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--ink-mute, #6d6252) 6%),
+      var(--paper-2, #f0e9d9));
+}
+.sr-grid line { stroke: color-mix(in srgb, var(--rule, #e4dcc8) 70%, transparent); stroke-width: 1; }
+
+/* the arm's reachable workspace (radius = total reach) — a faint map ring */
+.sr-reach {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 30%, transparent);
+  stroke-width: 1; stroke-dasharray: 2 4;
+}
+.sr-base { fill: var(--ink-mute, #6d6252); }
+
+/* the target: success-tolerance ring + dot at the sampled goal (green) */
+.sr-tol {
+  fill: color-mix(in srgb, var(--entity-target-ink, #0c7d5f) 10%, transparent);
+  stroke: color-mix(in srgb, var(--entity-target-ink, #0c7d5f) 65%, transparent);
+  stroke-width: 1.2; stroke-dasharray: 3 3;
+}
+.sr-target-dot { fill: var(--entity-target-ink, #0c7d5f); }
+.sr-target-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; fill: var(--entity-target-ink, #0c7d5f); font-weight: 600;
+}
+
+/* the fingertip's travelled trail (neutral ink — a map, not the agent) */
+.sr-trail {
+  fill: none;
+  stroke: color-mix(in srgb, var(--signal, #1f56de) 55%, var(--ink-mute, #6d6252));
+  stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
+  opacity: 0.5;
+}
+
+/* the arm: base -> elbow -> fingertip (blue — the SAC policy embodied) */
+.sr-arm-ghost {
+  fill: none; stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 40%, transparent);
+  stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round;
+}
+.sr-arm {
+  fill: none; stroke: var(--signal, #1f56de);
+  stroke-width: 3.2; stroke-linejoin: round; stroke-linecap: round;
+}
+.sr-joint { fill: var(--signal, #1f56de); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.sr-ftip {
+  fill: var(--signal, #1f56de); stroke: var(--paper, #f7f3ea); stroke-width: 1.2;
+}
+.sr-ftip[data-reached="true"] { fill: var(--entity-target-ink, #0c7d5f); }
+
+.sr-arena-cap {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.5rem; margin-top: 0.3rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.sr-arena-name { font-size: 0.74rem; font-weight: 700; color: var(--signal, #1f56de); }
+.sr-arena-out { font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+.sr-ok  { color: var(--entity-target-ink, #0c7d5f); font-weight: 600; }
+.sr-bad { color: var(--alert, #c0362a); font-weight: 600; }
+
+/* the reach-panel side column: the live dist readout + the mechanism braces */
+.sr-side { display: grid; gap: 0.55rem; align-content: start; }
+.sr-readout {
+  display: grid; gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+}
+.sr-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; }
+.sr-k { color: var(--ink-mute, #6d6252); }
+.sr-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.sr-v.sr-good { color: var(--entity-target-ink, #0c7d5f); }
+.sr-meter { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent); overflow: hidden; }
+.sr-meter-fill { height: 100%; background: var(--signal, #1f56de); border-radius: 3px; }
+.sr-meter-fill[data-reached="true"] { background: var(--entity-target-ink, #0c7d5f); }
+
+.sr-braces { display: grid; gap: 0.3rem; }
+.sr-brace {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; line-height: 1.45; color: var(--ink-mute, #6d6252);
+  padding-left: 0.7rem; border-left: 2px solid color-mix(in srgb, var(--signal, #1f56de) 55%, transparent);
+}
+.sr-brace b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- panel 1 controls ---------------------------------------------------- */
+.sr-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.sr-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #4a4437);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sr-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.sr-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.sr-btn--primary {
+  background: var(--signal, #1f56de);
+  color: var(--signal-ink, #fff);
+  border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.4));
+}
+.sr-btn--primary:hover { color: var(--signal-ink, #fff); background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.sr-btn[disabled] { opacity: 0.5; cursor: default; }
+.sr-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252); margin-left: auto;
+}
+
+/* ---- panel 2: the bargain chart ------------------------------------------ */
+.sr-chart { display: block; width: 100%; height: auto; }
+.sr-axis { stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.4; }
+.sr-grid-h { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent); stroke-width: 1; }
+.sr-tick-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; fill: var(--ink-mute, #6d6252); }
+.sr-axis-cap { font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+
+/* the solve bar (0.05 m) + the random baseline — reference lines */
+.sr-solve-line { stroke: var(--entity-target-ink, #0c7d5f); stroke-width: 1.3; stroke-dasharray: 5 3; }
+.sr-solve-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; fill: var(--entity-target-ink, #0c7d5f); font-weight: 600; }
+.sr-base-line { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+.sr-base-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); }
+
+/* SAC solved marker (vertical guide at 18k env steps) */
+.sr-solve-mark { stroke: var(--signal, #1f56de); stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.8; }
+.sr-solve-mark-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; fill: var(--signal, #1f56de); font-weight: 700; }
+
+.sr-curve { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.sr-curve--sac { stroke: var(--signal, #1f56de); }
+.sr-curve--ppo { stroke: var(--alert, #c0362a); }
+.sr-dot--sac { fill: var(--signal, #1f56de); stroke: var(--paper-2, #f0e9d9); stroke-width: 1.4; }
+.sr-dot--ppo { fill: var(--alert, #c0362a); stroke: var(--paper-2, #f0e9d9); stroke-width: 1.4; }
+.sr-end-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.sr-end-lbl--sac { fill: var(--signal, #1f56de); }
+.sr-end-lbl--ppo { fill: var(--alert, #c0362a); }
+
+/* chart legend */
+.sr-legend {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.1rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+.sr-leg { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sr-leg::before { content: ""; width: 0.85rem; height: 0; border-top-width: 3px; border-top-style: solid; border-radius: 2px; }
+.sr-leg.sr-leg--sac::before { border-top-color: var(--signal, #1f56de); }
+.sr-leg.sr-leg--ppo::before { border-top-color: var(--alert, #c0362a); }
+.sr-leg b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* the bargain verdict badge */
+.sr-verdict {
+  display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 4px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.73rem; line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--signal, #1f56de) 42%, transparent);
+  background: color-mix(in srgb, var(--signal, #1f56de) 8%, transparent);
+  color: var(--ink-soft, #4a4437);
+}
+.sr-verdict-tag { font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; color: var(--signal, #1f56de); }
+.sr-verdict b { color: var(--ink, #23201b); }
+
+/* ---- panel 3: the honest note ------------------------------------------- */
+.sr-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.6; color: var(--ink-mute, #6d6252);
+}
+.sr-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.sr-note--caveat { margin-top: 0.5rem; font-size: 0.68rem; }
+
+/* visually-hidden live region for screen readers */
+.sr-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 34rem) {
+  .sr-control-note { display: none; }
+  .sr-title { font-size: 0.84rem; }
+}
+
+/* honour reduced-motion: kill the only CSS transitions (the replay itself is
+   already skipped in the component's rAF logic under reduced motion) */
+@media (prefers-reduced-motion: reduce) {
+  .sr-btn { transition: none; }
+}

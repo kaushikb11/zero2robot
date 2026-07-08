@@ -9,7 +9,7 @@
 # eval action); the sampling/log-std branch is training-only and not exported.
 demo: pusher_sac_reach
 scene: pusher_reach         # curriculum/common/envs/pusher_reach/pusher_reach.xml, verbatim
-policy: sac_actor.onnx      # PENDING export; contract v1: obs float32[1,8] -> action float32[1,2]
+policy: sac_actor.onnx      # exported; contract v1: obs float32[1,8] -> action float32[1,2]
 camera:
   lookat: [0.0, 0.0, 0.0]
   distance: 0.6

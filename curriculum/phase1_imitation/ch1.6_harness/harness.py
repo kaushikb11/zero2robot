@@ -28,9 +28,10 @@ are cheap on purpose: the STATISTICS are the subject, not the robot.
 Run it:      python curriculum/phase1_imitation/ch1.6_harness/harness.py --seed 0 --device cpu
 Break it:    python curriculum/phase1_imitation/ch1.6_harness/harness.py --seed 0 --device cpu --break too_few
 CI smoke:    python curriculum/phase1_imitation/ch1.6_harness/harness.py --smoke --seed 0 --device cpu --no-rerun
-             (the cited figures are [measured cpu]; on Apple Silicon pin --device cpu to reproduce)
 
-Everything here is torch + numpy + mujoco — no scipy hiding the CI math.
+The reference figures are seed 0 on CPU; on Apple Silicon pass --device cpu to
+reproduce them bitwise (mps is fast but not bit-reproducible). Everything here is
+torch + numpy + mujoco — no scipy hiding the CI math.
 """
 
 # --- region: setup ---
@@ -64,7 +65,7 @@ parser.add_argument("--seed", type=int, default=0, help="seeds demos, both train
 parser.add_argument("--num_demos", type=int, default=120)       # strong policy's demos; T4/cpu: 120 | smoke: 6
 parser.add_argument("--num_demos_weak", type=int, default=40)   # weak policy trains on the first this-many demos
 parser.add_argument("--hidden_dim", type=int, default=192)
-parser.add_argument("--epochs", type=int, default=300)          # cpu: ~2 min | smoke: 3
+parser.add_argument("--epochs", type=int, default=300)          # cpu: ~0.6 min whole run | smoke: 3
 parser.add_argument("--eval_episodes", type=int, default=20,    # per suite; 20 = the noisy number the arc reported
                     help="episodes PER suite; the small-N estimate uses one suite of this size")
 parser.add_argument("--n_seeds", type=int, default=10,          # independent suites; pooled N = n_seeds * eval_episodes
@@ -301,11 +302,21 @@ print(f"\n[1] strong policy, {args.n_seeds} suites of {n_small}: per-suite succe
       f"ranged {suite_rates.min():.2f}..{suite_rates.max():.2f} "
       f"(std {suite_rates.std():.3f}) — that spread is what one number hides")
 
-# (2) + (3) SINGLE NUMBERS LIE. The small-N estimate is suite 0 (N=eval_episodes);
-# the large-N estimate pools every suite (N=n_pooled). Same rollouts, nested.
+# (2) CONFIDENCE INTERVALS. The pooled strong estimate two independent ways: the
+# analytic Wilson interval and a seeded percentile bootstrap of the same outcomes.
+# They should land on top of each other — agreement is the proof the band is not an
+# artifact of either derivation, not a coincidence.
+ks_pool, n_pool = int(strong_out.sum()), n_pooled
+boot = bootstrap_ci(strong_out.reshape(-1).astype(np.float64), rng)
+wl, wh = wilson_ci(ks_pool, n_pool)
+print(f"\n[2] strong pooled {ks_pool}/{n_pool} = {ks_pool / n_pool:.3f}: "
+      f"Wilson [{wl:.3f}, {wh:.3f}]  bootstrap [{boot[0]:.3f}, {boot[1]:.3f}] "
+      f"— two roads, one band")
+
+# (3) SINGLE NUMBERS LIE. The small-N estimate is suite 0 (N=eval_episodes); the
+# large-N estimate pools every suite (N=n_pooled). Same rollouts, nested.
 ks_small, n_small = int(strong_out[0].sum()), args.eval_episodes
 kw_small = int(weak_out[0].sum())
-ks_pool, n_pool = int(strong_out.sum()), n_pooled
 kw_pool = int(weak_out.sum())
 small_diff = diff_ci(ks_small, n_small, kw_small, n_small)
 pool_diff = diff_ci(ks_pool, n_pool, kw_pool, n_pool)
@@ -320,9 +331,6 @@ print(f"    N={n_pool:<4d} strong {ks_pool/n_pool:.2f} {wilson_ci(ks_pool,n_pool
       f"weak {kw_pool/n_pool:.2f} {wilson_ci(kw_pool,n_pool)}")
 print(f"           diff CI {pool_diff[0]:+.2f}..{pool_diff[1]:+.2f}  "
       f"-> {'ranking SIGNIFICANT' if pool_sig else 'NOT significant (CIs overlap 0)'}")
-
-# Wilson vs bootstrap agree on the pooled strong estimate (two roads, one CI).
-boot = bootstrap_ci(strong_out.reshape(-1).astype(np.float64), rng)
 
 # (4) HELD-OUT. Same policy, a start region it never trained on. The gap is the
 # generalization story — with its own CI, because it is a success rate too.

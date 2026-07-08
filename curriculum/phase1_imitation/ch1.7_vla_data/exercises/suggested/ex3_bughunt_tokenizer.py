@@ -11,6 +11,11 @@ the rest. Get the wrapping wrong and every downstream shape still looks fine —
 arrays are the right length — but the model sees a sentence that starts in the wrong
 place, and (worse) a bag-of-words built from it silently miscounts.
 
+Before you read on, look only at `encode` and write one sentence: the arrays are
+the right length and every shape downstream still fits — so what does a
+bag-of-words built from this output silently miscount, and why will no shape
+check flag it?
+
 THE BUG. `encode` below FORGETS to prepend the BOS token: it returns
 [id(w0), ..., EOS, PAD, ...]. It still returns length MAX_TOKENS, still runs, still
 tokenizes OOV words to UNK. Find it and fix it so the check passes (token[0] must be
@@ -35,7 +40,7 @@ def encode(text: str) -> np.ndarray:
     BUG: the BOS token is never prepended, so the sentence starts at its first word
     and every id is shifted one slot to the left. At t=0 the array must hold BOS.
     """
-    ids = [STOI.get(w, STOI["<unk>"]) for w in text.split()]   # <-- missing the leading BOS
+    ids = [STOI.get(w, STOI["<unk>"]) for w in text.split()]
     ids.append(STOI["<eos>"])
     ids = ids[:MAX_TOKENS] + [STOI["<pad>"]] * (MAX_TOKENS - len(ids))
     return np.asarray(ids[:MAX_TOKENS], dtype=np.int64)

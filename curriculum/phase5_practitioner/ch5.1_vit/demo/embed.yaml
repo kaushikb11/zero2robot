@@ -1,0 +1,56 @@
+# Demo embed stub — ch5.1 "vit_attention_viewer".
+# Playground integration point: playground/ owns the site components; this file declares
+# WHAT the embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json
+# from vit.py; the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# CONTRACT NOTE (author + playground must read): this chapter trains NO policy and exports
+# NO onnx. There is NOTHING to run in MuJoCo-WASM — the artifact produces a static
+# representation + attention maps. So this embed is a pure DATA-VIEWER over demo/vizdata.json
+# (frames + precomputed CLS attention-rollout grids). It needs neither tensor contract v1 nor
+# v2; it is the cheapest embed tier: no sim loop, no inference, no WASM. UNBLOCKED as soon as
+# the site can read the JSON and draw an overlay.
+#
+# The HERO is the attention-map viewer: hover a frame and see the CLS-token attention-rollout
+# overlaid on the 8x8 patch grid — concentrated on the block for the TRAINED ViT, washed out
+# uniformly for a RANDOM-INIT ViT of the same shape. A toggle flips trained <-> random.
+demo: vit_attention_viewer
+vizdata: vizdata.json          # emitted by vit.py (seed 0, default config); schema below
+panels:
+  - id: attention_viewer
+    kind: canvas-overlay        # draw the thumbnail, overlay a heatmap; no MuJoCo/WASM
+    title: "Where does the CLS token look?"
+    shows: >
+      For each of a few held-out frames: the 32x32 camera thumbnail (frames[i].image, scaled
+      up) with the 8x8 CLS attention-rollout (frames[i].attn_trained) overlaid as a heatmap,
+      one cell per patch. On hover, highlight the patch under the cursor and its attention
+      weight. A TRAINED/RANDOM toggle swaps attn_trained <-> attn_random: the trained map
+      concentrates (~10-16x over uniform) on the patches that contain the block; the random
+      map is flat (~1.1x). The one-line caption to feel: "a ViT is a bag of patches with
+      position tags — training is what teaches its attention to look at the object."
+    interactions:
+      - "hover a patch -> show its (row, col) and attention weight"
+      - "toggle trained/random -> same frame, two attention maps"
+      - "step through frames[] (4 frames spanning quadrants)"
+  - id: bag_of_patches_note
+    kind: static-figure         # optional companion; author renders from reference_run
+    title: "The bug you can't see in the accuracy"
+    shows: >
+      Two numbers from meta.yaml reference_run: clean probe (0.891) vs --break
+      patch_interleave probe (0.919). Same accuracy — because a coarse scene fact is a
+      permutation-invariant bag-of-patches property, so the classic patchify RESHAPE bug is
+      SILENT to the probe. Pair with a caption: "the patch bug only shows in the attention
+      map, never in the metric." Author: static, no live compute.
+schema:                          # demo/vizdata.json, emitted by vit.py's report region
+  grid: 8                        # patches per side (8x8 = 64 image tokens)
+  patch: 8                       # pixels per patch side
+  img_hw: 64                     # full frame size the ViT saw
+  thumb_hw: 32                   # frames[].image is emitted at 32x32 (every 2nd pixel) to bound JSON size
+  quadrants: ["NE", "NW", "SW", "SE"]
+  probe_acc_trained: "float — the trained ViT's linear-probe accuracy (headline)"
+  probe_acc_random: "float — the random-init ViT's probe accuracy (the baseline)"
+  frames: "list of {quadrant:int, image:32x32x3 uint8, attn_trained:8x8 float[0,1], attn_random:8x8 float[0,1]}"
+notes: >
+  Recommendation: ship the attention_viewer from vizdata.json (unblocked, no WASM, no policy)
+  and render the bag_of_patches_note as a static figure from meta.yaml. The committed
+  vizdata.json is the seed-0 reference; regenerate it if the artifact's viz emit changes.
+  There is no rollout in this chapter by design — do NOT wait on any sampler/contract runtime.

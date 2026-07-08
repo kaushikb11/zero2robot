@@ -11,6 +11,10 @@ The contract: reduce the per-dim squared error to ONE number per example (the ME
 over that example's VALID dims), THEN average over examples. A 2-dim example and a
 6-dim example each contribute exactly one equally-weighted term.
 
+Before you read why, write one sentence: with `.sum() / mask.sum()`, does a
+6-dim ALOHA frame push harder or softer on the gradient than a 2-dim PushT
+frame — and which task does that starve to 0.0?
+
 THE BUG. `masked_flow_loss` below SUMS the masked error over the whole batch and
 divides by the total number of valid dims — so an example with more valid dims pulls
 harder. Find it and fix it to the per-example average (the check pins a fixture where
@@ -36,4 +40,4 @@ def masked_flow_loss(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tenso
     then take the mean over examples.
     """
     se = (pred - target) ** 2
-    return (se * mask).sum() / mask.sum()   # <-- per-DIM weighting, not per-EXAMPLE
+    return (se * mask).sum() / mask.sum()

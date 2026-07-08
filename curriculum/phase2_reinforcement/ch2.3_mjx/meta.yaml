@@ -7,6 +7,8 @@ artifact: ppo_mjx.py       # 415 LOC (measured); target ~350, hard cap 450. Over
 task: cartpole             # curriculum/common/envs/cartpole/cartpole.xml, loaded into MJX (mjx.put_model)
 framework: jax             # THE curriculum's one deliberate JAX excursion (infra/decisions/015). Pure
                            # jax/flax/optax + mujoco.mjx; NO torch. The other ~33 chapters stay torch.
+allow_mjx: true            # grants jax/flax/optax past the forbidden-imports gate (decision 015; THIS
+                           # chapter only). Without it, check_forbidden_imports blocks them everywhere.
 dataset:
   reference: null          # RL generates its own data by acting; no demo dataset
   learner_path: false
@@ -29,12 +31,12 @@ scale_lab_ref: >
   PENDING a GPU runner (infra/decisions/014 Modal L40S).
 
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR (read-the-real-thing skill pins the
-# real upstream commit; do NOT invent a sha). Candidate anchors, all jax:
-#   - Brax PPO (google/brax, brax/training/agents/ppo) — the canonical parallel-env PPO
-#   - PureJaxRL (luchris429/purejaxrl) — single-file jitted PPO, the closest match to this file's shape
-#   - MJX itself (google-deepmind/mujoco, mjx/) — mjx.step / mjx.make_data, the sim this chapter vmaps
-# The point of the segment: this file IS the from-scratch version; the learner graduates to Brax/PureJaxRL.
+# RTRT prose is written (prose "Read the real thing"): anchors PureJaxRL
+# (luchris429/purejaxrl — closest to this file's single jitted-step shape), Brax PPO
+# (google/brax, brax/training/agents/ppo), and MJX (google-deepmind/mujoco, mjx/).
+# STILL PENDING: the read-the-real-thing skill pins the exact upstream commit — do
+# NOT invent a sha. The point: this file IS the from-scratch version; the learner
+# graduates to Brax/PureJaxRL.
 
 demo: mjx_parallel_training   # live parallel-training viz: many envs training at once + the throughput/return curves
 
@@ -48,7 +50,7 @@ reference_run:
     config: "num_envs 64, num_steps 128, total_steps 300000 => 36 gradient updates"
     eval_return_seed0: 407.2     # cap 500; random baseline ~10-30
     eval_return_seed1: 499.7     # seed band: both seeds clearly solve (min 407 over seeds 0-1)
-    wallclock_min_cpu_laptop: 0.51
+    wallclock_min_cpu_laptop: 0.49   # canonical: curriculum/common/wallclock.csv (ch2.3-mjx, cpu-laptop, 2026-07-06)
   wall_clock_cliff:              # env-steps/sec from --sweep on cpu-jax; TIMING (not bitwise), representative
     note: "throughput CLIMBS with parallel envs then PLATEAUS/REVERSES on CPU (~256 envs); a GPU keeps climbing to 4096"
     num_envs_16: 50154
@@ -75,3 +77,18 @@ exercise_checks:
 # gates on drift). Omitted until this chapter is rendered — the site build adds them.
 # notebook_hash / notebook_file_hash: added by the notebook-tier-test skill when the
 # Colab variant is generated. Omitted until then.
+
+notebook_hash: ec2828358bc2b333b66392ac25bd7cea5e37f76abaeb7659a33c8d9074d3d496        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 33889bd99457d4e9ec24062447bc999f96e4f8737215c8d7bb55009b363abff4   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: 6f31cbe1e07975a79cfb870e46945a8a0f1af380b85cdbcfb8897f80e31db5b4
+  primer: f6b3a5c769847b66cbe410cb6590c0c7548fa50ce37356198b16748bb46cc103
+  env: 79b470b1606440d01e6b6881c752fe05b700a52ba58e2c7be704893a1ddc0f44
+  model: 6876eca118d4ea2aacbde4b13d4582135b2658e09668b3c86f82b13f7d252038
+  rollout: 37f024170b39ae4b51212a23cc588f75d3387973af0c47e6c6b7c873e69e8056
+  update: 58356b1b55a1a01f777548cd8aaa5e603c3705490fcf3ca9068931ea1ff97c2d
+  build: 60f66a116bf2a45c863b06422757994e89261647f87ba0c43f8fbad407628804
+  sweep: fcc6584df294379774b3b40a405d8a53c68264132ca9ecd92cbe07c60030d8d0
+  eval: a3e9ba3c13308ec37b6e890abacf86636df5d90325afc15171f64190452f506a
+  train: b6b405488fefbcb05f3c94658c5198c53e15636889572f2d34c260e3e368940c

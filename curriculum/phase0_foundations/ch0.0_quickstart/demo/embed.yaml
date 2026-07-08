@@ -1,0 +1,40 @@
+# Demo embed stub — ch0.0 "quickstart_first_win".
+# The hero moment of the whole course: the policy the learner just trained,
+# solving the task. Unlike ch1.1's LIVE ONNX embed (visitor perturbs the block),
+# this one REPLAYS a recorded, real rollout from quickstart.py --seed 0 — the
+# lightest possible "it works", shown before any mechanics. The TSX is authored
+# in site/ against demo/vizdata.json; this file declares WHAT the toy shows.
+demo: quickstart_first_win
+kind: recorded-replay          # not live inference — a transcribed real rollout (vizdata.json)
+scene: pusht                   # curriculum/common/envs/pusht/pusht.xml geometry (mirrored into vizdata.scene)
+data: vizdata.json             # provenance + scene geometry + the 115-frame rollout
+camera:
+  lookat: [0.0, 0.0, 0.02]
+  distance: 1.1
+  azimuth: 90
+  elevation: -75               # near top-down: the T walking onto the target reads best straight down
+playback:
+  autoplay: true
+  loop: true
+  fps: 10                      # matches PushTEnv.CONTROL_HZ; one frame per control step
+hud:
+  - pos_err                    # distance to target — watch it fall from 0.20 m to under the 0.03 m ring
+  - success                    # latches when the block holds inside tolerance
+overlay:
+  target_ring: 0.03            # draw the POS_TOL success ring at the origin
+  headline: "trained policy 12/25 · random 0/25"   # the win vs the floor, from vizdata.headline
+# TOY SPEC (behavior the site TSX implements):
+#   1. Draw the plane, the green target T at the origin with a success ring
+#      (radius pos_tol), and the blue T + red pusher at rollout.frames[0].
+#   2. Play the 115-frame rollout at 10 fps, looping: the pusher gets behind the
+#      block and walks it onto the target; pos_err (HUD) falls monotonically-ish
+#      to under 0.03; success flips true and the block holds.
+#   3. Show the headline "trained 48% vs random 0%" so the win is legible without
+#      reading prose. No interaction required — this is a look-what-you-made beat,
+#      not a sandbox (the live, perturbable version is ch1.1's job).
+notes: >
+  This is Rec 3 of the structure review made concrete: a fast, motivating win
+  BEFORE Phase 0's mechanics. The rollout is real and honest — the first of the
+  seed-0 policy's 12/25 held-out successes, block driven from 0.20 m to 0.028 m.
+  Graceful-degrade ladder (playground/CLAUDE.md): animated replay -> static
+  first/last frame + the headline numbers; never a blank screen.

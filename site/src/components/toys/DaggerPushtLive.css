@@ -1,0 +1,133 @@
+/* ch4.2 "Corrections (DAgger)" concept-toy — the LIVE recovery PushT toy.
+ *
+ * Co-located CSS for DaggerPushtLive.tsx. Namespaced `dg-*` so it never collides
+ * with the global `ct-*`/`bk-*`/`fl-*`/`df-*` classes. It only *reads* the site's
+ * design tokens (each var carries a light fallback so the toy renders if mounted
+ * outside the page shell). The stage is a hardcoded-LIGHT lab instrument in both
+ * themes — public/styles.css pins .ct-figure/.fl-figure tokens light under dark
+ * theme, and this mirrors those, so the JS-painted canvas + HUD read on warm paper.
+ *
+ * Colour discipline (per the frozen concept-toy contract):
+ *   - --entity-* → the pusher / T-block / target (the physical entities)
+ *   - ONE --signal blue → the live drag handle (the one interaction)
+ *   - --alert red → the covariate-shift (far-start) readout only
+ *   - --entity-target green → the pos_err reached-target readout
+ *   - neutral --ink → the narrow BC-practice region (a map, not an entity)
+ */
+
+/* ch4.2 hero stacks the recorded recovery-curve panel above this live PushT panel */
+.dg-stack { display: grid; gap: 1.6rem; }
+
+.dg { display: grid; gap: 0; }
+
+/* square top-down stage — poster and canvas share the exact box (no reflow on boot) */
+.dg-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  max-width: 34rem;
+  border: 1px solid var(--paper-edge, #dcd0b6);
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fbf9f3, #f4efe3);
+  touch-action: none;
+}
+.dg-figure:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+.dg-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+.dg-canvas[hidden] { display: none; }
+.dg-canvas[data-dragging="true"] { cursor: grabbing; }
+
+.dg-poster { position: absolute; inset: 0; }
+.dg-poster[hidden] { display: none; }
+.dg-poster-svg { display: block; width: 100%; height: 100%; }
+
+/* poster vector styling (static) */
+.dg-arena { fill: #fbf9f3; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.5; }
+.dg-grid line { stroke: rgba(200, 188, 158, 0.5); stroke-width: 1; }
+.dg-tee { fill: var(--entity-block, #a5257d); }
+.dg-target { fill: none; stroke: var(--entity-target, #0c7d5f); stroke-width: 2; stroke-dasharray: 5 4; }
+.dg-practice { fill: var(--ink-mute, #6d6252); opacity: 0.1; }
+.dg-practice-ring { fill: none; stroke: var(--ink-mute, #6d6252); stroke-width: 1.4; stroke-dasharray: 6 4; opacity: 0.72; }
+.dg-practice-label,
+.dg-target-label,
+.dg-poster-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.dg-practice-label { font-size: 11px; }
+.dg-target-label { font-size: 12px; }
+.dg-poster-hint { font-size: 13px; letter-spacing: 0.03em; fill: var(--signal, #1f56de); text-anchor: middle; }
+.dg-pusher-ring { fill: none; stroke: var(--entity-pusher, #b0560f); stroke-width: 1.5; opacity: 0.5; }
+.dg-pusher-core { fill: var(--entity-pusher, #b0560f); }
+.dg-halo { fill: none; stroke: var(--signal, #1f56de); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
+.dg-drag-label { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; fill: var(--signal, #1f56de); }
+
+/* HUD — the live instrument: start distance + pos_err ticking down */
+.dg-hud {
+  position: absolute; top: 0.7rem; left: 0.7rem;
+  width: min(17rem, 62%);
+  display: grid; gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, #fdfbf6 86%, transparent);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  backdrop-filter: blur(3px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.dg-hud-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: baseline; }
+.dg-k { color: var(--ink-mute, #6d6252); letter-spacing: 0.02em; }
+.dg-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.dg-v.dg-ok { color: var(--entity-target, #0c7d5f); }
+.dg-v.dg-bad { color: var(--alert, #c0362a); }
+
+/* the start-distance meter — fills as the block is dragged past the BC region */
+.dg-meter { height: 5px; border-radius: 100px; background: rgba(200, 188, 158, 0.4); overflow: hidden; }
+.dg-meter-fill { height: 100%; background: var(--entity-target, #0c7d5f); transition: width 0.12s linear; }
+.dg-meter-fill[data-far="true"] { background: var(--alert, #c0362a); }
+
+/* boot / status line */
+.dg-status {
+  position: absolute; left: 0.7rem; bottom: 0.7rem; right: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  pointer-events: none;
+}
+.dg-status[data-failed="true"] { color: var(--alert, #c0362a); }
+
+/* controls — JS-only. */
+.dg-controls {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  padding: 0.85rem 0.1rem 0.1rem;
+}
+.dg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; letter-spacing: 0.01em;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-soft, #473f34);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dg-btn:hover { border-color: var(--signal, #1f56de); color: var(--ink, #23201b); }
+.dg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.dg-btn--primary {
+  background: var(--signal, #1f56de); color: var(--signal-ink, #fff);
+  border-color: var(--signal, #1f56de);
+  box-shadow: 0 1px 4px -1px var(--signal-line, rgba(31, 86, 222, 0.4));
+}
+.dg-btn--primary:hover { color: #fff; background: color-mix(in srgb, var(--signal, #1f56de) 90%, #000); }
+.dg-btn:disabled { opacity: 0.5; cursor: default; }
+.dg-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252); margin-left: auto;
+}
+@media (max-width: 34rem) {
+  .dg-hud { font-size: 0.62rem; padding: 0.4rem 0.5rem; top: 0.5rem; left: 0.5rem; width: min(15rem, 66%); }
+  .dg-control-note { display: none; }
+}

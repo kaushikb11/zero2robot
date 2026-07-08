@@ -1,0 +1,59 @@
+# Demo embed stub — ch5.7 "quantization_dial".
+# Playground integration point: playground/ owns the site components; this file declares WHAT
+# the embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json from
+# quantize.py; the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# CONTRACT NOTE (author + playground must read): this chapter exports NO onnx and runs NO
+# policy in the browser. The artifact produces a static measurement (the deployment triangle +
+# the weight round-trip errors). So this embed is a pure DATA-VIEWER over demo/vizdata.json
+# (three configs, each with size_kb / action_mse / latency_ms / success + Wilson CI). It needs
+# neither tensor contract v1 nor v2; it is the cheapest embed tier: no sim loop, no inference,
+# no WASM. UNBLOCKED as soon as the site can read the JSON and draw three bars.
+#
+# The HERO is the quantization dial: a slider with three detents — FP32 -> per-tensor INT8 ->
+# per-channel INT8 — driving three live bars. As you slide right: the SIZE bar drops ~4x and
+# stays down; the ACTION-ERROR bar spikes at per-tensor and then RECOVERS most of the way at
+# per-channel (the whole lesson, in one motion); the LATENCY bar goes UP, not down (the honest
+# surprise: naive int8 is slower on this CPU).
+demo: quantization_dial
+vizdata: vizdata.json          # emitted by quantize.py (seed 0, default config); schema below
+panels:
+  - id: quantization_dial
+    kind: slider-bars           # a 3-detent slider driving three bar meters; no MuJoCo/WASM
+    title: "Slide from FP32 to per-channel INT8"
+    shows: >
+      Three bars — Size (KB), Action error vs FP32 (MSE), Latency (ms) — driven by a 3-detent
+      slider over configs[] (FP32, per-tensor INT8, per-channel INT8). Sliding right: Size drops
+      ~4x and holds; Action error is ~0 at FP32, SPIKES at per-tensor INT8, then RECOVERS most
+      of the way at per-channel INT8; Latency RISES (int8 is not faster on this CPU). Annotate
+      the action-error bar with each config's success-rate Wilson interval [ci_lo, ci_hi] and a
+      note that the intervals overlap FP32 — the size/accuracy trade is real, the task-success
+      difference is inside the noise. The one-line caption to feel: "the per-channel scale
+      recovers the accuracy the per-tensor scale threw away — the granularity of the scale IS the
+      idea."
+    interactions:
+      - "slide FP32 -> per-tensor -> per-channel -> watch all three bars move together"
+      - "hover a bar -> show the raw number (KB / MSE / ms) and, for accuracy, the Wilson CI"
+  - id: scale_is_the_idea_note
+    kind: static-figure         # optional companion; author renders from vizdata.json
+    title: "Rounding vs scaling"
+    shows: >
+      Two numbers from vizdata.json: naive_round_zero_frac (~0.95 — rounding weights with NO
+      scale collapses 95% of them to zero) beside weight_roundtrip_err.per_tensor vs
+      .per_channel (a per-row scale roughly halves the round-trip error). Caption: "a scale
+      turns a dead cast into a working policy; a per-row scale makes it accurate."
+schema:                          # demo/vizdata.json, emitted by quantize.py's report region
+  seed: 0
+  break: "none | bad_calib — which run produced this vizdata"
+  calib_rule: "percentile | minmax — the activation-calibration rule used"
+  naive_round_zero_frac: "float — fraction of weights that collapse to 0 under naive no-scale rounding"
+  weight_roundtrip_err: "{per_tensor: float, per_channel: float} — mean |W - dequant(quant(W))|"
+  full_int8: "{action_mse: float, success_rate: float} — the all-integer path (per-channel weights + calibrated activations)"
+  configs: >
+    list of 3 {label:str, size_kb:float, action_mse:float, latency_ms:float, success:int, n:int,
+    success_rate:float, ci_lo:float, ci_hi:float} — FP32, per-tensor INT8, per-channel INT8
+notes: >
+  Ship the quantization_dial from vizdata.json (unblocked, no WASM, no policy) and render the
+  scale_is_the_idea_note as a static figure. The committed vizdata.json is the seed-0 reference;
+  regenerate it if the artifact's viz emit changes. There is no browser inference in this chapter
+  by design — do NOT wait on any tensor-contract runtime.

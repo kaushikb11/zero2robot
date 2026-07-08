@@ -1,0 +1,219 @@
+/* ch3.5 "Contact" concept-toy — the PENALTY-vs-LCP honesty toy.
+ *
+ * Co-located CSS for ContactToy.tsx (imported at the top of that file). Namespaced
+ * `ck-*` so it never collides with the global `bk-*`/`ct-*` or the sibling toys'
+ * `fr-*`/`mx-*`/etc. classes. Like the other 2D data toys this is PURE SVG and drives
+ * every colour from the site's flipping design tokens — so it is genuinely theme-
+ * aware in BOTH light and dark, with no hardcoded surface colours. Every var carries
+ * a light fallback so the toy still renders if mounted outside the shell.
+ *
+ * Colour scheme (contact.py COLORS / embed.yaml):
+ *   - --alert red         → PENALTY (it sinks, rings, and detonates past dt_crit)
+ *   - --entity-target grn → LCP (it holds the ball on the table)
+ *   - --signal blue       → the ONE live handle (the sliders + focus)
+ *   - neutral ink         → the table, axes, grids (the frame, not the lesson)
+ */
+
+.ck {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* recorded-not-live honesty banner */
+.ck-recorded {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  color: var(--ink-mute, #6d6252);
+  padding: 0.32rem 0.55rem;
+  border: 1px dashed var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper-2, #f0e9d9) 60%, transparent);
+}
+.ck-recorded b { color: var(--ink, #23201b); }
+
+/* --- panels -------------------------------------------------------------- */
+.ck-panel {
+  margin: 0;
+  padding: 0.55rem 0.65rem 0.5rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ck-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+  margin-bottom: 0.35rem;
+}
+.ck-cap b { color: var(--ink, #23201b); }
+.ck-e-pen { color: var(--alert, #c0362a); font-weight: 700; }
+.ck-e-lcp { color: var(--entity-target, #0c7d5f); font-weight: 700; }
+
+/* shared entity strokes/fills for the two methods */
+.ck-penalty-stroke { stroke: var(--alert, #c0362a); }
+.ck-penalty-fill { fill: var(--alert, #c0362a); }
+.ck-lcp-stroke { stroke: var(--entity-target, #0c7d5f); }
+.ck-lcp-fill { fill: var(--entity-target, #0c7d5f); }
+
+/* --- Panel 1: the drop lanes --------------------------------------------- */
+.ck-drop-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--paper, #f7f3ea) 96%, var(--signal, #1f56de) 4%),
+      var(--paper, #f7f3ea));
+  border-radius: 3px;
+}
+.ck-divider { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.ck-fall { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 26%, transparent); stroke-width: 1; stroke-dasharray: 2 4; }
+.ck-penalty .ck-ball { fill: color-mix(in srgb, var(--alert, #c0362a) 82%, transparent); stroke: var(--alert, #c0362a); stroke-width: 1.5; }
+.ck-lcp .ck-ball { fill: color-mix(in srgb, var(--entity-target, #0c7d5f) 82%, transparent); stroke: var(--entity-target, #0c7d5f); stroke-width: 1.5; }
+.ck-lane-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ck-penalty .ck-lane-lab { fill: var(--alert, #c0362a); }
+.ck-lcp .ck-lane-lab { fill: var(--entity-target, #0c7d5f); }
+.ck-pen-tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px; font-weight: 700; fill: var(--alert, #c0362a);
+}
+.ck-lcp .ck-pen-tag { fill: var(--entity-target, #0c7d5f); }
+/* the table: translucent so a sunk ball shows through as "inside the table" */
+.ck-table { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 30%, var(--paper-2, #f0e9d9)); opacity: 0.9; }
+.ck-surface { stroke: var(--ink, #23201b); stroke-width: 2; }
+.ck-surface-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em;
+}
+
+/* --- shared: axis / grid / label typography ------------------------------ */
+.ck-ax { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 40%, transparent); stroke-width: 1; }
+.ck-pen-svg, .ck-cliff-svg { display: block; width: 100%; height: auto; }
+
+/* --- Panel 2: penetration chart ------------------------------------------ */
+.ck-pen-surface { stroke: var(--ink, #23201b); stroke-width: 1.4; }
+.ck-pen-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 20%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.ck-pen-ghost { fill: none; stroke-width: 1.4; opacity: 0.28; stroke-linejoin: round; }
+.ck-pen-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.ck-pen-head { stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.ck-pen-surflab, .ck-pen-ylab, .ck-pen-ytitle, .ck-pen-xtitle, .ck-pen-surfnote {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.ck-pen-surflab, .ck-pen-ylab { font-size: 10px; }
+.ck-pen-surfnote { font-size: 10px; }
+.ck-pen-ytitle, .ck-pen-xtitle { font-size: 10px; letter-spacing: 0.04em; }
+
+.ck-pen-read {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; font-variant-numeric: tabular-nums;
+}
+.ck-read.ck-e-pen { color: var(--alert, #c0362a); }
+.ck-read.ck-e-lcp { color: var(--entity-target, #0c7d5f); }
+
+/* --- Panel 3: the dt cliff ----------------------------------------------- */
+.ck-cliff-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 18%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.ck-cliff-ylab, .ck-cliff-ytitle, .ck-cliff-xlab, .ck-cliff-xtitle, .ck-cliff-lcplab, .ck-crit-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  fill: var(--ink-mute, #6d6252);
+}
+.ck-cliff-ylab { font-size: 10px; }
+.ck-cliff-ytitle, .ck-cliff-xtitle { font-size: 10px; letter-spacing: 0.04em; }
+.ck-cliff-xlab { font-size: 10px; }
+.ck-cliff-node.is-active .ck-cliff-xlab { fill: var(--signal, #1f56de); font-weight: 700; }
+
+/* dt_crit marker */
+.ck-crit-line { stroke: color-mix(in srgb, var(--ink, #23201b) 45%, transparent); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.ck-crit-lab { font-size: 10px; fill: var(--ink, #23201b); }
+
+/* lcp = flat, bounded (green) */
+.ck-cliff-lcp { stroke-width: 2.2; }
+.ck-cliff-lcplab { font-size: 10px; fill: var(--entity-target, #0c7d5f); }
+
+/* penalty = flat then detonates (red) */
+.ck-cliff-pen { fill: none; stroke-width: 2.4; stroke-linejoin: round; }
+.ck-cliff-node circle:not(.ck-cliff-hit) { fill: var(--alert, #c0362a); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.ck-cliff-node.is-stable circle:not(.ck-cliff-hit) { fill: color-mix(in srgb, var(--alert, #c0362a) 45%, var(--ink-mute, #6d6252)); }
+.ck-cliff-node.is-active circle:not(.ck-cliff-hit) { stroke: var(--signal, #1f56de); stroke-width: 2.5; }
+.ck-cliff-hit { fill: transparent; cursor: pointer; }
+.ck-cliff-drop { stroke: color-mix(in srgb, var(--signal, #1f56de) 55%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+
+.ck-cliff-read {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.9rem;
+  margin-top: 0.3rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-variant-numeric: tabular-nums;
+}
+.ck-cliff-dt { color: var(--ink, #23201b); }
+.ck-cliff-dt b { color: var(--signal, #1f56de); }
+.ck-cliff-state { font-weight: 600; }
+.ck-cliff-state.ck-e-pen { color: var(--alert, #c0362a); }
+.ck-cliff-state.ck-e-pen.is-blown {
+  padding: 0.02rem 0.4rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--alert, #c0362a) 14%, transparent);
+}
+.ck-cliff-state.ck-e-lcp { color: var(--entity-target, #0c7d5f); }
+
+/* --- controls (JS-only): scrubber + dt slider ---------------------------- */
+.ck-scrub-row, .ck-slider-row { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; margin-top: 0.45rem; }
+.ck-cliff-controls { display: grid; gap: 0.45rem; }
+.ck-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.ck-slider-label b { color: var(--signal, #1f56de); }
+.ck-scrub, .ck-slider {
+  flex: 1 1 180px; min-width: 140px;
+  accent-color: var(--signal, #1f56de); cursor: pointer;
+}
+.ck-scrub:focus-visible, .ck-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.ck-scrub-val, .ck-dt-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.76rem; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--signal, #1f56de); min-width: 4.5ch; text-align: right;
+}
+.ck-dt-val.ck-dt-blown { color: var(--alert, #c0362a); }
+
+.ck-btn-row { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.ck-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.38rem 0.8rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ck-btn:hover { border-color: var(--signal, #1f56de); }
+.ck-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ck-btn--primary { border-color: var(--signal, #1f56de); color: var(--signal, #1f56de); }
+.ck-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+}
+
+/* honest-limits note */
+.ck-limits {
+  margin: 0;
+  font-size: 0.72rem; line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+  padding: 0.4rem 0.55rem;
+  border-left: 2px solid var(--rule-strong, #c8bc9e);
+}
+.ck-limits b { color: var(--ink, #23201b); }
+
+/* honour reduced-motion: the drop replay stays on the settled frame (handled in
+   JS) and the only CSS transitions the toy uses are killed here. */
+@media (prefers-reduced-motion: reduce) {
+  .ck-btn { transition: none; }
+}

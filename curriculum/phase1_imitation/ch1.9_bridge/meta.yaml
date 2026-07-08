@@ -16,7 +16,7 @@ objectives:
   - Know the Hub publish path (push_to_hub for policy + dataset) and why it is HUMAN-GATED — offline/CI never needs a token, and the default run dry-runs it
 
 scale_lab: false
-# The map's ch1.9 row is T4 and calls for no distinct Scale Lab. This DRAFT ships a
+# The map's ch1.9 row is T4 and calls for no distinct Scale Lab. This chapter ships a
 # free-tier core: the default (50 demos, 150 epochs, dim 128) completes on cpu-laptop
 # in minutes and trains BOTH ACTs. The scale knobs (--num_demos, --epochs, --model_dim,
 # --chunk_size) are the on-ramp; the honest scaling story is that ACT wants more epochs/
@@ -26,19 +26,19 @@ scale_lab: false
 # have wallclock-bench MEASURE it — do not assert a scaling claim.
 
 # READ-THE-REAL-THING: the map pairs this chapter with LeRobot internals (the dataset
-# format + the policy registry). The rtrt: block is LEFT FOR THE AUTHOR to pin — I did
-# not have a verified offline commit sha and must never invent one. The real repo is
+# format + the policy registry). The rtrt: block is LEFT FOR THE AUTHOR to pin — no
+# verified offline commit sha was available, and one must never be invented. The real repo is
 # huggingface/lerobot (the pinned 0.4.4; the modules bridge.py imports are the exact
 # reading list). site RTRT.astro renders nothing until repo + commit both exist.
 read_the_real_thing: true
-# rtrt:
-#   repo: huggingface/lerobot            # author: confirm + pin the 0.4.4 release commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - lerobot/policies/act/modeling_act.py (ACT + the CVAE + the temporal ensembler) vs ch1.3's act.py, section by section
-#     - lerobot/policies/factory.py make_policy + dataset_to_policy_features: how a dataset's features become a policy's input/output PolicyFeatures (and where our environment_state re-type slots in)
-#     - lerobot/datasets/lerobot_dataset.py delta_timestamps + action_is_pad: the chunk bookkeeping we wrote by hand in ch1.3, now one declaration
-#     - lerobot/processor pipelines (NormalizerProcessorStep): why dataset stats travel with the data, and what breaks when they don't
+rtrt:
+  repo: huggingface/lerobot
+  commit: 8fff0fde7c79f23a93d845d1a50e985de01f8b8a   # tag v0.4.4 (matches the course-pinned lerobot); pinned 2026-07-07. NOTE: at v0.4.4 the package lives under src/lerobot/... — read the focus paths below with a src/ prefix.
+  focus:
+    - "lerobot/policies/act/modeling_act.py (ACT + the CVAE + the temporal ensembler) vs ch1.3's act.py, section by section"
+    - "lerobot/policies/factory.py make_policy + dataset_to_policy_features: how a dataset's features become a policy's input/output PolicyFeatures (and where our environment_state re-type slots in)"
+    - "lerobot/datasets/lerobot_dataset.py delta_timestamps + action_is_pad: the chunk bookkeeping we wrote by hand in ch1.3, now one declaration"
+    - "lerobot/processor pipelines (NormalizerProcessorStep): why dataset stats travel with the data, and what breaks when they don't"
 
 demo: bridge_comparison       # 2D panels (the 380-vs-20 code diff + the two-ACT CI overlap + the train_dist break); no MuJoCo/WASM needed
 
@@ -110,9 +110,11 @@ exercise_checks:
   ex4:                             # ex4_completion_chunk_timestamps.py (code-completion, fast)
     provenance: "self-contained; the completed delta_timestamps for a K-frame action chunk at fps Hz is [0, 1/fps, ..., (K-1)/fps] — the chunk bookkeeping ch1.3 wrote by hand"
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
-# on first render; do not hand-write them.
+# region_hashes: sha256 of each region body (infra/ci/lib/regions.py), recorded and
+# verified against the current bridge.py. check_prose_code_drift recomputes these on
+# render; any edit to a region body must re-record its hash.
+notebook_hash: bd1f0eb9065327709e3671e59f00d81b018673a34056d03b31f6183ebbd9faef        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 8097f9d1ea837da4760d19f53c0f2d27e584c26b3e985131d3eb15e291cf2f15   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 547ffbd2b54ce7432cddd59d1b7f81a4bd10d9895ef850d3772300a9528ad473
@@ -122,6 +124,3 @@ region_hashes:
   eval: 6c3355c37745c1e8a0668b27dc14115c6c7994ef044ec9ac512774db2b968d7f
   publish: ad8770542ef18cc6db0a070cb22548f9dc89dea2cb1db3b2d0aaf2444a2bf04d
   report: edcd77adae877562ddb488745ac3c0408a667de043666c3ee6dc58aee505ee9b
-
-notebook_hash: bd1f0eb9065327709e3671e59f00d81b018673a34056d03b31f6183ebbd9faef        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 8097f9d1ea837da4760d19f53c0f2d27e584c26b3e985131d3eb15e291cf2f15   # sha256 of the generated notebook bytes; mismatch => hand-edited

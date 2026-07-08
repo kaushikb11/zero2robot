@@ -19,9 +19,8 @@ and one sentence of mechanism in PREDICTION.
 
 Then run this file. It trains PPO on seeds 0, 1, 2 and sweeps each seed's policy.
 Read whether the SAME perturbation wins on every seed — that agreement is what
-makes "latency is the thing to fear here" a claim and not a coincidence. (Spoiler
-you should still predict against: balance is a stability problem, and stability
-problems die on delay.)
+makes "this one perturbation is the thing to fear here" a claim and not a
+coincidence.
 
 Estimated learner time: 25 minutes (three short PPO trains + sweeps).
 """
@@ -82,4 +81,7 @@ if __name__ == "__main__":
         print(f"seed {seed}: clean success {b:.2f}  worst perturbation = {w:<13s}  "
               f"success at max latency {l8:.2f}")
     print("\nDid the SAME perturbation win on all three seeds? If so, that is a real "
-          "property of the task, not a fluke — and the reason ch2.7 randomizes the gap.")
+          "property of the task, not a fluke — and the reason ch2.7 randomizes the gap. "
+          "If the worst perturbation surprised you, write one sentence on why *this "
+          "task's* dynamics can absorb the other two but not that one — balance is a "
+          "stability problem, and stability problems die on delay.")

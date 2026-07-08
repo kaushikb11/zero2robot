@@ -18,11 +18,11 @@ companion_tooling:
   - compare_ppo_sac.py
 scale_lab: false           # map lists ch2.2 tier T4; free-tier CPU config measured. A 4090 SL (bigger buffer/nets, PushT-dense) is a future add, not this draft.
 read_the_real_thing: true
-# read_the_real_thing block LEFT FOR THE AUTHOR. Anchor is CleanRL's single-file
-# sac_continuous_action.py (~280 LOC) — the reference the learner graduates to.
-# Do NOT invent a commit sha here; the read-the-real-thing skill pins the real
-# upstream commit.
-#   repo: vwxyz/cleanrl   # PLACEHOLDER — resolve the real org/commit via the skill
+rtrt:
+  repo: vwxyzjn/cleanrl
+  commit: c37a3ec4ef8d33ab7c8a69d4d2714e3817739365   # tag v1.0.0; pinned 2026-07-07 (API-verified)
+  focus:
+    - sac_continuous_action.py   # the single-file (~280 LOC) SAC this chapter mirrors — squashed-Gaussian + twin-Q + alpha-autotune
 demo: pusher_sac_reach     # hero: trained SAC arm reaches; visitor drags the target, the arm re-reaches
 
 # Reference metrics + seeded bands for the exercise checks (exercise-spec:
@@ -52,6 +52,9 @@ exercise_checks:
 # notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill when
 # the Colab variant is generated. Not gated by `make check`.
 
+notebook_hash: 7117292c948501f25b24e67bc5851c177d5c8134b1fed6a4f6dcc29680bf138a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 9b994b64012546c537ed1fa3cc8773dcf276a9db0a0e1c46130961cf5d062636   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
 region_hashes:
   setup: d91783a7e5a69fed1e5106f3047ce978332cad6f55613663a5e47995c3c0a62a
   env: 92dba03857c0b457d145d6e384412359f08c0a27918a3a95b99f653b7f907a1a
@@ -61,6 +64,3 @@ region_hashes:
   eval: 89f51273777765aec5bce64a8e952af57fad47bed60db6ff1d3092a3886a055d
   train: eb3266c57827bb7c7e4e5fb020e88300e8f5b6ff38703e93a43aa24bf4ac675d
   report: e2cc4242b5e907961ec2cc9383e8cd6852c086615faddda64a0936c90855b15e
-
-notebook_hash: 7117292c948501f25b24e67bc5851c177d5c8134b1fed6a4f6dcc29680bf138a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 9b994b64012546c537ed1fa3cc8773dcf276a9db0a0e1c46130961cf5d062636   # sha256 of the generated notebook bytes; mismatch => hand-edited

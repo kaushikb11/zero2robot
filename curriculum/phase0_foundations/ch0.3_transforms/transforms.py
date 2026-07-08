@@ -6,7 +6,7 @@ world. That bookkeeping is quaternions and rigid transforms, and it is where
 three bugs bite everyone — quaternion component order, composition order, and
 point-vs-frame direction. This file builds the toolkit FROM SCRATCH in numpy
 (quaternion multiply, quat<->matrix, rotate-a-vector, and a rigid Frame with
-compose/inverse/transform-point) and then, on every op, asserts it agrees with
+compose/inverse/transform-point) and then, on every op, checks it agrees with
 MuJoCo's own mju_* functions to machine precision. The lesson: you can trust
 this code because MuJoCo, which drives every sim in this book, agrees with it.
 

@@ -1,0 +1,168 @@
+/* ch3.7 "Datasets at Scale" concept-toy — the DATA-SCALE toy.
+ *
+ * Co-located CSS for DataScaleToy.tsx (imported at the top of that file).
+ * Namespaced `ds-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`fr-*`/`sl-*` classes. Like ch3.3's engine-drift toy this
+ * is PURE SVG over pre-computed scale_data.py numbers — no WASM — so it drives
+ * every colour from the site's flipping design tokens and is genuinely
+ * theme-aware in BOTH light and dark. Every var carries a light fallback so it
+ * still renders if mounted outside the shell.
+ *
+ * Colour scheme — mapped to tokens by MEANING:
+ *   - --ink-mute neutral  → SOURCE (the coverage-starved baseline)
+ *   - --signal blue       → AUGMENTED (the one variable — the added data) + the control
+ *   - --entity-target grn → the goal / target marker in the coverage map
+ */
+
+.ds { display: grid; gap: 0.6rem; }
+
+/* --- the one control: the view toggle ------------------------------------ */
+.ds-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ds-seg-label, .ds-seg-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink-mute, #6d6252); letter-spacing: 0.01em;
+}
+.ds-seg-label { color: var(--ink, #23201b); }
+.ds-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.ds-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.85rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ds-seg-btn:last-child { border-right: 0; }
+.ds-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.ds-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+
+/* --- panels -------------------------------------------------------------- */
+.ds-panels { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .ds-panels { grid-template-columns: 1.15fr 1fr; align-items: stretch; } }
+
+.ds-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.4rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ds-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.15rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.ds-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.ds-svg { display: block; width: 100%; height: auto; }
+.ds-cov-svg { aspect-ratio: 1 / 1; }
+
+/* --- success panel marks -------------------------------------------------- */
+.ds-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.ds-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent); stroke-width: 1; }
+.ds-tick, .ds-axis-title, .ds-bar-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.ds-axis-title { letter-spacing: 0.03em; }
+
+.ds-bar { transition: opacity 0.15s ease; }
+.ds-b-src { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 62%, transparent); }
+.ds-b-aug { fill: color-mix(in srgb, var(--signal, #1f56de) 82%, transparent); }
+.ds-bar-dim { opacity: 0.62; }
+.ds-bar-active { opacity: 1; }
+
+.ds-whisker { stroke: var(--ink, #23201b); stroke-width: 1.2; opacity: 0.72; }
+.ds-seed { stroke: var(--paper, #f7f3ea); stroke-width: 0.8; }
+.ds-seed.ds-b-src { fill: var(--ink-soft, #473f34); }
+.ds-seed.ds-b-aug { fill: color-mix(in srgb, var(--signal, #1f56de) 60%, var(--ink, #23201b)); }
+
+.ds-bar-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  fill: var(--ink, #23201b);
+}
+.ds-bar-val-on { fill: var(--signal, #1f56de); }
+.ds-delta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px; font-weight: 700; fill: color-mix(in srgb, var(--entity-target, #0c7d5f) 80%, var(--ink, #23201b));
+}
+
+/* --- coverage panel marks ------------------------------------------------- */
+.ds-annulus { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 8%, transparent); stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 32%, transparent); stroke-width: 1; }
+.ds-annulus-inner { fill: var(--paper-2, #f0e9d9); stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 24%, transparent); stroke-width: 1; }
+.ds-target { stroke: var(--entity-target, #0c7d5f); stroke-width: 1.6; }
+.ds-target-lab { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--entity-target-ink, #096047); }
+
+.ds-dot { transition: opacity 0.15s ease; }
+.ds-dot-aug { fill: var(--signal, #1f56de); opacity: 0.5; }
+.ds-dot-src { fill: var(--ink-soft, #473f34); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+
+/* --- readout HUD + legend ------------------------------------------------- */
+.ds-readout {
+  display: grid; gap: 0.28rem;
+  padding: 0.45rem 0.55rem; margin-top: 0.35rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+}
+.ds-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; transition: opacity 0.15s ease; }
+.ds-row[data-off="true"] { opacity: 0.4; }
+.ds-row-delta { border-top: 1px solid var(--rule, #ddd2ba); padding-top: 0.24rem; margin-top: 0.02rem; }
+.ds-lg { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ds-lg::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; }
+.ds-lg.ds-l-src { color: var(--ink-soft, #473f34); }
+.ds-lg.ds-l-aug { color: var(--signal, #1f56de); }
+.ds-lg-name { color: var(--ink, #23201b); }
+.ds-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.ds-v.ds-good { color: color-mix(in srgb, var(--signal, #1f56de) 75%, var(--ink, #23201b)); }
+
+/* --- cross-embodiment card ------------------------------------------------ */
+.ds-cross {
+  display: grid; gap: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--paper-edge, #ded3ba); border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.ds-cross-h {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+}
+.ds-cross-rows { display: grid; gap: 0.35rem; }
+.ds-cross-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ds-cross-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-weight: 600; color: var(--ink, #23201b);
+  min-width: 4.5ch;
+}
+.ds-cells { display: inline-flex; gap: 3px; }
+.ds-cell { width: 0.85rem; height: 0.85rem; border-radius: 2px; }
+.ds-cell-on { background: var(--signal, #1f56de); }
+.ds-cell-pad {
+  background: repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent) 0 2px,
+    transparent 2px 4px);
+  border: 1px dashed color-mix(in srgb, var(--ink-mute, #6d6252) 45%, transparent);
+}
+.ds-cross-dims {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: var(--ink-mute, #6d6252);
+}
+.ds-cross-note { font-size: 0.78rem; line-height: 1.5; color: var(--ink, #23201b); }
+.ds-cross-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* the persistent honest-note line under everything */
+.ds-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.55; color: var(--ink-mute, #6d6252);
+}
+.ds-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill the transitions (there is no rAF motion to gate) */
+@media (prefers-reduced-motion: reduce) {
+  .ds-seg-btn, .ds-bar, .ds-dot, .ds-row { transition: none; }
+}

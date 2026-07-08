@@ -4,17 +4,20 @@ Objective tested: HOW MUCH augmentation, and what the returns look like. ex1
 asked *whether* augmentation helps; here you turn the knob `--aug_per_demo`
 (re-solved variants generated per source demo) and watch the success rate as the
 augmented set grows. A real data engine (MimicGen) faces exactly this question:
-generate 10x? 100x? — and the honest answer is that coverage saturates.
+generate 10x? 100x? — and where the curve bends is where you stop paying.
 
 PREDICT before you run. As `--aug_per_demo` goes 0 -> 4 -> 8, does success:
-  (A) rise LINEARLY forever (more is always proportionally better),
-  (B) rise with DIMINISHING returns (each doubling helps less as coverage fills), or
-  (C) fall (more augmented demos drown the originals)?
+  (A) keep CLIMBING across the whole range (you are coverage-starved, so every
+      batch of valid demos still buys coverage you did not have),
+  (B) PLATEAU within this range (coverage fills fast, so 4->8 buys much less
+      than 0->4), or
+  (C) FALL (the augmented demos drown the 12 originals)?
 Write your choice and one sentence of why in PREDICTION.
 
 Then run this file. It trains BC at aug_per_demo in {0, 4, 8} (seed 0, CPU) and
-prints the success rate for each. aug_per_demo 0 is the source-only baseline (no
-demo survives to add). Watch the gap between steps, not just the endpoints.
+prints the success rate for each. aug_per_demo 0 is the source-only arm exactly
+(no demo survives to add). Watch the SHAPE — the size of each step, not just the
+endpoints.
 
 Estimated learner time: 35 minutes (three BC-pair trainings; ~1-2 min each).
 """
@@ -59,5 +62,7 @@ if __name__ == "__main__":
         step = "" if prev is None else f"  (step +{rate - prev:+.2f})"
         print(f"--aug_per_demo {amount}:  success {rate:.2f}{step}")
         prev = rate
-    print("\nReconcile: is the 4->8 gain smaller than the 0->4 gain? "
-          "If coverage is filling in, later augmentation buys less — that is the shape to see.")
+    print("\nReconcile: is the 4->8 step smaller than the 0->4 step, or about the same? "
+          "At free-tier scale (12 starved demos, aug<=8) coverage is still filling, so more "
+          "augmentation keeps paying — the plateau is the asymptote you would only reach by "
+          "pushing aug_per_demo much higher.")

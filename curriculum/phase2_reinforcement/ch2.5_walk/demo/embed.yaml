@@ -9,7 +9,7 @@
 # eval action); the sampling/log-std branch is training-only and not exported.
 demo: quadruped_walk
 scene: quadruped            # curriculum/common/envs/quadruped/quadruped.xml, verbatim
-policy: walk_actor.onnx     # PENDING export; contract v1: obs float32[1,23] -> action float32[1,8]
+policy: walk_actor.onnx     # exported; contract v1: obs float32[1,23] -> action float32[1,8]
 camera:
   lookat: [0.0, 0.0, 0.2]
   distance: 2.5

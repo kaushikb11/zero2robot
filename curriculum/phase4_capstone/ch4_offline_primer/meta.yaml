@@ -1,0 +1,113 @@
+id: ch4-offline-primer
+title: "Offline RL Primer: Beat the Data With Its Own Reward"
+# MAP PLACEMENT UNASSIGNED — author decides the final number. This chapter is NOT
+# yet in the 4.1-4.4 map; it resolves the map's OPEN Phase-4 dependency ("4.3
+# assumes offline-primed RL / corrections as prior; no offline-RL chapter
+# exists"). Natural slot: between 4.2 (corrections) and 4.3 (HIL-SERL), e.g. 4.2b
+# or a renumber. The author assigns the number and wires the map edge.
+artifact: offline.py       # 383 LOC (measured); target ~300, hard cap 450
+task: pusher_reach         # curriculum/common/envs/pusher_reach — dense reward (-distance), continuous torque (ch2.2's env)
+dataset:
+  reference: null          # the "dataset" is a FIXED offline set built in-file from the scripted expert + a random policy (mixed quality); no external demos
+  learner_path: false      # no teleop path; the point is that you CANNOT collect more data
+
+# WHICH ALGORITHM + WHY. AWAC (advantage-weighted actor-critic; the AWR/AWAC
+# family). Chosen over IQL/CQL as the cleanest to TEACH here because it is
+# literally ch1.1's BC regression with a per-sample weight, plus ch2.2's twin-Q
+# critic — two idioms the learner already owns, recombined. IQL's expectile value
+# regression would add a second loss with no reuse; CQL adds a conservative
+# penalty term that is harder to motivate from what came before. AWAC's one-line
+# diff from BC (the advantage weight) IS the lesson.
+
+objectives:
+  - Define the offline RL setting — learn from a FIXED dataset with NO environment interaction — and why it is the setting real correction/demo data lives in
+  - Explain why BC's ceiling is the dataset's average quality (it clones, ignoring reward) and why offline RL can exceed it (it uses the reward to prefer above-average actions)
+  - Implement AWAC from scratch in one file — a twin-Q critic (ch2.2 idiom) + advantage-weighted regression policy extraction (ch1.1's BC loss, reweighted)
+  - Measure, don't assert, that offline RL BEATS BC on the SAME fixed mixed-quality dataset, with ch1.6 error bars (Wilson CI + a difference CI)
+  - Show the naive-offline-RL failure — maximize Q with no data constraint and the critic OVERESTIMATES out-of-distribution actions (worst on narrow data) — which is WHY the advantage constraint exists
+  - "Supply the offline prior 4.3 needs: HIL-SERL fine-tunes an RL policy with the learner's correction data as a PRIOR; that prior is exactly an offline-RL policy extracted from logged corrections, which this chapter builds"
+
+# MEASURED reference run. PROVENANCE: cpu (forced), torch 2.10.0 / mujoco 3.10.0
+# / numpy 2.4.6; DEFAULT config (episodes 200, expert_frac 0.3 [expert+random
+# mix], steps 8000, eval n_seeds 5 x eval_episodes 20 = 100 pooled rollouts);
+# seeds 0,1,2; measured 2026-07-07.
+reference_run:
+  headline: "offline RL (AWAC) BEATS BC on the same fixed dataset, seed-robust and significant"
+  behavior_return: "expert ~-2.3 vs random ~-16.0 (the mixed quality BC must average over)"
+  bc_success_per_seed: [0.03, 0.07, 0.05]          # mean 0.050
+  offline_success_per_seed: [0.27, 0.20, 0.21]     # mean 0.227
+  bc_mean_final_dist_per_seed: [0.1542, 0.1468, 0.1437]
+  offline_mean_final_dist_per_seed: [0.1089, 0.0997, 0.0889]
+  diff_ci_offline_minus_bc: "excludes 0 on every seed (SIGNIFICANT), e.g. seed0 +0.15..+0.34, seed1 +0.04..+0.23, seed2 +0.07..+0.25"
+  random_baseline_dist: 0.176
+  naive_divergence_signal:                          # H3, --naive --expert_frac 1.0 (narrow data), seeds 0,1,2
+    naive_mean_abs_q_per_seed: [7.29, 7.41, 6.74]   # OVERESTIMATED
+    awac_mean_abs_q_seed0: 1.08                     # bounded (same narrow data)
+    naive_broad_mean_abs_q_seed0: 0.8               # default mix (expert_frac 0.3): naive stays bounded AND still beats BC (+0.16..+0.36) — coverage saves it
+    reading: "naive maximize-Q inflates |Q| ~7x on NARROW data while eval collapses toward random; on the BROAD expert+random mix, coverage keeps naive honest (|Q|~0.8, still beats BC) — coverage-dependence is the lesson"
+  near_expert_within_band:                          # expert_frac 1.0 (CLEAN expert-only log), seeds 0,1,2; measured 2026-07-07
+    bc_success_per_seed: [0.23, 0.19, 0.23]         # BC clones a clean expert -> jumps from ~0.05 on the mix
+    offline_success_per_seed: [0.27, 0.37, 0.38]
+    bc_mean_final_dist_per_seed: [0.0512, 0.0535, 0.0551]      # BC is LOWER (better) on distance, every seed
+    offline_mean_final_dist_per_seed: [0.0888, 0.0780, 0.0692]
+    diff_ci_offline_minus_bc: "seed0 -0.08..+0.16 (TIE), seed1 +0.06..+0.30, seed2 +0.02..+0.27 — marginal, not seed-robust; BC wins on distance on every seed"
+    reading: "with no junk left to reweight, AWAC's edge over BC falls WITHIN the difference-CI band — the win is CONDITIONAL on the data carrying suboptimal actions, not universal. This is the chapter's central honesty; do not let it drift to 'AWAC beats BC' cleanly."
+  honest_framing: >
+    The gap is real, significant, and seed-robust ON THE MIXED DATASET — but modest
+    in absolute terms: offline RL reaches ~0.09-0.11 m (success ~0.20-0.27), still
+    short of the scripted expert (~0.0001 m). The MECHANISM is the lesson, not a
+    leaderboard number: BC is capped by averaging the mix (it stays ~0.05 success
+    as long as the log carries a meaningful junk fraction — ex2 sweeps 15%-60%
+    expert — because it cannot tell a good action from a bad one), while offline RL
+    uses the reward to prefer the above-average actions. The honest boundary (see
+    near_expert_within_band): on a CLEAN expert-only log (expert_frac 1.0) BC jumps
+    to ~0.2 success and AWAC's edge falls WITHIN the difference-CI band — it even
+    trails BC on final distance — because there is no suboptimal action left to
+    reweight. AWAC beats BC WHEN the data carries junk worth down-weighting, not
+    universally. That reward-aware extraction, done without env interaction and
+    without the extrapolation error that sinks naive offline RL, is precisely the
+    "offline prior" 4.3 fine-tunes from — and correction data is exactly the
+    junk-carrying, narrow regime where it pays off.
+
+# Reference metrics + seeded bands for the exercise checks (exercise-spec:
+# "seeded-run band with provenance", not a bare magic number). checks.py reads
+# these instead of hardcoding tolerances. Bands assert the STRONG, seed-robust
+# signal (ch2.1 spike H1/H2), never a flaky single-run effect.
+exercise_checks:
+  ex1:                     # ex1_predict_multiseed.py — BC vs offline on the mixed dataset, seeds 0-2, DEFAULT steps
+    provenance: "cpu, seeds 0-2, default config (steps 8000); measured 2026-07-07: BC success [0.03,0.07,0.05] dist [0.154,0.147,0.144]; offline success [0.27,0.20,0.21] dist [0.109,0.100,0.089]"
+    offline_beats_bc_success_margin: 0.08    # mean offline success (0.227) - mean BC success (0.050) = 0.177; assert margin >= 0.08
+    offline_dist_below_bc_per_seed: 0.02     # every seed: offline mean final dist < BC's by >= this (measured min gap ~0.045)
+  ex2:                     # ex2_investigate_dataset_quality.py — expert_frac {0.15 mostly-junk, 0.6 mostly-clean}, seeds 0-1
+    provenance: "cpu, seeds 0-1, default steps; measured 2026-07-07: ef0.15 BC [0.05,0.04] offline [0.13,0.15]; ef0.6 BC [0.05,0.03] offline [0.23,0.18]. BC stays ~0.03-0.05 across BOTH junk-carrying arms (capped by averaging); offline beats it on every arm. (Pure-expert ef1.0 is the within-band boundary — see reference_run.near_expert_within_band — not a gated arm.)"
+    offline_beats_bc_each_arm_margin: 0.05   # per arm: mean offline success - mean BC success >= this (measured margins 0.095, 0.165)
+  ex3:                     # ex3_predict_naive_blowup.py — naive maximize-Q on narrow (--expert_frac 1.0) vs broad (0.3) data, --naive, seeds 0-1
+    provenance: "cpu, seeds 0-1, --naive, default steps 8000; measured 2026-07-08: narrow (ef1.0) mean|Q| [7.29,7.41] (mean 7.35), eval collapses to success [0.17,0.17] / dist [0.163,0.150] (near random 0.176); broad (ef0.3) mean|Q| [0.83,0.67] (mean 0.75), eval success [0.29,0.45]. Ratio ~9.8x. Matches reference_run.naive_divergence_signal (narrow [7.29,7.41,6.74], broad seed0 0.8)."
+    naive_narrow_abs_q_min: 3.0    # naive maximize-Q inflates |Q| on the narrow expert-only log; measured mean ~7.35, assert >= this
+    naive_broad_abs_q_max: 2.0     # on the broad expert+random mix coverage keeps the critic honest; measured mean ~0.75, assert <= this
+
+# read_the_real_thing: TRUE — the "Read the real thing" prose section is written
+# (anchors: the AWAC paper, Nair et al. 2020 "Accelerating Online RL with Offline
+# Datasets"; and Kostrikov's IQL reference impl, github ikostrikov/implicit_q_learning,
+# as the "what the grown-up version does differently" reading — IQL's expectile value
+# regression vs AWAC's Q(s,pi(s)) baseline). The PINNED upstream commit is recorded by
+# the read-the-real-thing skill — not invented here.
+read_the_real_thing: true
+
+scale_lab: false           # free-tier CPU config measured (~1 min). A GPU Scale Lab (bigger dataset, D4RL-style tasks, IQL head-to-head) is a future add, out of this chapter's scope.
+demo: offline_bc_vs_awac   # hero: two arms side by side on the SAME target — BC (trained on the junk mix) flails, AWAC reaches. See demo/embed.yaml.
+
+# region_hashes: sha256 of each code region's exact bytes (infra/ci/lib/regions.py);
+# check_prose_code_drift recomputes and fails on drift. notebook_hash / notebook_file_hash
+# are refreshed by the notebook-tier-test skill whenever the artifact changes.
+notebook_hash: 5d53c46b94c48d21fd418c64f64e4b5e3a9698bf7da16bb605491156d87482f6        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: c9a165173a2c83cc0275f5270819b91472253185d88d4b78749a85387d3a3472   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: f0905eef64cb409ba1db347037bc4491eee35470a1646995d476ca693a53a5e3
+  data: 454bac590613c3ebe197ffc0acb76068d7e2c7592036b0476b2586c7cb9014b7
+  model: 3463dd917fc306a9624087c06f8e66b7c54e32575a17288a3273aaa5b538a8ab
+  stats: 2f42573d8b25069cc61f84d306337c1f7010b788ae4372fb11cabfc75f942d4c
+  eval: 91baf9f308b3a9bc44be59d301ebe379a39a0929616459ba91543fb81f1b33ca
+  train: 58e0c4bfa6795193c0f9dae7ce17c0634b548ad02955cc04bb9c70e26c498ffa
+  report: f75dccf0d943dafe7ff8dd785972909ad047345bfb93af68af3281df18e65f18

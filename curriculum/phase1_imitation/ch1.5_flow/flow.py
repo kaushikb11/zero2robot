@@ -20,7 +20,8 @@ same eval — only the OBJECTIVE (predict velocity, not noise) and the SAMPLER
 (integrate an ODE, don't run the DDPM posterior) change. ~60 lines differ; the site
 renders the diff. The toy makes the same point (flow covers the 8 ring modes; a
 same-width MSE regressor collapses to the dead center — objective-driven, robust to
-capacity), and it adds one flow measures directly: fewer sampling steps to the modes.
+capacity), and it adds the one thing flow measures that ch1.4 could not: how few
+sampling steps still reach the modes.
 
 SIMPLIFIED from real flow-matching policies (pi0), flagged in prose: we flow a
 SINGLE action (not an action-horizon chunk), the net is a small MLP (not a temporal

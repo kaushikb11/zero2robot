@@ -6,6 +6,10 @@ loss and val loss are IDENTICAL to bc.py's, epoch for epoch, and the ONNX
 export passes parity. Every number the training loop can print is healthy.
 Only the rollouts are much worse.
 
+Before you change a line, write one sentence: train and val loss are both
+healthy, so what does that rule out — and where in this pipeline does that leave
+the only place the bug can hide?
+
 Find the bug by holding every line against the model region's design
 decision (where does normalization live in this pipeline, and why?), fix it,
 and re-run checks.py until the smoke metrics agree with the chapter's.

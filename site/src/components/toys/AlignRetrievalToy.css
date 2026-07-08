@@ -1,0 +1,225 @@
+/* ========================================================================
+   AlignRetrievalToy (.ar-*) — ch5.2 "Why Aligned: Contrastive Vision-Language"
+   concept-toy (demo aligned_vs_random_retrieval).
+
+   A pure DATA-VIEWER over precomputed cosine retrieval rankings: pick an
+   instruction, watch which held-out scenes light up under the ALIGNED contrastive
+   encoder vs a RANDOM-INIT one, side by side. Each gallery "scene" is a block
+   POSITION (tee_xy from sim state) drawn as a top-down marker — no camera-image
+   binaries, no MuJoCo-WASM, no onnx, no dynamic import. It hydrates only to make
+   the instruction picker interactive, so the server-rendered default ("top left",
+   both galleries + both readouts) is a complete JS-off experience.
+
+   COLOUR — a data panel (not a fixed lab instrument), so every colour comes from
+   the FLIPPING design tokens (site/public/styles.css) and is correct in light AND
+   dark with no special-case. Mapped by MEANING:
+     · a retrieved scene that really sits in the named corner (a HIT) → --entity-target-ink (green)
+     · a retrieved scene in the wrong corner (a MISS)                 → --alert (red)
+     · the shaded target corner / the 249 faint scenes / the cross    → neutral --ink-mute / --rule
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — no animation; the sole interaction is picking an instruction (state, not
+   rAF). The only CSS transitions are on the controls, gated under reduced-motion.
+   ======================================================================== */
+.ar {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.ar-head { margin-bottom: 0.1rem; }
+.ar-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.ar-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.ar-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the one control: pick or type an instruction ----------------------- */
+.ar-picker {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+}
+.ar-text-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252); white-space: nowrap;
+}
+.ar-text {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem;
+  padding: 0.32rem 0.5rem;
+  color: var(--ink, #23201b);
+  background: var(--paper, #f7f3ea);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  min-width: 0;
+}
+.ar-text:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ar-text-hint {
+  grid-column: 2;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252); font-style: italic;
+}
+.ar-chips {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+}
+.ar-chip {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 700;
+  padding: 0.28rem 0.6rem;
+  color: var(--ink-soft, #4a4437);
+  background: var(--paper, #f7f3ea);
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ar-chip:hover { border-color: var(--signal, #1f56de); }
+.ar-chip:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.ar-chip[aria-pressed="true"] {
+  color: var(--signal-ink, #12347f);
+  border-color: var(--signal, #1f56de);
+  background: color-mix(in srgb, var(--signal, #1f56de) 14%, var(--paper, #f7f3ea));
+}
+
+/* the resolved instruction, echoed in full */
+.ar-instruction {
+  margin: 0;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.ar-inst-k {
+  font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+}
+.ar-inst-v { font-size: 0.82rem; font-weight: 700; color: var(--ink, #23201b); }
+
+/* ---- the two side-by-side result columns -------------------------------- */
+.ar-galleries {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem;
+}
+.ar-col {
+  margin: 0;
+  display: grid; gap: 0.45rem;
+  padding: 0.55rem 0.6rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 6px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+}
+.ar-col--aligned { border-top: 3px solid var(--entity-target-ink, #0c7d5f); }
+.ar-col--random { border-top: 3px solid var(--alert, #c0362a); }
+.ar-col-cap {
+  display: grid; gap: 0.05rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.ar-col-cap b { font-size: 0.76rem; font-weight: 700; color: var(--ink-soft, #4a4437); }
+.ar-col--aligned .ar-col-cap b { color: var(--entity-target-ink, #0c7d5f); }
+.ar-col--random .ar-col-cap b { color: var(--alert, #c0362a); }
+.ar-col-cap span { font-size: 0.62rem; color: var(--ink-mute, #6d6252); }
+
+/* the top-down scene plot */
+.ar-plot {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background:
+    radial-gradient(120% 120% at 50% 35%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 95%, var(--ink-mute, #6d6252) 5%),
+      var(--paper-2, #f0e9d9));
+}
+.ar-table { fill: none; stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.2; }
+.ar-cross { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.ar-corner { fill: color-mix(in srgb, var(--entity-target-ink, #0c7d5f) 9%, transparent); }
+.ar-corner-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8px; letter-spacing: 0.02em;
+  fill: color-mix(in srgb, var(--ink-mute, #6d6252) 70%, transparent);
+}
+.ar-corner-lbl.is-target { fill: var(--entity-target-ink, #0c7d5f); font-weight: 700; }
+
+/* the 249 held-out scenes — faint neutral cloud */
+.ar-scene { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 40%, transparent); }
+
+/* the encoder's top-5 — hit green, miss red, rank digit inside */
+.ar-hit circle { stroke: var(--paper, #f7f3ea); stroke-width: 1.4; }
+.ar-hit text {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8px; font-weight: 700; fill: var(--paper, #f7f3ea);
+}
+.ar-hit.is-hit circle { fill: var(--entity-target-ink, #0c7d5f); }
+.ar-hit.is-miss circle { fill: var(--alert, #c0362a); }
+
+/* per-column hit readout */
+.ar-readout {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252);
+  text-align: center;
+  padding: 0.3rem 0.4rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 70%, transparent);
+}
+.ar-readout b { font-size: 0.86rem; font-variant-numeric: tabular-nums; color: var(--ink-soft, #4a4437); }
+.ar-readout[data-good="true"] b { color: var(--entity-target-ink, #0c7d5f); }
+.ar-readout[data-good="false"] b { color: var(--alert, #c0362a); }
+
+/* ---- legend ------------------------------------------------------------- */
+.ar-legend {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; color: var(--ink-mute, #6d6252);
+}
+.ar-leg { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ar-leg::before { content: ""; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: none; }
+.ar-leg--hit::before { background: var(--entity-target-ink, #0c7d5f); }
+.ar-leg--miss::before { background: var(--alert, #c0362a); }
+.ar-leg--scene::before {
+  width: 0.5rem; height: 0.5rem;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 40%, transparent);
+}
+
+/* ---- the honest framing note -------------------------------------------- */
+.ar-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; line-height: 1.6; color: var(--ink-mute, #6d6252);
+}
+.ar-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* visually-hidden live region for screen readers */
+.bk-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 34rem) {
+  .ar-galleries { grid-template-columns: 1fr; }
+  .ar-title { font-size: 0.84rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ar-chip { transition: none; }
+}

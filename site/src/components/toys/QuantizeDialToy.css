@@ -1,0 +1,338 @@
+/* ========================================================================
+   QuantizeDialToy (.qz-*) — ch5.7 "Quantize a Policy by Hand" concept-toy
+   (demo quantization_dial).
+
+   A pure DATA-VIEWER: a 3-detent dial (FP32 → per-tensor INT8 → per-channel
+   INT8) drives three live bars — SIZE (drops ~3.8× and holds), ACTION ERROR vs
+   FP32 (~0, then SPIKES at per-tensor, then RECOVERS ~half at per-channel), and
+   LATENCY (RISES ~6× — the honest surprise: naive INT8 is slower on a laptop
+   CPU). Every bar carries faint ghost ticks for all three configs, so the whole
+   arc reads in one static frame — which is exactly what SSR renders. No
+   MuJoCo-WASM, no ONNX, no dynamic import; it hydrates only to move the dial, so
+   the server-rendered view (three bars + readout + ledger + scale note + honest
+   latency framing) is a complete JS-off experience.
+
+   COLOUR — a data panel (not a fixed light lab instrument), so it drives every
+   colour from the FLIPPING design tokens (site/public/styles.css) and is correct
+   in light AND dark with no special-case. Mapped by MEANING:
+     · size, the GUARANTEED win        → --entity-target (green — the one you win)
+     · action error, the accuracy cost → --alert (red — spikes, then recovers)
+     · latency, the honest CAVEAT      → --alert red + a diagonal hatch (the
+                                          "yes-but", visually flagged as not-a-win)
+     · the dial handle, the one live control → --signal blue (nothing static wears it)
+     · ghost ticks / graph paper / rules → neutral --ink-mute / --rule
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — no animation; the sole interaction is the dial (state, not rAF), and
+   the only CSS transitions are on the controls, gated under prefers-reduced-motion.
+   ======================================================================== */
+.qz {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.qz-head { margin-bottom: 0.1rem; }
+.qz-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.qz-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.qz-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the three metric bars ---------------------------------------------- */
+.qz-bars {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem 0.75rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 6px;
+  background:
+    radial-gradient(120% 120% at 50% 20%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--ink-mute, #6d6252) 6%),
+      var(--paper-2, #f0e9d9));
+}
+.qz-metric { display: grid; gap: 0.2rem; }
+.qz-metric-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.qz-metric-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft, #4a4437);
+  letter-spacing: 0.01em;
+}
+.qz-metric-val {
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.qz-metric-u { font-size: 0.62rem; font-weight: 600; color: var(--ink-mute, #6d6252); }
+.qz-metric-delta {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 0.05rem 0.32rem;
+  border-radius: 3px;
+}
+.qz-delta--good {
+  color: var(--entity-target-ink, #096047);
+  background: color-mix(in srgb, var(--entity-target, #0c7d5f) 15%, transparent);
+}
+.qz-delta--bad {
+  color: var(--alert, #c0362a);
+  background: color-mix(in srgb, var(--alert, #c0362a) 13%, transparent);
+}
+.qz-delta--mute {
+  color: var(--ink-mute, #6d6252);
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+}
+
+/* the bar itself — one shared 200×26 viewBox */
+.qz-bar {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.qz-track {
+  fill: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, var(--paper, #f7f3ea));
+  stroke: var(--rule-strong, #c8bc9e);
+  stroke-width: 0.6;
+}
+/* the moving fill — coloured by the metric's MEANING */
+.qz-bar--size .qz-fill { fill: var(--entity-target, #0c7d5f); }
+.qz-bar--mse  .qz-fill { fill: var(--alert, #c0362a); }
+.qz-bar--lat  .qz-fill { fill: color-mix(in srgb, var(--alert, #c0362a) 62%, var(--paper, #f7f3ea)); }
+/* the latency hatch — flags it as the caveat, not a win */
+.qz-hatch-line { stroke: var(--alert, #c0362a); stroke-width: 1.1; opacity: 0.7; }
+
+/* ghost ticks — every config's level, always visible (the full arc) */
+.qz-ghost {
+  stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 1.5 1.5;
+}
+.qz-ghost[data-sel="true"] {
+  stroke: var(--ink, #23201b);
+  stroke-width: 1.6;
+  stroke-dasharray: none;
+}
+/* the caret riding the selected level */
+.qz-bar--size .qz-caret { fill: var(--entity-target-ink, #096047); }
+.qz-bar--mse  .qz-caret { fill: var(--alert, #c0362a); }
+.qz-bar--lat  .qz-caret { fill: var(--alert, #c0362a); }
+
+/* the latency honesty flag under its bar */
+.qz-lat-flag {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem;
+  line-height: 1.4;
+  color: var(--alert, #c0362a);
+}
+
+/* ---- the dial: a 3-detent slider (the one interactive handle) ------------ */
+.qz-controls {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+}
+.qz-slider-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft, #4a4437);
+}
+.qz-slider {
+  width: 100%;
+  accent-color: var(--signal, #1f56de);
+  cursor: pointer;
+}
+.qz-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.qz-detent-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+}
+.qz-detent {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.22rem 0.3rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: var(--paper, #f7f3ea);
+  color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qz-detent:first-child { text-align: left; }
+.qz-detent:last-child { text-align: right; }
+.qz-detent:nth-child(2) { text-align: center; }
+.qz-detent[data-on="true"] {
+  background: color-mix(in srgb, var(--signal, #1f56de) 15%, var(--paper, #f7f3ea));
+  border-color: var(--signal, #1f56de);
+  color: var(--signal, #1f56de);
+}
+
+/* ---- the exact-numbers ledger (with Wilson CI) --------------------------- */
+.qz-ledger {
+  margin: 0;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+}
+.qz-ledger-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  color: var(--ink-mute, #6d6252);
+  margin-bottom: 0.45rem;
+}
+.qz-ledger-cap b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.qz-ledger-grid {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(4, 1fr);
+  gap: 0.22rem 0.5rem;
+  align-items: baseline;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.qz-lg-h {
+  font-size: 0.62rem;
+  color: var(--ink-mute, #6d6252);
+  text-align: right;
+}
+.qz-lg-h:first-child { text-align: left; }
+.qz-lg-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-soft, #4a4437);
+}
+.qz-lg-v {
+  font-size: 0.68rem;
+  text-align: right;
+  color: var(--ink-mute, #6d6252);
+}
+.qz-lg-name[data-sel="true"],
+.qz-lg-v[data-sel="true"] {
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.qz-ledger-note {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+}
+.qz-ledger-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the companion "scale is the idea" figure ---------------------------- */
+.qz-scale {
+  margin: 0;
+  padding: 0.55rem 0.7rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-left: 3px solid var(--entity-target, #0c7d5f);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 84%, transparent);
+}
+.qz-scale-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft, #4a4437);
+  margin-bottom: 0.45rem;
+}
+.qz-scale-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.qz-scale-stat {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 80%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.qz-scale-v {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #23201b);
+  line-height: 1.15;
+}
+.qz-scale-v--bad { color: var(--alert, #c0362a); }
+.qz-scale-arrow { color: var(--ink-mute, #6d6252); font-weight: 600; }
+.qz-scale-k { font-size: 0.64rem; line-height: 1.4; color: var(--ink-mute, #6d6252); }
+.qz-scale-k b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+.qz-scale-note {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--ink-mute, #6d6252);
+}
+.qz-scale-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the honest framing note -------------------------------------------- */
+.qz-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--ink-mute, #6d6252);
+}
+.qz-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* visually-hidden live region for screen readers (shared .bk-sr also exists) */
+.qz .bk-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 34rem) {
+  .qz-title { font-size: 0.84rem; }
+  .qz-scale-grid { grid-template-columns: 1fr; }
+  .qz-ledger-grid { font-size: 0.9em; }
+  .qz-metric-head { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qz-detent { transition: none; }
+}

@@ -74,6 +74,9 @@ exercise_checks:
 # renders this chapter (check_prose_code_drift only gates once they are present).
 # notebook_hash / notebook_file_hash: filled by the notebook-tier-test skill.
 
+notebook_hash: 0028e57b9353a626cbc2685fe54576ee50f7293c1c443ce251e8590e9c42625a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: d796ac4861d55dfd69854d325bf71780ca42de69b6a83007f2efbf0a681bd5f8   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
 region_hashes:
   setup: 587e91893fd24a305b226fb22795bc8035c81f6b49d6d1bf665b4e5ae09d6d50
   policy: 75a2cf5afdb7e51caaa04908a50c2e44c02c2cb0f6f39ff6550c1f965afd3821
@@ -81,6 +84,3 @@ region_hashes:
   eval: f2ae8d73cdca5c999e0f3945c68b6df36328e443e2ce59be0e02f15a6ed394aa
   sweep: 1899ac03ba348e2dd3dbbff8534e98b8cfb85eaa251dc8a5ff28afdfe78579d5
   report: 7208c5f0c0e132e1a239c9c1d2eb18e7e4022d0f2f442fcb23aedea2c65739d0
-
-notebook_hash: 0028e57b9353a626cbc2685fe54576ee50f7293c1c443ce251e8590e9c42625a        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: d796ac4861d55dfd69854d325bf71780ca42de69b6a83007f2efbf0a681bd5f8   # sha256 of the generated notebook bytes; mismatch => hand-edited

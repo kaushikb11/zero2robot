@@ -1,0 +1,77 @@
+# Demo embed stub — ch5.4 "prefix_suffix_attention".
+# Playground integration point: playground/ owns the site components; this file declares WHAT the
+# embed shows and the vizdata it reads. The DRAFTING agent emits demo/vizdata.json from vla_shape.py;
+# the ORCHESTRATOR builds the TSX. Coordinate at the contracts.ts level.
+#
+# CONTRACT NOTE (author + playground must read): this chapter trains a policy but exports NO onnx and
+# the PushT rollout FLOORS at free-tier, so there is nothing to drive live in MuJoCo-WASM. This embed
+# is a pure DATA-VIEWER over demo/vizdata.json (two block-attention masks + precomputed suffix
+# attention + two recorded rollouts). It needs neither tensor contract v1 nor v2 — the cheapest embed
+# tier: no sim loop, no inference, no WASM. UNBLOCKED as soon as the site can read the JSON.
+#
+# The HERO is the BLOCK-ATTENTION MASK. Draw the (P+H) x (P+H) grid (rows = query token, cols = key
+# token), labelled by labels_seq: the prefix block [vision, state, tok0..tok11], then the suffix block
+# [act0..act7]. Shade the four quadrants: prefix<->prefix (full), suffix->prefix (the cross-attention),
+# suffix<->suffix (full), prefix->suffix (BLOCKED). A single toggle CUTS the suffix->prefix quadrant
+# (mask_full -> mask_cut) and, in lockstep, swaps the recorded rollout + the delta panel: the SAME
+# trained expert, now blind to the VLM, and the held-out flow-MSE jumps (full -> cut). The one-line
+# caption to feel: "the action expert is one cell of a mask away from being blind to the robot."
+demo: prefix_suffix_attention
+vizdata: vizdata.json            # emitted by vla_shape.py (seed 0; committed reference is the exercise_config, H=8)
+panels:
+  - id: block_mask_toggle
+    kind: canvas-heatmap         # draw a labelled (P+H)^2 grid; no MuJoCo/WASM
+    title: "The block-attention mask (toggle the cross-attention)"
+    shows: >
+      The full (P+H) x (P+H) attention mask from vizdata.mask_full (1 = a query token may attend to a
+      key token), rows/cols labelled by vizdata.labels_seq. Shade the four blocks distinctly and label
+      them: prefix<->prefix (the VLM fusion), suffix->prefix (the cross-attention), suffix<->suffix
+      (the chunk coordinating), and prefix->suffix (always dark — the prefix never reads the actions,
+      which is what makes it KV-cacheable). A CUT CROSS-ATTENTION toggle swaps to vizdata.mask_cut,
+      which blanks the suffix->prefix block. Overlay vizdata.suffix_attention (length P+H, the last
+      block's averaged action-token attention) as a faint row highlight to show WHERE the expert
+      actually looks under the full mask.
+    interactions:
+      - "hover a cell -> show (query_label, key_label) and allowed/blocked"
+      - "toggle CUT CROSS-ATTENTION -> mask_full <-> mask_cut; the suffix->prefix quadrant goes dark"
+      - "the toggle drives the two companion panels below in lockstep"
+  - id: rollout_replay
+    kind: canvas-2d              # replay a recorded PushT rollout from vizdata (geometry only, no WASM)
+    title: "What the expert does when you cut its view of the VLM"
+    shows: >
+      A top-down PushT replay of vizdata.full.frames (full mask) or vizdata.cut.frames (cut), each row
+      = [pusher_x, pusher_y, tee_x, tee_y, tee_yaw]; render the tee (vizdata.tee) toward the target
+      (vizdata.target) inside world_half_extent_m. The CUT toggle swaps which trajectory plays. BE
+      HONEST in the caption: BOTH rollouts FLOOR (fail) at free-tier — a from-scratch model on a frozen-
+      RANDOM vision backbone can't drive PushT (ch1.8's ceiling). The rollout is illustrative; the
+      MEASURED collapse is the flow-MSE panel.
+    interactions:
+      - "play/scrub the recorded trajectory"
+      - "toggle CUT -> replay the severed-expert rollout from the same start"
+  - id: flow_mse_delta
+    kind: static-figure          # two bars from vizdata.meta; the toggle highlights the active one
+    title: "The measured collapse: held-out velocity fit"
+    shows: >
+      Two bars from vizdata.meta: flow_mse_full vs flow_mse_cut (and the gap flow_mse_gap). This is the
+      HEADLINE — byte-reproducible, seed-robust (+0.6..+1.0 across seeds 0/1/2): cutting the suffix->
+      prefix cross-attention collapses the trained expert's held-out velocity fit toward the
+      unconditional prior. Caption: "sever one block of the mask and the expert loses its only path to
+      the state — routing, not just parameters, is load-bearing."
+schema:                          # demo/vizdata.json, emitted by vla_shape.py's report region
+  prefix_len: 14                 # P: 1 vision + 1 state + 12 instruction tokens
+  horizon: 8                     # H: suffix action-expert tokens (the chunk)
+  labels_seq: "list[str] length P+H: ['vision','state','tok0'..'tok11','act0'..'act7']"
+  mask_full: "(P+H) x (P+H) int (1=allowed) — the full block-attention mask"
+  mask_cut: "(P+H) x (P+H) int — same, with the suffix->prefix block zeroed (--break cut_cross)"
+  suffix_attention: "length P+H float — the last block's averaged action-token attention (full mask)"
+  target: "{x,y,yaw} PushT goal pose (fixed at origin)"
+  tee: "{bar_half, stem_half, stem_offset_y} the T-block half-extents (draw the rollout)"
+  full: "{success, mean_return, frames:[[px,py,tx,ty,tyaw]...]} full-mask rollout (floors)"
+  cut: "{success, mean_return, frames:[...]} severed-expert rollout (floors)"
+  meta: "{flow_mse_full, flow_mse_cut, flow_mse_gap, num_frames}"
+notes: >
+  Ship block_mask_toggle + flow_mse_delta first (unblocked, the real lesson: the mask cell and the
+  measured collapse). rollout_replay is a companion — keep its "both floor" caption honest and do NOT
+  wait on any sampler/contract runtime; there is no live inference in this chapter. PushT rollout
+  geometry is the SAME as ch5.3's toy (fixed env) — the TSX can reuse it. The committed vizdata.json is
+  the seed-0 reference at the exercise_config (H=8); regenerate it if the artifact's viz emit changes.

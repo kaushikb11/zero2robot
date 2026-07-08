@@ -18,6 +18,9 @@ noise (ch2.1). The DIRECTION (augmented > source) is what holds seed-to-seed;
 the exact numbers move, and both are modest — 12 demos is a coverage-starved
 regime chosen so the DATA effect is not drowned by a saturated policy.
 
+Now say WHY in one sentence: the policy, weights, and batch order were identical across
+the two arms — so what exactly did the extra demos change that lifted success?
+
 Estimated learner time: 30 minutes (mostly waiting on two BC trainings ~1-2 min).
 """
 

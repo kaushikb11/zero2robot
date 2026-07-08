@@ -1,0 +1,232 @@
+/* ch2.8 "Concepts of ROS, Without ROS" concept-toy — the PUB-SUB RUNTIME GRAPH.
+ *
+ * Co-located CSS for RuntimeGraphToy.tsx (imported at the top of that file).
+ * Namespaced `rg-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`cp-*` classes. Like ch3.3's engine-drift toy this is PURE
+ * SVG over pre-recorded runtime.py data — no WASM — so it drives every colour from
+ * the site's flipping design tokens and is genuinely theme-aware in BOTH light and
+ * dark. Every var carries a light fallback so it still renders if mounted outside
+ * the shell.
+ *
+ * Colour by MEANING:
+ *   - --signal blue       → the flowing message + the firing node (the one LIVE handle)
+ *   - --entity-target grn → a healthy topic (0 dropped) + the BALANCED verdict
+ *   - --alert red         → a dropped-message count / the fall cone (the failure edge)
+ *   - --entity-pusher     → the pole (matches the ch2.1 cartpole sibling)
+ *   - neutral ink         → the nodes, rail, cart (structure, not state)
+ */
+
+.rg { display: grid; gap: 0.6rem; }
+
+/* --- controls: the RATE SLIDER (hero) + the /obs queue-depth toggle ------- */
+.rg-controls { display: grid; gap: 0.4rem; }
+.rg-ctl-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.rg-ctl-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252);
+  min-width: 5.4rem; flex: 0 0 auto;
+}
+.rg-rate { flex: 1 1 180px; min-width: 140px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.rg-rate:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.rg-rate-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; font-weight: 700;
+  min-width: 5ch; text-align: right;
+}
+
+/* segmented queue-depth toggle */
+.rg-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.rg-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; letter-spacing: 0.01em;
+  padding: 0.3rem 0.7rem; border: none; background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+}
+.rg-seg-btn + .rg-seg-btn { border-left: 1px solid var(--rule-strong, #c8bc9e); }
+.rg-seg-btn:hover { color: var(--ink, #23201b); }
+.rg-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: -2px; }
+.rg-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; font-weight: 600; }
+
+.rg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px;
+  background: var(--paper, #f7f3ea); color: var(--ink, #23201b); cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.rg-btn:hover { border-color: var(--signal, #1f56de); }
+.rg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.rg-play { min-width: 2.4rem; text-align: center; margin-left: auto; }
+.rg-play[aria-pressed="true"] { color: var(--signal, #1f56de); border-color: var(--signal, #1f56de); }
+
+/* --- verdict banner: live readout of the current (rate, queue) selection -- */
+.rg-verdict {
+  display: flex; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--paper-edge, #ded3ba); border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.rg-badge {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 0.16rem 0.5rem; border-radius: 100px;
+}
+.rg-badge-ok { color: var(--entity-target, #2f9e44); background: color-mix(in srgb, var(--entity-target, #2f9e44) 14%, transparent); }
+.rg-badge-bad { color: var(--alert, #c0362a); background: color-mix(in srgb, var(--alert, #c0362a) 14%, transparent); }
+.rg-metric {
+  display: inline-flex; align-items: baseline; gap: 0.4rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem;
+}
+.rg-metric .rg-mk { color: var(--ink-mute, #6d6252); }
+.rg-metric b { font-variant-numeric: tabular-nums; color: var(--ink, #23201b); }
+
+/* shared text-state colours */
+.rg-ok { color: var(--entity-target, #2f9e44); }
+.rg-mid { color: var(--entity-pusher, #b0560f); }
+.rg-bad { color: var(--alert, #c0362a); }
+
+/* --- panels -------------------------------------------------------------- */
+.rg-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.45rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.rg-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.2rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.rg-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.rg-cap b.rg-ok { color: var(--entity-target, #2f9e44); }
+.rg-cap b.rg-bad { color: var(--alert, #c0362a); }
+.rg-svg { display: block; width: 100%; height: auto; }
+
+.rg-row { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .rg-row { grid-template-columns: 1fr 1fr; align-items: stretch; } }
+
+/* --- node-graph panel ---------------------------------------------------- */
+.rg-panel-tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em;
+}
+.rg-edge { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); stroke-width: 1.6; }
+.rg-arrowhead { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 70%, transparent); }
+.rg-topic {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px; font-weight: 600; fill: var(--ink, #23201b);
+}
+.rg-topic-meta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.rg-topic-drop { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; }
+.rg-drop-ok { fill: color-mix(in srgb, var(--entity-target, #2f9e44) 88%, var(--ink, #23201b)); }
+.rg-drop-bad { fill: var(--alert, #c0362a); }
+
+.rg-node {
+  fill: color-mix(in srgb, var(--paper, #f7f3ea) 78%, transparent);
+  stroke: var(--rule-strong, #c8bc9e); stroke-width: 1.4;
+}
+/* the POLICY node is the knob the rate slider drives — mark it as the live one */
+.rg-node-policy { stroke: var(--signal, #1f56de); stroke-width: 1.8; }
+.rg-node-hz-knob { font-weight: 700; }
+.rg-node-halo { fill: none; stroke: var(--signal, #1f56de); stroke-width: 2.4; }
+.rg-node-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px; font-weight: 700; fill: var(--ink, #23201b);
+}
+.rg-node-role {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 8.5px; fill: var(--ink-mute, #6d6252);
+}
+.rg-node-hz {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 600; fill: var(--signal, #1f56de);
+}
+.rg-msg {
+  fill: var(--signal, #1f56de);
+  stroke: var(--paper, #f7f3ea); stroke-width: 1.2;
+}
+
+/* --- cartpole panel ------------------------------------------------------ */
+.rg-rail { stroke: var(--rule-strong, #c8bc9e); stroke-width: 3; stroke-linecap: round; }
+.rg-cone { stroke: color-mix(in srgb, var(--alert, #c0362a) 45%, transparent); stroke-width: 1; stroke-dasharray: 4 4; }
+.rg-cone-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8px; fill: color-mix(in srgb, var(--alert, #c0362a) 70%, var(--ink-mute, #6d6252));
+}
+.rg-pole { stroke: var(--entity-pusher, #b0560f); stroke-width: 7; stroke-linecap: round; }
+.rg-pole-bob { fill: var(--entity-pusher, #b0560f); }
+/* a fallen run: the pole reads as the failure (alert red) */
+.rg-pole.rg-pole-fell { stroke: var(--alert, #c0362a); }
+.rg-pole-bob.rg-pole-fell { fill: var(--alert, #c0362a); }
+.rg-cart { fill: var(--ink, #23201b); }
+.rg-hinge { fill: var(--ink-mute, #6d6252); }
+
+/* --- readouts ------------------------------------------------------------ */
+.rg-readout {
+  display: grid; gap: 0.26rem;
+  padding: 0.42rem 0.55rem; margin-top: 0.35rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+}
+.rg-row-line { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+.rg-k { color: var(--ink-mute, #6d6252); }
+.rg-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+
+/* --- the per-tick flow line under the graph ------------------------------ */
+.rg-flow {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+  margin-top: 0.3rem;
+}
+.rg-flow b { font-weight: 600; }
+.rg-f-node { color: var(--ink, #23201b); }
+.rg-f-topic { color: var(--signal, #1f56de); }
+
+/* --- determinism note card ----------------------------------------------- */
+.rg-det {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: center; gap: 0.45rem;
+  padding: 0.6rem 0.6rem;
+  border: 1px dashed color-mix(in srgb, var(--signal, #1f56de) 40%, var(--paper-edge, #ded3ba));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--signal, #1f56de) 5%, var(--paper, #f7f3ea));
+}
+.rg-det-p { font-size: 0.76rem; line-height: 1.45; color: var(--ink, #23201b); }
+.rg-det-p b { font-weight: 600; }
+.rg-det-key { color: var(--signal, #1f56de); }
+/* the ex2 punchline (deep queue AT the cliff): drops -> 0 yet the pole still falls */
+.rg-det-punch {
+  padding: 0.35rem 0.45rem; border-radius: 4px;
+  border-left: 2.5px solid var(--alert, #c0362a);
+  background: color-mix(in srgb, var(--alert, #c0362a) 8%, transparent);
+  font-weight: 500;
+}
+.rg-mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink, #23201b);
+}
+.rg-det-proof {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem; color: color-mix(in srgb, var(--entity-target, #2f9e44) 85%, var(--ink, #23201b));
+}
+
+/* the persistent honest-note line under all panels */
+.rg-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.rg-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* honour reduced-motion: kill transitions; the rAF replay + pulse are JS-gated
+   off separately (the component parks both panels on a settled frame). */
+@media (prefers-reduced-motion: reduce) {
+  .rg-btn { transition: none; }
+}

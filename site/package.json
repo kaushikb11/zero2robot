@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "sync:hashes": "${Z2R_PYTHON:-../.venv/bin/python} scripts/sync_region_hashes.py",
-    "prebuild": "npm run sync:hashes",
+    "fetch:models": "${Z2R_PYTHON:-../.venv/bin/python} scripts/fetch_models.py",
+    "prebuild": "npm run sync:hashes && npm run fetch:models",
     "build": "astro build",
     "preview": "astro preview"
   },
@@ -14,6 +15,7 @@
     "@astrojs/preact": "6.0.1",
     "@mujoco/mujoco": "3.10.0",
     "astro": "7.0.6",
+    "katex": "0.17.0",
     "marked": "18.0.5",
     "onnxruntime-web": "1.27.0",
     "preact": "10.29.4"

@@ -52,10 +52,12 @@ from curriculum.common.seeding import set_seed  # noqa: E402
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--out", type=Path, default=Path("outputs/ch3.7-scale-data"))
-parser.add_argument("--pusht_data", type=Path, default=Path("outputs/pusht-demos"),
-                    help="your PushT LeRobot demos (ch0.4 teleop or gen_demos.py); regenerated under --smoke")
-parser.add_argument("--aloha_data", type=Path, default=Path("outputs/aloha-demos"),
-                    help="your ALOHA LeRobot demos; the second embodiment for the wrangling lesson")
+parser.add_argument("--pusht_data", type=Path, default=None,
+                    help="PushT LeRobot demos; default: a fresh coverage-starved set under --out. "
+                         "Pass your own only if it holds exactly --source_episodes demos (else it is rebuilt).")
+parser.add_argument("--aloha_data", type=Path, default=None,
+                    help="ALOHA LeRobot demos (the second embodiment for the wrangling lesson); "
+                         "default: a fresh set under --out")
 parser.add_argument("--source_episodes", type=int, default=12,
                     help="source demos per embodiment (deliberately SMALL: coverage-starved so augmentation can help)")
 parser.add_argument("--aug_per_demo", type=int, default=8,
@@ -81,7 +83,13 @@ rng = set_seed(args.seed)  # seeds python/numpy/torch; returns the numpy Generat
 if args.smoke:  # smoke pins everything the CI byte-compare depends on
     (args.source_episodes, args.aug_per_demo, args.epochs, args.eval_episodes,
      args.hidden_dim, args.device) = 4, 1, 3, 5, 64, "cpu"
-    args.pusht_data, args.aloha_data = args.out / "pusht-demos", args.out / "aloha-demos"  # hermetic
+    args.pusht_data = args.aloha_data = None  # force the hermetic default below
+# Demos default to a CHAPTER-PRIVATE path under --out. This chapter needs its OWN
+# coverage-starved 12-demo set; defaulting into a shared path (e.g. ch1.1's 500-demo
+# outputs/pusht-demos) would either fight that chapter's data or get rebuilt out from
+# under it. Chapter-private means each --seed (and each exercise --out) gets its own demos.
+args.pusht_data = args.pusht_data or args.out / "pusht-demos"
+args.aloha_data = args.aloha_data or args.out / "aloha-demos"
 banner("ch3.7-scale-data", device=args.device)  # report the device the run ACTUALLY uses
 args.out.mkdir(parents=True, exist_ok=True)
 device = torch.device(args.device)
@@ -98,14 +106,27 @@ if args.rerun:
 ACT_DIM_MAX = 6  # pusht acts in 2 dims, aloha in 6 — the shared tensor is padded to the max
 
 
-def ensure_dataset(path: Path, gen, episodes: int, seed: int, regen: bool) -> None:
-    """Generate a LeRobot demo dataset if missing (offline, deterministic). Under
-    --smoke we REGENERATE (regen=True): a cache from another --seed would train on
-    the wrong demos while metrics.json records this seed — silent wrong data."""
-    if regen and path.exists():
-        shutil.rmtree(path)
-    if not (path / "meta" / "info.json").is_file():
+def ensure_dataset(path: Path, gen, episodes: int, seed: int) -> None:
+    """Generate a LeRobot demo dataset if missing (offline, deterministic), and
+    REBUILD it if a cached one was built for a different (episodes, seed) than this
+    run asks for. Reusing a mismatched cache would silently train on the wrong demos
+    while metrics.json reports THIS run's config, and either field can drift:
+      * episodes — the whole lesson is the COVERAGE-STARVED regime (a handful of
+        source demos). A fatter cache (say ch1.1's 500-demo set) would erase it.
+      * seed — a cache from another --seed is different data; the demos must match
+        the seed metrics.json records.
+    gen re-derives byte-identical demos from (episodes, seed) alone, so a rebuild is
+    cheap and deterministic. The default path is chapter-private (see setup), so we
+    never read or clobber a dataset another chapter wrote."""
+    spec = {"episodes": episodes, "seed": seed}
+    stamp = path / "z2r_demospec.json"  # the (episodes, seed) the cached demos were built for
+    if stamp.is_file() and json.loads(stamp.read_text()) != spec:
+        shutil.rmtree(path)  # cached demos were built for a different run -> stale
+    if not stamp.is_file():
+        if path.exists():
+            shutil.rmtree(path)  # a partial/foreign dir with no stamp -> clean before regen
         gen.main(["--episodes", str(episodes), "--seed", str(seed), "--out", str(path), "--no-video"])
+        stamp.write_text(json.dumps(spec) + "\n")
 
 
 def load_lerobot(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -118,8 +139,8 @@ def load_lerobot(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             np.asarray(frames["episode_index"]))
 
 
-ensure_dataset(args.pusht_data, pusht_gen_demos, args.source_episodes, args.seed, args.smoke)
-ensure_dataset(args.aloha_data, aloha_gen_demos, args.source_episodes, args.seed, args.smoke)
+ensure_dataset(args.pusht_data, pusht_gen_demos, args.source_episodes, args.seed)
+ensure_dataset(args.aloha_data, aloha_gen_demos, args.source_episodes, args.seed)
 pusht_obs, pusht_act, pusht_ep = load_lerobot(args.pusht_data)
 aloha_obs, aloha_act, aloha_ep = load_lerobot(args.aloha_data)
 
@@ -216,7 +237,10 @@ for src in np.unique(pusht_ep):
     for _ in range(args.aug_per_demo):
         attempts += 1
         tee_xy = base_tee + rng.normal(0.0, args.aug_pos_sigma, size=2)
-        tee_xy = tee_xy * np.clip(np.hypot(*tee_xy), 0.08, 0.26) / (np.hypot(*tee_xy) + 1e-9)  # keep in the spawn annulus
+        # rescale the block onto ~the spawn annulus (a hair wider than the env's own
+        # [0.10, 0.24] so augmentation also probes its edges): keep direction, clamp radius
+        radius = np.hypot(*tee_xy)
+        tee_xy = tee_xy * np.clip(radius, 0.08, 0.26) / (radius + 1e-9)
         tee_yaw = wrap_angle(base_yaw + rng.normal(0.0, args.aug_yaw_sigma))
         pusher_xy = np.clip(base_pusher + rng.normal(0.0, args.aug_pos_sigma, size=2), -0.30, 0.30)
         if np.linalg.norm(pusher_xy - tee_xy) < PushTEnv._PUSHER_CLEAR:  # nudge the pusher clear of the block
@@ -263,6 +287,10 @@ class BCPolicy(nn.Module):
 
 def train_and_eval(obs: np.ndarray, act: np.ndarray, tag: str) -> tuple[float, int]:
     """Fit BC on (obs, act) with the ch1.1 recipe, roll it out, return (success_rate, frames)."""
+    # Reset the weight-init RNG so BOTH arms start from IDENTICAL weights. With the batch
+    # order also fixed (shuffle seed below), the training DATA is the only thing that differs
+    # between source-only and source+augmented — which is the entire point of the measurement.
+    torch.manual_seed(args.seed)
     obs_min, act_min = obs.min(0), act.min(0)
     obs_range = np.where((obs.max(0) - obs_min) < 1e-4, np.float32(1.0), obs.max(0) - obs_min)
     act_range = np.where((act.max(0) - act_min) < 1e-4, np.float32(1.0), act.max(0) - act_min)

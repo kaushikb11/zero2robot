@@ -6,11 +6,9 @@
    live/interactive things + focus rings, --font-mono for instrument chrome.
    Defines NO palette of its own. The page body itself is the Variant C book
    column (reuses .bk-titleblock / .bk-prose from styles.css); this file only
-   adds the draft band, the CTA row, and the keyboard-shortcut key list.
+   adds the lede enclosure, the CTA row, and the keyboard-shortcut key list.
 
    Discipline:
-   - marketing/voice copy sits inside the honest `.ab-draft` band (mirrors the
-     landing .ln-draft / the galley-proof .bk-ribbon) — never presented as final.
    - the primary CTA is CHROME → oxblood, never signal blue.
    - every transition is gated behind prefers-reduced-motion: no-preference.
    - all text clears WCAG AA on the warm paper it sits on.
@@ -21,46 +19,14 @@
   margin: 0 auto;
 }
 
-/* --- draft band — mirrors the galley-proof .bk-ribbon, scoped + inline ------
-   The pitch below is authored/voice copy pending the DevRel + author pass.
-   Warm paper, oxblood keyline; never signal blue (it is not interactive). */
-.ab-draft {
-  display: flex;
-  align-items: baseline;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  padding: 0.4rem 0.75rem;
-  margin: 1.6rem 0 0;
-  background: color-mix(in srgb, var(--book) 7%, var(--paper));
-  border: 1px solid var(--rule-strong);
-  border-left: 3px solid var(--book-soft);
-  border-radius: 3px 3px 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-  line-height: 1.5;
-}
-.ab-draft b {
-  color: var(--book);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-weight: 700;
-}
-.ab-draft__src { color: var(--ink-mute); }
-@media (max-width: 40rem) {
-  .ab-draft__tail { display: none; }
-}
-
-/* the voice-copy zone the band labels — a dashed "still drafting" enclosure so a
-   reader can see exactly which words are placeholder, exactly like a chapter's
-   draft prose sits under its ribbon. */
+/* the lede — a self-contained enclosure with an oxblood keyline, setting the
+   pitch apart from the how-to prose below it. */
 .ab-intro {
   margin: 0 0 2.4rem;
   padding: 1.2rem 1.4rem 0.4rem;
   border: 1px solid var(--rule-strong);
-  border-top: 0;
   border-left: 3px solid var(--book-soft);
-  border-radius: 0 0 3px 3px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--paper-2) 55%, transparent);
 }
 .ab-intro p {
@@ -73,13 +39,16 @@
 .ab-intro strong { color: var(--ink); font-weight: 600; }
 
 /* --- CTA row (chrome → oxblood, mirrors the landing .ln-btn) --------------- */
+/* Buttons live inside .bk-prose, whose `a` rule (color/border-bottom) would
+   otherwise out-specify a single .ab-btn class — so scope the button rules under
+   .ab-cta to win, or the filled primary CTA renders oxblood-on-oxblood. */
 .ab-cta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
   margin: 2rem 0 0.5rem;
 }
-.ab-btn {
+.ab-cta .ab-btn {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -96,16 +65,16 @@
   background: transparent;
   text-decoration: none;
 }
-.ab-btn:hover {
+.ab-cta .ab-btn:hover {
   background: color-mix(in srgb, var(--book) 8%, transparent);
   border-color: var(--book);
 }
-.ab-btn--primary {
+.ab-cta .ab-btn--primary {
   color: var(--paper);
   background: var(--book);
   border-color: var(--book);
 }
-.ab-btn--primary:hover {
+.ab-cta .ab-btn--primary:hover {
   background: color-mix(in srgb, var(--book) 88%, #000);
   color: #fff;
 }

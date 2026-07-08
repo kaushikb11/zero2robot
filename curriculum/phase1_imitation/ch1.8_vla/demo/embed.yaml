@@ -8,14 +8,14 @@
 # is an ODE integration (flow_steps velocity evaluations), AND each velocity evaluation
 # needs the FUSED conditioning — a forward pass over [CLS, vision, state, tokens] through
 # the from-scratch transformer, which itself needs the frozen CNN's image feature. So the
-# live PushT rollout panel is BLOCKED on the same sampler-aware contract v2 the flow
+# live PushT rollout panel would need the contract-v2 sampler PLUS an image-encoder path, so it ships recorded; the flow
 # chapter needs, PLUS an image-feature input. Until then, ship the recorded .rrd panels.
 #
 # The HERO is the fused-attention picture: what does the policy actually LOOK at?
 demo: vla_rollout
 panels:
   - id: pusht_rollout
-    kind: rerun                    # renders the recorded vla.rrd (eval rollout scalars); live WASM rollout BLOCKED on contract v2
+    kind: rerun                    # renders the recorded vla.rrd (eval rollout scalars); live WASM rollout needs contract-v2 + an image path, so it is recorded by design
     title: "The language-conditioned policy drives PushT"
     shows: >
       A PushT episode under the trained tiny VLA: the pusher moving the T toward the

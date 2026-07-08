@@ -1,6 +1,7 @@
 id: ch3.5-contact
 title: "Build a Physics Engine III: Contact"
-artifact: contact.py         # 413 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: contact.py         # 414 LOC, CPU-only, pure numpy (no mujoco in the dynamics)
 task: bodies-on-a-table      # a ball/puck dropping, bouncing, and a stacked tower — all from-scratch numpy
 objectives:
   - See that CONTACT is a one-sided constraint (an INEQUALITY, not ch3.4's equality): the table may only PUSH, never pull, so gap>=0, force>=0, and gap*force=0 — a COMPLEMENTARITY problem, not a force you can write down
@@ -24,17 +25,13 @@ scale_lab: false
 # the LCP formulation), or Stewart & Trinkle (1996, the time-stepping LCP scheme our
 # velocity-level solve is a stripped-down cousin of), or Anitescu-Potra.
 read_the_real_thing: true
-# rtrt:
-#   repo: google-deepmind/mujoco          # author: confirm + pin a real commit sha
-#   commit: <author pins a real sha>
-#   focus:
-#     - the docs' "Computation" / contact model: soft contacts, solref/solimp (the
-#       impedance/reference parameters) — the principled version of the penalty stiffness
-#       and the Baumgarte push we hand-tune here
-#     - engine_core_constraint / the PGS-or-CG solver over contacts: the same per-contact
-#       projected sweep our solve_contacts does, but convex and regularized, not a hard clamp
-#     - WHY a bare penalty contact (stiff spring) needs a tiny dt and a hard LCP is expensive/
-#       brittle — and why MuJoCo chose a soft, convex formulation between the two
+rtrt:
+  repo: google-deepmind/mujoco
+  commit: 28009f9105cd92784b7b0b30c0605a5e29107a77   # tag 3.10.0 (matches the course-pinned mujoco); pinned 2026-07-07
+  focus:
+    - "the docs' \"Computation\" / contact model: soft contacts, solref/solimp (the impedance/reference parameters) — the principled version of the penalty stiffness and the Baumgarte push we hand-tune here"
+    - "engine_core_constraint / the PGS-or-CG solver over contacts: the same per-contact projected sweep our solve_contacts does, but convex and regularized, not a hard clamp"
+    - "WHY a bare penalty contact (stiff spring) needs a tiny dt and a hard LCP is expensive/brittle — and why MuJoCo chose a soft, convex formulation between the two"
 
 demo: contact_quality        # 2D body height + penetration + energy curves, penalty vs lcp; pure numpy
 
@@ -63,8 +60,8 @@ reference_run:
   #     inelastic/restitution contact only ever REMOVES energy) and lcp holds the floor.
   # --- STACK scene (--scene stack): the few-contact (body-body PGS) case, reusable by ch3.6 ---
   #   penalty max_penetration_frac = 0.0595, rest = 0.0294 (the tower sinks into itself and the floor);
-  #   lcp max_penetration_frac = 5.0e-6, rest = 4.2e-6 (the tower holds to microns) — the projected
-  #   Gauss-Seidel sweep solving floor + two body-body contacts together.
+  #   lcp max_penetration_frac = 5.0e-6, rest = 4.2e-6 (five-millionths of a radius == sub-micron:
+  #   0.5 um at radius 0.1 m) — the projected Gauss-Seidel sweep solving floor + two body-body contacts.
   # HONESTY (author MUST keep this framing — it is the measured truth):
   #  * The ORDERING is the rock and is seed-robust (checked seeds 0/1/2 on drop): penalty's
   #    impact penetration (0.23-0.25) is 4x-10x lcp's (0.02-0.057), and penalty's static sink
@@ -99,13 +96,19 @@ exercise_checks:
     answer: "B"                    # raise dt past dt_crit and penalty EXPLODES (energy blows up) while lcp stays bounded
     penalty_blowup_factor_min: 5.0 # penalty energy_excess at dt=0.03 (>dt_crit) is ~1409x; lcp stays ~0. 5x is the robust floor
 
-# notebook_hash / notebook_file_hash intentionally omitted — the notebooks/ Colab variant
-# is not built yet (ch3.5 is an agent draft pending the teaching-pass); notebook-tier-test
-# writes both on generation, and the gate skips a chapter that carries neither key.
+# notebook_hash / notebook_file_hash: sha256 of the artifact at generation and of the
+# generated notebook bytes, written by notebook-tier-test. Drift => regenerate;
+# a file-hash mismatch => the notebook was hand-edited.
 
-# region_hashes intentionally omitted until the site build renders this chapter
-# (check_prose_code_drift passes a chapter with no region_hashes). The site records them
-# on first render; do not hand-write them.
 
-notebook_hash: 2c093f9f7782570bce093b919492f74ce37f11e4c7165ecc119bc7e7cfa2b88c        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 0a52ed0aab46521d3a402c422e3deb7467ce4e2f3776e85b6f3db3c8b08de0d6   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 97cdbb6f5af7dab613c516cc766fb2aef50281376ba7e629c1349949c4304231        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 56501fb969bbd7761acbe3202674555a256f50cf0f39e0330421e8834edbd360   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: b84fc777c9f06b9072d798035adb48dc03501c0151bf58c77792ccafd886154f
+  scenes: 8a6389bbeb82ed0dbe7c80fed9ff4b55f2b261d3f2fc30e6d1023369ed16e412
+  contacts: 7484e6335f6d7db3cf1d72ca800a9b29d8fa8ab258632658ce8ca89fd0c240f3
+  penalty: 3f54fbfb09f7e933bf9d9a0a60c66e33b66560857c57d55cbdfb6a0366afd9f5
+  lcp: b99d2bd682ceb54343e26904130a7039d47788380c0d4c3d59a6019614a36d96
+  simulate: 212c0d82c63eb0856f06c531a7e320e5d26f5e6cc07dcb393026643230641404
+  report: ebc8fd5dc738443b71deb7798a1ae6fce057dec09dec30809af831b79060e634

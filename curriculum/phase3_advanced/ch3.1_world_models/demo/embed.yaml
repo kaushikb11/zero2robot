@@ -1,0 +1,41 @@
+# Demo embed stub — ch3.1 "world_model_prediction".
+# The site component is a follow-up (playground/ owns rendering); this file
+# declares WHAT the embed shows. The hero is the reconstruction-vs-prediction
+# contrast, driven by the .rrd wm.py already records — no WASM/ONNX needed, so
+# this is a rerun-panel embed, not a live-inference embed.
+demo: world_model_prediction
+source: rerun               # wm.py --seed 0 writes outputs/ch3.1-world-models/world_models.rrd
+panels:
+  - id: prediction_vs_copy_last
+    kind: line-chart        # x = prediction horizon k, two curves
+    entities:
+      - eval/pred/world_model    # prior rollout on actions alone — stays low
+      - eval/pred/copy_last      # assume-nothing-moves baseline — climbs with k
+    caption: >
+      The headline, honestly. At k=1 copy-last wins (nothing has moved yet); the
+      world model overtakes it in AGGREGATE around k=2-3 and the gap widens. But
+      that aggregate win is carried by the pusher — a near-trivial integral of the
+      commanded velocity; on the T-block's own dynamics copy-last still wins. The
+      crossover is the model learning the easy half of the simulator, not the physics.
+  - id: rollout_trace
+    kind: line-chart        # x = horizon k, predicted vs ground-truth pusher_x on one sequence
+    entities:
+      - eval/rollout/pusher_x_predicted
+      - eval/rollout/pusher_x_true
+    caption: >
+      A single de-normalized coordinate: the dreamed trajectory (prior rollout)
+      tracks the true pusher_x for several steps, then drifts — open-loop
+      prediction degrades, which is exactly why ch3.2 re-grounds on observations.
+  - id: training_losses
+    kind: line-chart
+    entities:
+      - train/recon             # falls fast — reconstruction is the easy half
+      - train/dyn               # the prior learning to match the posterior it can't see
+    caption: "Reconstruction drops first; the dynamics (prior) loss is what turns the autoencoder into a simulator."
+interaction: horizon-scrub    # visitor scrubs the horizon k to watch the two prediction curves separate
+notes: >
+  Deliberately NOT a live "dream a rollout in the browser" demo — that is the
+  pixel Scale Lab (this chapter models the low-dim state; a decoded-pixel dream
+  needs the larger decoder the spike showed does not fit free-tier). The recorded
+  rerun panels carry the whole lesson: reconstruction is easy, prediction is the
+  test, and the crossover over copy-last is the payoff.

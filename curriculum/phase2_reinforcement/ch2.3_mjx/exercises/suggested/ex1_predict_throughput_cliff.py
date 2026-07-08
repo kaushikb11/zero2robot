@@ -12,10 +12,8 @@ scaling, (b) rise, but far less than 16x — real but sub-linear on a CPU, or (c
 stay flat / fall? Write your choice and one sentence of why in PREDICTION.
 
 Then run this file. It sweeps 16 and 256 envs and prints both throughputs and the
-ratio. On CPU-jax the honest answer is (b): more envs help, but a laptop has a
-handful of cores, so the curve is sub-linear and (past ~256 here) even reverses.
-THAT plateau is the cliff — and the reason MJX's 4096-robot headline is a GPU
-story: on a 4090 the same curve keeps climbing where the CPU flattens.
+ratio, then — only after your prediction is locked — reconciles which choice the
+numbers support.
 
 NOTE: these are TIMINGS, not a bitwise-reproducible number — they wobble
 run-to-run and depend on your machine. The reproducible fact is the SHAPE (256
@@ -69,3 +67,7 @@ if __name__ == "__main__":
     ratio = tp[256] / tp[16]
     print(f"\n256-env / 16-env throughput ratio: {ratio:.2f}x "
           f"(16x envs, but a CPU has few cores — that gap IS the cliff)")
+    print("Reconcile: on CPU-jax the honest answer is (b) — more envs help, but a laptop "
+          "has a handful of cores, so the curve is sub-linear and (past ~256 here) even "
+          "reverses. THAT plateau is the cliff, and the reason MJX's 4096-robot headline "
+          "is a GPU story: on a 4090 the same curve keeps climbing where the CPU flattens.")

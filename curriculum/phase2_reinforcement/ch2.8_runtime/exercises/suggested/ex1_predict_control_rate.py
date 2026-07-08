@@ -3,9 +3,9 @@
 Objective tested: the chapter's central claim that the control RATE is not a
 detail — it is the thing keeping the robot alive. The sensor and the plant keep
 running at 50 Hz; you slow only the POLICY node (--control_hz), so every control
-step in between re-applies the last action (zero-order hold). The trained ch2.1
-policy is a good balancer, so it tolerates a surprising amount of slowdown — and
-then falls off a cliff.
+step in between re-applies the last action (zero-order hold). The built-in
+scripted balancer is a good controller, so it tolerates a surprising amount of
+slowdown — and then falls off a cliff.
 
 PREDICT before you run: as you drop --control_hz from 50 down through 25, 20, 15,
 10, 5, at roughly what rate does the pole first FAIL to survive the full 10-second
@@ -39,8 +39,10 @@ REPO = Path(__file__).resolve().parents[5]
 ARTIFACT = REPO / "curriculum/phase2_reinforcement/ch2.8_runtime/runtime.py"
 SEEDS = (0, 1, 2)
 RATES = (50.0, 25.0, 20.0, 15.0, 10.0, 5.0)
-# Deterministic virtual clock, forced CPU: same (rate, seed) -> same metrics.json.
-COMMON = ["--device", "cpu", "--clock", "virtual", "--no-rerun"]
+# Deterministic virtual clock, forced CPU, and the checkpoint-free scripted brain
+# pinned explicitly: same (rate, seed) -> same metrics.json on every machine,
+# whatever checkpoints happen to be lying around.
+COMMON = ["--device", "cpu", "--clock", "virtual", "--no-rerun", "--policy", "scripted"]
 
 
 def run_one(control_hz: float, seed: int, workdir: Path) -> dict:

@@ -16,11 +16,9 @@ THE QUESTION. At the default budget (total_steps 300000, num_steps 128), num_env
 the SAME (throughput is all that matters), or (c) a LOWER eval return (too few
 gradient updates to learn)? Write it in PREDICTION.
 
-Then run this file. It trains both configs at seed 0 and prints eval returns.
-Measured (2026-07-06, cpu-jax): 64-env solves (eval ~407), 256-env does NOT (eval
-~90) — same data, 4x fewer updates. Faster wall-clock throughput bought WORSE
-learning. On a GPU you'd raise total_steps to give the 4096-env run enough
-updates; the tradeoff never disappears, it just moves.
+Then run this file. It trains both configs at seed 0 and prints eval returns. Read
+them against your prediction. On a GPU you'd raise total_steps to give the
+4096-env run enough updates; the tradeoff never disappears, it just moves.
 
 Estimated learner time: 25 minutes (two short training runs).
 """
@@ -69,5 +67,7 @@ if __name__ == "__main__":
     for name, ev in results.items():
         print(f"{name:14s}  eval return {ev:6.1f}")
     print("\nReconcile: the FASTER config (more envs, higher env-steps/sec) learned "
-          "LESS at the same env-step budget — because it took fewer gradient updates. "
-          "Throughput is not learning.")
+          "LESS at the same env-step budget. Before you read why, explain it in one "
+          "sentence yourself — then check: it took fewer gradient updates. Throughput "
+          "is not learning. (Measured 2026-07-06, cpu-jax: 64-env eval ~407, 256-env "
+          "~90 — same data, 4x fewer updates.)")

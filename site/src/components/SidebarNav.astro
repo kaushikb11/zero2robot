@@ -3,7 +3,7 @@
 // by number + title). Fully static; the current chapter is marked
 // aria-current="page". Reading-progress JS (in ChapterLayout) decorates visited
 // links with a data-read attribute at runtime, but the nav is complete without JS.
-import { chaptersByPhase, type ChapterInfo } from "../lib/curriculum.ts";
+import { chaptersByPhase, discoverFurther, type ChapterInfo } from "../lib/curriculum.ts";
 import ThemeToggle from "./ThemeToggle.tsx";
 
 interface Props {
@@ -12,6 +12,15 @@ interface Props {
 }
 const { chapters, currentSlug } = Astro.props;
 const groups = chaptersByPhase(chapters);
+
+// Phase-5 prose appendices (reading track + graduation bridge). Not chapters, so
+// they never appear in `chapters` — group them by track so the nav lists them
+// after the phases, each linking a real /further/ page.
+const further = discoverFurther();
+const furtherGroups = [...new Map(further.map((m) => [m.track, m.trackLabel])).entries()].map(
+  ([track, label]) => ({ track, label, modules: further.filter((m) => m.track === track) }),
+);
+const currentPath = Astro.url.pathname;
 ---
 
 <nav class="sidebar" aria-label="Chapters">
@@ -33,6 +42,7 @@ const groups = chaptersByPhase(chapters);
 
   <ul class="sidebar__quicklinks">
     <li><a href="/about/" aria-current={currentSlug === undefined && Astro.url.pathname.startsWith("/about") ? "page" : undefined}>Start here</a></li>
+    <li><a href="/map/" aria-current={currentSlug === undefined && Astro.url.pathname.startsWith("/map") ? "page" : undefined}>Learning map</a></li>
     <li><a href="/progress/">Your progress</a></li>
   </ul>
 
@@ -56,6 +66,31 @@ const groups = chaptersByPhase(chapters);
               </a>
             </li>
           ))}
+        </ul>
+      </div>
+    ))
+  }
+
+  {
+    furtherGroups.map((fg) => (
+      <div class="sidebar__phase">
+        <p class="sidebar__phase-label" id={`fx-${fg.track}`}>{fg.label}</p>
+        <ul class="sidebar__list" aria-labelledby={`fx-${fg.track}`}>
+          {fg.modules.map((m) => {
+            const href = `/further/${m.track}/${m.slug}/`;
+            return (
+              <li class="sidebar__item">
+                <a
+                  class="sidebar__link"
+                  href={href}
+                  aria-current={currentPath === href ? "page" : undefined}
+                >
+                  <span class="sidebar__num">{m.badge}</span>
+                  <span class="sidebar__title">{m.title}</span>
+                </a>
+              </li>
+            );
+          })}
         </ul>
       </div>
     ))

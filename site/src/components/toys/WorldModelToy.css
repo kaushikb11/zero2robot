@@ -1,0 +1,218 @@
+/* ch3.1 "World Models I: Learning the Simulator" concept-toy — RECONSTRUCTION
+ * vs PREDICTION, told HONESTLY.
+ *
+ * Co-located CSS for WorldModelToy.tsx (imported at the top of that file).
+ * Namespaced `wm-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`fr-*` classes. Like ch3.3's EngineDriftToy this toy is
+ * PURE SVG over pre-computed wm.py numbers — no WASM — so it drives every colour
+ * from the site's flipping design tokens and is genuinely theme-aware in BOTH
+ * light and dark. Every var carries a light fallback so it still renders if
+ * mounted outside the shell.
+ *
+ * Colour by MEANING (the honest split is the whole point):
+ *   - --signal blue        → the WORLD MODEL (its prediction curve + bars)
+ *   - --ink-mute neutral   → COPY-LAST (the assume-nothing-moves baseline)
+ *   - --entity-target grn  → a WIN badge (pusher: the model beats copy-last)
+ *   - --alert red          → the honest LOSS badge (object: copy-last wins)
+ */
+
+.wm { display: grid; gap: 0.7rem; }
+
+/* ============================ THE HEADLINE: the honest split ================ */
+.wm-split {
+  margin: 0;
+  padding: 0.6rem 0.7rem 0.65rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+.wm-split-h {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252);
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+.wm-split-h b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+.wm-groups { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .wm-groups { grid-template-columns: 1fr 1fr; } }
+
+.wm-group {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  display: grid; gap: 0.3rem;
+}
+.wm-group[data-loss="true"] {
+  border-color: color-mix(in srgb, var(--alert, #c0362a) 40%, var(--rule-strong, #c8bc9e));
+  background: color-mix(in srgb, var(--alert, #c0362a) 5%, var(--paper, #f7f3ea));
+}
+.wm-group-title {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+}
+.wm-group-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.82rem; font-weight: 700; color: var(--ink, #23201b);
+}
+.wm-badge {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 0.12rem 0.4rem; border-radius: 100px; white-space: nowrap;
+}
+.wm-badge[data-kind="win"] {
+  color: #fff; background: var(--entity-target, #2f9e44);
+}
+.wm-badge[data-kind="loss"] {
+  color: #fff; background: var(--alert, #c0362a);
+}
+.wm-group-sub {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.63rem; color: var(--ink-mute, #6d6252); line-height: 1.35;
+}
+
+/* horizontal bar pair (world model vs copy-last) inside a group */
+.wm-bars { display: grid; gap: 0.28rem; margin-top: 0.15rem; }
+.wm-bar-row { display: grid; grid-template-columns: 5.4rem 1fr auto; align-items: center; gap: 0.4rem; }
+.wm-bar-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink, #23201b);
+}
+.wm-bar-track {
+  height: 0.62rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.wm-bar-fill { height: 100%; border-radius: 3px; }
+.wm-bar-fill[data-series="wm"] { background: var(--signal, #1f56de); }
+.wm-bar-fill[data-series="copy"] { background: var(--ink-mute, #6d6252); }
+.wm-bar-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; font-variant-numeric: tabular-nums; color: var(--ink, #23201b);
+  min-width: 3.6ch; text-align: right;
+}
+.wm-bar-val[data-winner="true"] { font-weight: 700; }
+
+.wm-headline {
+  margin-top: 0.55rem;
+  font-size: 0.86rem; line-height: 1.5; color: var(--ink, #23201b);
+}
+.wm-headline b { font-weight: 700; }
+.wm-headline .wm-easy { color: var(--signal, #1f56de); }
+.wm-headline .wm-hard { color: var(--alert, #c0362a); }
+
+/* ============================ the two lower panels ========================= */
+.wm-lower { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 680px) { .wm-lower { grid-template-columns: 1.5fr 1fr; align-items: stretch; } }
+
+.wm-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.45rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.wm-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.15rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.wm-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.wm-svg { display: block; width: 100%; height: auto; }
+
+/* --- aggregate line chart marks --- */
+.wm-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.wm-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 14%, transparent); stroke-width: 1; }
+.wm-tick {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252);
+}
+.wm-axis-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em;
+}
+.wm-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.wm-line.wm-l-wm { stroke: var(--signal, #1f56de); }
+.wm-line.wm-l-copy { stroke: var(--ink-mute, #6d6252); stroke-dasharray: 5 4; }
+.wm-dot { stroke: var(--paper, #f7f3ea); stroke-width: 1.2; }
+.wm-dot.wm-l-wm { fill: var(--signal, #1f56de); }
+.wm-dot.wm-l-copy { fill: var(--ink-mute, #6d6252); }
+.wm-cursor { stroke: color-mix(in srgb, var(--ink, #23201b) 40%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.wm-cross { stroke: var(--entity-target, #2f9e44); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.wm-cross-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px; fill: color-mix(in srgb, var(--entity-target, #2f9e44) 85%, var(--ink, #23201b));
+}
+.wm-series-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 600;
+}
+.wm-series-lab.wm-l-wm { fill: var(--signal, #1f56de); }
+.wm-series-lab.wm-l-copy { fill: var(--ink-mute, #6d6252); }
+
+/* --- the horizon k scrubber --- */
+.wm-slider-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.wm-slider-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink, #23201b);
+}
+.wm-slider-label b { color: var(--signal, #1f56de); }
+.wm-slider { flex: 1 1 150px; min-width: 120px; accent-color: var(--signal, #1f56de); cursor: pointer; }
+.wm-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+
+/* the per-k readout under the chart */
+.wm-readout {
+  display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+  margin-top: 0.35rem; padding: 0.4rem 0.5rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.68rem;
+}
+.wm-ro-k { font-weight: 700; color: var(--ink, #23201b); }
+.wm-ro-v { font-variant-numeric: tabular-nums; color: var(--ink, #23201b); }
+.wm-ro-v.wm-l-wm { color: var(--signal, #1f56de); }
+.wm-ro-v.wm-l-copy { color: var(--ink-mute, #6d6252); }
+.wm-ro-win { margin-left: auto; font-weight: 700; }
+.wm-ro-win[data-who="wm"] { color: var(--signal, #1f56de); }
+.wm-ro-win[data-who="copy"] { color: var(--ink-mute, #6d6252); }
+
+/* --- reconstruction / scale-lab card --- */
+.wm-recon { display: grid; gap: 0.4rem; flex: 1 1 auto; }
+.wm-recon-bars { display: grid; gap: 0.3rem; }
+.wm-recon-row { display: grid; grid-template-columns: 7rem 1fr auto; align-items: center; gap: 0.4rem; }
+.wm-recon-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink, #23201b);
+}
+.wm-recon-track {
+  height: 0.62rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent); overflow: hidden;
+}
+.wm-recon-fill { height: 100%; border-radius: 3px; }
+.wm-recon-fill[data-kind="recon"] { background: var(--entity-target, #2f9e44); }
+.wm-recon-fill[data-kind="pred"] { background: var(--signal, #1f56de); }
+.wm-recon-val {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; font-variant-numeric: tabular-nums; color: var(--ink, #23201b);
+  min-width: 4ch; text-align: right;
+}
+.wm-scale-note {
+  font-size: 0.72rem; line-height: 1.45; color: var(--ink, #23201b);
+  padding: 0.4rem 0.5rem; border-radius: 4px;
+  border: 1px dashed color-mix(in srgb, var(--ink-mute, #6d6252) 40%, var(--paper-edge, #ded3ba));
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 5%, var(--paper, #f7f3ea));
+}
+.wm-scale-note b { font-weight: 600; }
+
+/* the persistent honest-note line under the toy */
+.wm-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.wm-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-bar-fill, .wm-recon-fill { transition: none; }
+}

@@ -50,6 +50,10 @@ def compute_gae(rewards, values, terminated, done, bootstrap, next_value,
     (1 - terminated) mask — that is the whole lesson. Return the (T,) advantages.
 
     Rough size: 8-10 lines.
+
+    Before you code, predict it: which step's advantage should end up larger —
+    the fall (terminated, t=2) or the time-out (truncated, t=5) — and what breaks
+    in the value function if you mask them the same way?
     """
     # YOUR CODE HERE (delete the next line once you start)
     raise NotImplementedError("implement GAE — bootstrap on truncation, not on termination")

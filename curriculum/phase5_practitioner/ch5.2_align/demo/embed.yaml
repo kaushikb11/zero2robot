@@ -1,0 +1,47 @@
+# Demo embed stub — ch5.2 "aligned_vs_random_retrieval".
+# Playground integration point: playground/ owns the embed components; this file declares
+# WHAT the toy shows and the shape of the data it needs. Coordinate at the contracts.ts
+# level before wiring. The ARTIFACT emits demo/vizdata.json (align.py, report region); the
+# ORCHESTRATOR builds the TSX. SSR-poster + JS-off degrade + a11y are the standard.
+#
+# CONTRACT NOTE: there is NO MuJoCo-WASM and NO onnx inference here. All retrieval is
+# PRECOMPUTED into vizdata.json (real cosine rankings from the trained aligned encoder and a
+# random-init one). The toy is a static, data-driven retrieval viewer — it needs neither the
+# tensor contract v1 nor v2. It is UNBLOCKED as soon as the site can read a JSON blob.
+# NO image binaries: each gallery frame is a block POSITION (tee_xy in sim state), rendered as
+# a little scene marker, not a camera image.
+demo: aligned_vs_random_retrieval
+hero: side_by_side_retrieval
+panels:
+  - id: instruction_picker
+    kind: control
+    title: "Type an instruction"
+    shows: >
+      A picker (or free text mapped to the nearest canonical query) over the four quadrant
+      instructions in vizdata.queries — e.g. "the block is near the top left corner". Selecting
+      one drives BOTH galleries below. Default: "top left".
+  - id: aligned_gallery
+    kind: static-figure
+    title: "Aligned encoder (contrastive)"
+    shows: >
+      For the chosen query, highlight the top-5 gallery frames the ALIGNED encoder returns
+      (vizdata.aligned_top5[query.quadrant]), each drawn as a small top-down scene: a dot at
+      (tee_x, tee_y) inside a table square, tinted by its true quadrant. The point to FEEL: the
+      lit frames cluster in the instruction's corner — language pulled the right scenes to the top.
+    source: vizdata.json           # aligned_top5, gallery[].{tee_x,tee_y,quadrant,near_far}
+  - id: random_gallery
+    kind: static-figure
+    title: "Random-init encoder"
+    shows: >
+      The SAME query, but the top-5 from a RANDOM-init encoder (vizdata.random_top5[...]). The lit
+      frames are scattered across quadrants — no alignment, so cosine is noise. Side by side with
+      the aligned panel, this is the whole lesson: contrastive pretraining built a shared space;
+      random init did not. (Random often returns the same few high-norm frames for every query —
+      show that honestly.)
+    source: vizdata.json
+notes: >
+  Recommendation: ship the two galleries side by side with the instruction picker on top, plus a
+  caption strip showing the measured retrieval@1 (fine) from meta.yaml reference_run: aligned 0.83
+  vs random 0.10. Optional third state: a "no-negatives" gallery (from a --break noneg vizdata) to
+  show the collapse — the frames are less scattered than random but clearly worse than aligned.
+  Everything is precomputed; there is no live compute, no WASM, no policy rollout in this chapter.

@@ -1,0 +1,173 @@
+/* ch3.9 "Plan Through Your Engine: Sampling-Based MPC (CEM/MPPI)" concept-toy —
+ * the SAMPLING-BASED MPC FAN-OUT toy.
+ *
+ * Co-located CSS for MpcPlanToy.tsx (imported at the top of that file).
+ * Namespaced `mp-*` so it never collides with the global `ct-*`/`bk-*` or the
+ * sibling toys' `ed-*`/`fr-*` classes. Like ch1.5's flow-ring and ch3.3's
+ * energy-drift this toy is PURE SVG over pre-computed mpc.py geometry — no WASM —
+ * so it drives every colour from the site's flipping design tokens and is genuinely
+ * theme-aware in BOTH light and dark. Every var carries a light fallback so it
+ * still renders if mounted outside the shell.
+ *
+ * Colour by MEANING (mirrors embed.yaml):
+ *   - --signal blue        → the SAMPLED candidate plans (the search)
+ *   - --entity-pusher gold → the MPPI-CHOSEN plan + the swing-up it produces
+ *   - --alert red          → the myopic --break run (never comes up)
+ *   - --entity-target green→ the "upright" goal line
+ */
+
+.mp { display: grid; gap: 0.6rem; }
+
+/* --- the one control: the look-ahead horizon ----------------------------- */
+.mp-controls {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  border-radius: 8px;
+}
+.mp-controls:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.mp-seg-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; color: var(--ink, #23201b); letter-spacing: 0.01em;
+}
+.mp-seg-label b { color: var(--signal, #1f56de); }
+.mp-seg { display: inline-flex; border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 100px; overflow: hidden; }
+.mp-seg-btn {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; letter-spacing: 0.01em;
+  padding: 0.34rem 0.9rem;
+  border: 0; border-right: 1px solid var(--rule-strong, #c8bc9e);
+  background: var(--paper, #f7f3ea); color: var(--ink-mute, #6d6252);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mp-seg-btn:last-child { border-right: 0; }
+.mp-seg-btn[aria-pressed="true"] { background: var(--signal, #1f56de); color: #fff; }
+.mp-seg-btn:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 2px; }
+.mp-seg-hint {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; color: var(--ink-mute, #6d6252); letter-spacing: 0.01em;
+}
+
+/* --- panels -------------------------------------------------------------- */
+.mp-panels { display: grid; gap: 0.6rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .mp-panels { grid-template-columns: 1fr 1.15fr; align-items: stretch; } }
+
+.mp-panel {
+  margin: 0;
+  display: flex; flex-direction: column;
+  padding: 0.5rem 0.6rem 0.45rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 3px;
+  background: var(--paper-2, #f0e9d9);
+}
+.mp-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-mute, #6d6252); margin-bottom: 0.2rem;
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+}
+.mp-cap b { color: var(--ink, #23201b); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.mp-cap b.mp-good { color: var(--entity-target, #0c7d5f); }
+.mp-cap b.mp-bad { color: var(--alert, #c0362a); }
+.mp-svg { display: block; width: 100%; height: auto; }
+.mp-fan-svg { aspect-ratio: 380 / 300; }
+
+/* --- fan-out panel marks -------------------------------------------------- */
+.mp-fan-guide { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 20%, transparent); stroke-width: 1; stroke-dasharray: 3 4; }
+.mp-fan-orient {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.02em;
+}
+
+/* the sampled candidate plans (the search) — signal blue, weighted by cost */
+.mp-cand {
+  fill: none; stroke: var(--signal, #1f56de);
+  stroke-linejoin: round; stroke-linecap: round;
+}
+/* the MPPI-chosen plan — bold gold with a soft underlay */
+.mp-chosen-glow {
+  fill: none; stroke: var(--entity-pusher, #b0560f);
+  stroke-width: 6; stroke-linejoin: round; stroke-linecap: round;
+  opacity: 0.18;
+}
+.mp-chosen {
+  fill: none; stroke: var(--entity-pusher, #b0560f);
+  stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round;
+}
+.mp-start { fill: var(--ink, #23201b); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.mp-chosen-end { fill: var(--entity-pusher, #b0560f); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+
+/* --- swing-up panel marks ------------------------------------------------- */
+.mp-axis { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); stroke-width: 1; }
+.mp-grid { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 16%, transparent); stroke-width: 1; }
+.mp-up-line { stroke: var(--entity-target, #0c7d5f); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.85; }
+.mp-up-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: color-mix(in srgb, var(--entity-target, #0c7d5f) 82%, var(--ink, #23201b));
+}
+.mp-tick { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); }
+.mp-axis-title { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; fill: var(--ink-mute, #6d6252); letter-spacing: 0.03em; }
+
+.mp-run { fill: none; stroke-linejoin: round; stroke-linecap: round; stroke-width: 1.4; opacity: 0.3; }
+.mp-run-plan { stroke: var(--entity-pusher, #b0560f); }
+.mp-run-break { stroke: var(--alert, #c0362a); }
+.mp-run.is-active { opacity: 1; stroke-width: 2.4; }
+
+.mp-cross { fill: var(--entity-pusher, #b0560f); stroke: var(--paper, #f7f3ea); stroke-width: 1; }
+.mp-cross-lab {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px; fill: color-mix(in srgb, var(--entity-pusher, #b0560f) 88%, var(--ink, #23201b)); font-weight: 600;
+}
+
+/* --- fan-out legend ------------------------------------------------------- */
+.mp-legend {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; margin-top: 0.35rem;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.66rem;
+}
+.mp-lg { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink, #23201b); }
+.mp-lg em { color: var(--ink-mute, #6d6252); font-style: normal; }
+.mp-lg::before { content: ""; width: 0.9rem; height: 0.16rem; border-radius: 2px; background: currentColor; }
+.mp-lg-cand { color: var(--signal, #1f56de); }
+.mp-lg-chosen { color: var(--entity-pusher, #b0560f); }
+.mp-lg-chosen::before { height: 0.24rem; }
+
+/* --- swing-up readout ----------------------------------------------------- */
+.mp-readout {
+  display: grid; gap: 0.28rem;
+  padding: 0.45rem 0.55rem; margin-top: 0.35rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.7rem;
+}
+.mp-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; }
+.mp-k { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink, #23201b); }
+.mp-k::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; }
+.mp-k-plan { color: var(--entity-pusher, #b0560f); }
+.mp-k-break { color: var(--alert, #c0362a); }
+.mp-k-rand { color: var(--ink-mute, #6d6252); }
+.mp-v { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #23201b); }
+.mp-v.mp-good { color: var(--entity-target, #0c7d5f); }
+.mp-v.mp-bad { color: var(--alert, #c0362a); }
+.mp-v.mp-muted { color: var(--ink-mute, #6d6252); }
+
+/* the persistent honest-note line under both panels */
+.mp-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem; line-height: 1.5; color: var(--ink-mute, #6d6252);
+}
+.mp-note b { color: var(--ink, #23201b); font-weight: 600; }
+
+/* visually-hidden live region for screen readers */
+.bk-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* honour reduced-motion: kill the button colour transitions */
+@media (prefers-reduced-motion: reduce) {
+  .mp-seg-btn { transition: none; }
+}

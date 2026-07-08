@@ -1,0 +1,136 @@
+id: ch3.2-dreamer
+title: "World Models II: Acting in Imagination"
+track: elective            # off the main line (0→1→2→4→5) — Phase 3 is optional Depth; a self-contained elective, NOT a capstone prerequisite. /map/ renders these nodes as "optional · Depth".
+artifact: dreamer.py       # 447 LOC (measured); target ~350, hard cap 450 — see LOC NOTE below
+task: pusht                # curriculum/common/envs/pusht — the SAME env 3.1 learned to dream
+dataset:
+  reference: null          # the world model generates its own data (scripted-expert rollouts); the ACTOR trains only on imagined data
+  learner_path: false
+requires: [ch1.4]          # map dependency (the diffusion chapter's encoder/decoder idiom)
+builds_on: ch3.1-world-models   # DIRECT sequel: reuses the RSSM-lite (encoder/GRU/prior/posterior/decoder) + the prior rollout
+objectives:
+  - Do the Dreamer move — learn a POLICY entirely INSIDE a learned world model: freeze the ch3.1-style model, then train an actor (+ a critic) purely on IMAGINED rollouts (roll the prior forward on the actor's own actions, decode each dreamed state, score its reward), never touching the real PushT sim during policy learning
+  - Compute the imagined reward analytically from the DECODED observation (the PushT reward is a known function of the block pose) — which is exactly why imagination can lie: the reward reads the block pose the world model HALLUCINATED, the very dims 3.1 measured it gets wrong
+  - Measure the IMAGINATION GAP honestly — deploy the SAME policy in the dream AND in the true sim and compare return/success; the imagined policy looks like a champion in imagination (dream parks the block, imagined tee-dist ~0.01 m) and FAILS in reality (real tee-dist ~0.16 m, 0% success)
+  - Take the lesson: imagination is only as good as your world model. The policy learned to ACT (move the pusher) and to game its own dream, but the dream's hard half (block/contact dynamics) is wrong, so the "success" it optimized never transfers. This is the honest sequel to 3.1's "it learned the pusher, not the block."
+
+# FEASIBILITY (this chapter shipped from a GO/NO-GO spike — see 00-kickoff format).
+# The spike tested three hypotheses on the ch3.1 world model + an actor-in-imagination:
+#  * H1 (a policy CAN be trained inside the frozen WM) PASS: with a small actor_lr the
+#    analytic dynamics-gradient trains the actor to raise imagined return across seeds
+#    0-2 (imagined final tee-dist drops from the ~0.17 m spawn to ~0.01 m — the dream
+#    learns to park the hallucinated block). NOTE: the gradient is high-variance; at
+#    actor_lr 3e-4 one seed of three diverged, so the default lr is 1e-4 (an honest
+#    stabilization, not a result change — see the reference_run bands).
+#  * H2 (THE HEADLINE — the imagination gap) MEASURED: imagined return/step ~-0.18 vs
+#    real ~-0.39 (gap +0.17..+0.24 across seeds 0-2); imagined final tee-dist ~0.01 m
+#    (dream "solves" it) vs real ~0.16 m (block barely moved); real success 0.00 on
+#    every seed. Imagination is systematically rosier than reality — the deluded policy.
+#  * H3 (determinism) PASS: --device cpu twice-run produces byte-identical metrics.json.
+# VERDICT: GO. The gap is large, robust, and instructive — precisely the map's
+# "genuinely instructive, deliberately small" and the honest sequel to 3.1.
+
+# LOC NOTE (doctrine tension for the author): 447 lines — within the 450 hard cap but
+# over the ~350 target. This chapter carries genuinely more than 3.1 (a world model
+# TRAIN loop + a frozen-model actor-critic-in-imagination loop + a DUAL imagined-vs-real
+# eval). This matches the ch2.1 spike's H3 finding that RL/WM chapters run over target;
+# the comments are load-bearing (the code is the product). Author: accept at 447, or
+# move the actor-critic into an exercise if a tighter artifact is wanted.
+
+scale_lab: true
+# The Scale Lab is the 4090 config — the honest "why world models eat compute" thesis
+# applied to acting. Observed facts only (interpretation is the author's):
+#  - Bigger model + more imagination iters + (crucially) a BETTER world model on the
+#    block dynamics is what could close the imagination gap. The free-tier model can
+#    only ever dream the easy half well, so the free-tier actor can only ever be deluded.
+#  - The map calls this "SL: 4090 — the honest chapter about why world models eat
+#    compute; T4 config genuinely instructive, deliberately small." The T4/CPU config
+#    here IS instructive precisely because the gap is measurable and large.
+
+read_the_real_thing: true
+# READ-THE-REAL-THING left for the author to pin — I did not have a verified offline
+# commit sha and must never invent one. The anchor:
+#   - danijar/dreamerv3: the actor-critic learned IN IMAGINATION — the lambda-return,
+#     the actor's analytic dynamics-gradient (our -returns.mean() through the frozen
+#     model), the critic regressing onto lambda-returns, and the reward/continue heads
+#     we replaced with an analytic reward. This chapter is the hand-built skeleton of
+#     exactly that loop; 3.1 built the world model it acts inside.
+rtrt:
+  repo: danijar/dreamerv3
+  commit: e3f02248693a79dc8b0ebd62c93683888ddaccfe   # default-branch HEAD (no tags in repo); pinned 2026-07-07
+  focus:
+    - "the imagination MDP: imagine() rolling the prior under the actor (our train_actor loop)"
+    - "lambda-returns + the actor loss as analytic backprop through the frozen dynamics"
+    - "the LEARNED reward head (Dreamer) vs our ANALYTIC reward — and why a wrong world model poisons EITHER: the imagination gap is the point, not the reward's source"
+
+demo: imagined_vs_real    # the imagined-vs-real headline viz — see demo/embed.yaml (site component is a follow-up)
+
+# Reference run + seeded bands. All numbers seed sweep 0-2 on cpu, torch 2.10.0 /
+# mujoco 3.10.0 / numpy 2.4.6; DEFAULT config (latent_dim 16, hidden_dim 128, seq_len 24,
+# episodes 120, wm_epochs 60, imag_horizon 15, imag_iters 400, actor_lr 1e-4,
+# eval_horizon 40, eval_episodes 30); measured 2026-07-06.
+reference_run:
+  provenance: "seeds 0-2 on cpu, torch 2.10.0 / mujoco 3.10.0 / numpy 2.4.6; default config (actor_lr 1e-4); measured 2026-07-07 (post actor/critic stop-gradient fix)"
+  imagined_return_per_step: -0.18   # what the actor BELIEVES it earns (dream): -0.144..-0.220 across seeds
+  real_return_per_step: -0.39       # what it ACTUALLY earns (true PushT): -0.383..-0.392 across seeds
+  imagination_gap: 0.21             # imagined - real, per-step reward: +0.172..+0.240 across seeds (imagination rosier EVERY seed)
+  imagined_final_tee_dist: 0.009    # dream "parks" the block near target: 0.005..0.011 m across seeds
+  real_final_tee_dist: 0.159        # reality: the block barely moved from its ~0.17 m spawn: 0.156..0.160 m
+  real_success_rate: 0.0            # the imagination-trained policy NEVER solves the real task: 0.00 every seed
+  # HONESTY (author MUST keep this framing — it is the measured truth, and the spine tying 3.2 to 3.1):
+  #  * THE IMAGINATION GAP IS THE LESSON. The actor optimizes a reward computed on the
+  #    block pose the FROZEN world model decodes. 3.1 measured that this model learned
+  #    the pusher kinematics but NOT the block/contact dynamics (copy-last beats it on
+  #    the object dims). So the actor learns to game a dream whose hard half is wrong:
+  #    the imagined block glides to the target (imagined tee-dist ~0.01 m), the real
+  #    block does not (real tee-dist ~0.16 m, 0% success). Do NOT present this as
+  #    "Dreamer solves PushT" — it emphatically does not at free-tier scale.
+  #  * THE POLICY DID LEARN SOMETHING (H1): it learned to move the pusher and to raise
+  #    imagined return. The failure is not "the actor didn't train" — it is that the
+  #    world it trained in is wrong on the dims the reward depends on. That distinction
+  #    is the whole chapter.
+  #  * THE DELUSION IS HORIZON-INVARIANT (the investigation, ex2): a properly-trained
+  #    actor parks the DREAM block at EVERY imagination horizon (imagined tee-dist
+  #    ~0.01-0.02 m at both h=5 and h=30) while real success stays 0.00 and real tee-dist
+  #    stays ~0.16 m at EVERY horizon. Rolling the wrong world model further does NOT buy
+  #    real skill — the model is wrong regardless of how far you roll it. (This reframes
+  #    an earlier "more horizon = more delusion" ordering that was partly an artifact of a
+  #    pre-fix cross-contaminated actor/critic update; see the git history + author note.)
+  #  * TINY BY DESIGN (0.22 min CPU). Not a strong Dreamer. The lesson is the mechanism
+  #    (actor-critic-in-imagination) and the measured gap, not a competitive agent.
+
+# Reference bands + provenance for the exercise checks (exercise-spec: seeded band with
+# provenance, not a bare magic number). checks.py reads these instead of inlining tolerances.
+exercise_checks:
+  ex1:                          # ex1_predict_gap.py (predict-then-run: does the dream policy work in reality?)
+    provenance: "cpu, default config, seeds 0-1 (what ex1 runs); measured 2026-07-07 (post fix): gap +0.205..+0.240, imag tee-dist 0.005..0.011, real tee-dist ~0.16, success 0.00"
+    answer: "B"                 # it looks great in imagination and FAILS in reality (large positive gap, 0% real success)
+    gap_min: 0.10               # imagined return reliably >0.10/step ROSIER than real (measured min 0.205 over seeds 0-1; wide margin below)
+    real_success_max: 0.10      # the imagination-trained policy does NOT solve the real task (measured 0.00)
+    real_tee_dist_min: 0.10     # the real block barely moves from its ~0.17 m spawn (measured ~0.16)
+  ex2:                          # ex2_horizon_investigation.py (investigation: does more imagination horizon buy real skill?)
+    provenance: "cpu, seeds 0-1, imag_horizon in {5, 30}, default otherwise; measured 2026-07-07 (post actor/critic stop-gradient fix)"
+    imag_dist_max: 0.10                 # the dream PARKS the block at EVERY horizon (imag tee-dist <0.10; measured ~0.01-0.02 at both h=5 and h=30)
+    real_tee_dist_min: 0.10             # reality is unmoved at BOTH horizons (real tee-dist >0.10; measured ~0.16) -> the delusion is horizon-invariant
+
+# region_hashes: sha256 of each include-by-region span in the chapter artifact, checked
+# by check_prose_code_drift against the artifact. Populated at chapter-build time;
+# re-render (or re-run the drift gate) if the artifact's regions change.
+
+# notebook_hash / notebook_file_hash: sha256 of the artifact at generation and of the
+# generated notebook bytes, written by notebook-tier-test. Drift => regenerate;
+# a file-hash mismatch => the notebook was hand-edited.
+
+notebook_hash: d1083e6eb7764da43d9d6ac4e32a81e9e267c3c65a5515a1ddbc766d104ecf4c        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 812074f45a7fad4648a35ed93246244d31e0b0f3e7d1049997bb56bbd38d6162   # sha256 of the generated notebook bytes; mismatch => hand-edited
+
+region_hashes:
+  setup: b64cd12484ebefe1388a4f473befa40aec838b624a8a902201490dfa6af84909
+  data: 669fdd1c86d47b0ca4639d8195d882d199c2bc640e1dea90d202d879ae02168c
+  model: 1bed36d3b8193bf786a2c4ec99d25a4257650841e71329840636802a12837840
+  reward: 76bc2f3f02c62af7487ec158b517eb6ebcb9d9b542200a6bddcb64c8dc663c2d
+  agent: ebb322bf3b34ea2ca2c1637fc5c5bb71db50984da6e7c6d2b0b2f7eff09a8c05
+  train_wm: 37295918ed5b74fd4124b38190a2f47d3bca1f013c07b4a2e09ebce4fa1d4bcd
+  train_actor: dff7024f2666dbe2d28cde0df71c7c84fda7716abfed53c6aeca6c6888c2d147
+  eval: 9fff5ec548f88a501ca5e37abfe83caa1e17a25e20d45013e41fbcaae8dca96d
+  report: 361a800736e075053cdb2dba7175e21a96d5694ad5187920c39e3bf58a41c614

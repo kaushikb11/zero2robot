@@ -70,6 +70,8 @@ if __name__ == "__main__":
     print(f"hack mean torso height: {hack['height_m']:.3f} m     (what it optimized: be tall)")
     print(f"hack reward rose:       {hack['train_return_first']:.1f} -> {hack['train_return_last']:.1f} "
           f"({rise:.1f}x)   (what you SAID)")
+    print("\nBefore you read the reconcile below — in one sentence, why did a reward that "
+          "never mentions forward motion still let the robot 'succeed'?")
     print(f"\nReconcile: the reward went up {rise:.1f}x while forward distance stayed a small "
           f"fraction of the shaped walk (~4.6 m): hack forward = {hack['forward_m']:+.2f} m. "
           "The policy did exactly what you SAID (be tall), not what you MEANT (walk). "

@@ -107,6 +107,7 @@ interface Scene {
   silentErr: number;    // ‖correct − shown‖ of the long axis (m) — Break It #1, measured
   composeGap: number;   // ‖A∘B − B∘A‖ translation (m) — Break It #2, measured
   swappedPx: [number, number]; // the reversed-order pusher reconstruction (px)
+  composedWorld: [number, number]; // translation of T_world_from_tee ∘ T_tee_from_pusher (== pusher_world)
 }
 
 function buildScene(tx: number, ty: number, yaw: number, xyzw: boolean): Scene {
@@ -140,6 +141,7 @@ function buildScene(tx: number, ty: number, yaw: number, xyzw: boolean): Scene {
     origin: w2s(tx, ty),
     silentErr, composeGap,
     swappedPx: w2s(swapped[0], swapped[1]),
+    composedWorld: [correct[0], correct[1]],
   };
 }
 
@@ -229,6 +231,60 @@ function SceneGraphics({ s, xyzw, composeBA }: { s: Scene; xyzw: boolean; compos
         <text class="fd-lbl fd-lbl-tee" x={ox - 8} y={oy + 24}>tee</text>
       </g>
     </>
+  );
+}
+
+/** The SAME rigid transform as the 3×3 HOMOGENEOUS matrix T = world_from_tee —
+ *  the second linked representation. The rotation 2×2 comes straight from
+ *  quat_to_matrix (top-left block, z dropped for the top-down plane); the
+ *  translation is the frame origin; the bottom row is [0 0 1]. This is exactly
+ *  transform_point in matrix form, so p_world = T · [p_body; 1]: the panel shows
+ *  the pusher in BOTH frames at once. Under the xyzw break the rotation block
+ *  fills with renderQuat's wrong matrix — the same silent bug, in the numbers.
+ *  Renders server-side from the default scene, so it is the JS-off readout too. */
+function MatrixPanel({ s, tx, ty, xyzw }: { s: Scene; tx: number; ty: number; xyzw: boolean }) {
+  const R = quatToMatrix(s.renderQuat);                 // rotation, wxyz (or the broken feed)
+  const T: number[][] = [
+    [R[0][0], R[0][1], tx],                             // [ cosθ  −sinθ  tx ]
+    [R[1][0], R[1][1], ty],                             // [ sinθ   cosθ   ty ]
+    [0, 0, 1],                                          // [  0      0      1 ]
+  ];
+  const pb = s.pusherInTee;   // the pusher, written in the tee (body) frame
+  const pw = PUSHER_WORLD;    // the SAME pusher in world — equals T · [pb; 1]
+  return (
+    <div class="fd-matrix" aria-hidden="true">
+      <div class="fd-mx-head">
+        <span class="fd-mx-title">T = world_from_tee</span>
+        <span class="fd-mx-sub">rotation · translation, one 3×3</span>
+      </div>
+      <div class={`fd-mx-grid ${xyzw ? "fd-mx--wrong" : ""}`}>
+        {T.map((row, r) =>
+          row.map((v, c) => (
+            <span
+              class={`fd-mx-cell${r < 2 && c < 2 ? " fd-mx-rot" : ""}${c === 2 && r < 2 ? " fd-mx-trans" : ""}${r === 2 ? " fd-mx-affine" : ""}`}
+            >
+              {fmt(v, 2)}
+            </span>
+          )),
+        )}
+      </div>
+      <div class="fd-mx-eq">
+        <span class="fd-mx-lhs">p_world</span>
+        <span class="fd-mx-op">= T ·</span>
+        <span class="fd-mx-rhs">p_body</span>
+      </div>
+      <div class="fd-mx-nums">
+        <span class="fd-mx-pw">[{fmt(pw[0])} {fmt(pw[1])}]</span>
+        <span class="fd-mx-op">= T ·</span>
+        <span class={`fd-mx-pb ${xyzw ? "fd-bad" : ""}`}>[{fmt(pb[0])} {fmt(pb[1])}]</span>
+      </div>
+      {/* the composition lesson: chain two transforms, recover the pusher's world
+          pose. Reversing the product (the "compose order" toggle) breaks this. */}
+      <div class="fd-mx-compose">
+        <span class="fd-mx-compose-eq">world_from_pusher = <b>T</b> · tee_from_pusher</span>
+        <span class="fd-mx-compose-val">t → [{fmt(s.composedWorld[0])} {fmt(s.composedWorld[1])}]</span>
+      </div>
+    </div>
   );
 }
 
@@ -323,7 +379,7 @@ export default function FramesDrag() {
           role={booted ? "application" : "img"}
           aria-label={
             booted
-              ? "Interactive coordinate-frame toy. Drag the magenta tee frame's origin to move it, or drag the tip of its red x-axis to rotate it; or focus here and use arrow keys to move, comma/period to rotate. The frame's quaternion, the pusher's coordinates in the frame, and the code update together. Press B to flip the quaternion convention from wxyz to xyzw and watch the axes point wrong; press C to reverse the composition order; press R to reset."
+              ? "Interactive coordinate-frame toy. Drag the magenta tee frame's origin to move it, or drag the tip of its red x-axis to rotate it; or focus here and use arrow keys to move, comma/period to rotate. The frame's quaternion, its homogeneous transform matrix T, the pusher's coordinates in the frame, and the code update together. Press B to flip the quaternion convention from wxyz to xyzw and watch the axes point wrong; press C to reverse the composition order; press R to reset."
               : "A top-down coordinate diagram: a faint world frame at the origin, a magenta tee frame turned to the upper right with red, green and blue basis arrows, and an amber pusher point. With JavaScript enabled you can drag the tee frame and watch its quaternion and the pusher's coordinates in the frame update, then flip wxyz to xyzw to see it break."
           }
           onKeyDown={booted ? onKeyDown : undefined}
@@ -406,6 +462,10 @@ export default function FramesDrag() {
           </div>
         </figure>
 
+        <div class="fd-side">
+        {/* the transform T as a homogeneous 3×3 — the second linked representation */}
+        <MatrixPanel s={s} tx={tx} ty={ty} xyzw={xyzw} />
+
         {/* the code representation — highlights the line the drag is moving, and
             turns red on the wrong-convention feed (LINKED to the frame + numbers) */}
         <pre class="fd-code" aria-hidden="true">
@@ -428,6 +488,7 @@ export default function FramesDrag() {
             )}
           </code>
         </pre>
+        </div>
       </div>
 
       {/* controls — JS-only (the poster reads without them) */}
@@ -462,7 +523,8 @@ export default function FramesDrag() {
       <p class="fd-sr" aria-live="polite">
         {xyzw
           ? `Wrong convention: quaternion fed as xyzw, orientation error ${fmt(s.silentErr)} metres.`
-          : `pusher in tee frame: ${fmt(s.pusherInTee[0])}, ${fmt(s.pusherInTee[1])} metres; yaw ${fmt(yawDeg, 0)} degrees.`}
+          : `Transform T: translation ${fmt(tx)}, ${fmt(ty)} metres, yaw ${fmt(yawDeg, 0)} degrees. ` +
+            `The pusher is fixed at ${fmt(PUSHER_WORLD[0])}, ${fmt(PUSHER_WORLD[1])} in world; in the tee frame it is ${fmt(s.pusherInTee[0])}, ${fmt(s.pusherInTee[1])} metres.`}
       </p>
     </div>
   );

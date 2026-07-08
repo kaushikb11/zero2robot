@@ -19,6 +19,11 @@ PREDICT before you run: at dt past dt_crit, what happens?
   C) neither blows up — dt_crit is a myth; the body just penetrates a bit more
 
 Record your answer in PREDICTION below, then run this file.
+
+Before you run, write one sentence: WHY — what does an explicit integrator do to a
+stiff spring once dt passes 2*sqrt(m/k), and does the velocity-projecting LCP even
+have a spring to blow up?
+
 Estimated learner time: 12 minutes.
 """
 

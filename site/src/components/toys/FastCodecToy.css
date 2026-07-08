@@ -1,0 +1,230 @@
+/* ========================================================================
+   FastCodecToy (.fc-*) — ch5.5 "FAST: Turning Torques into Tokens" concept-toy
+   (demo fast_codec).
+
+   A pure DATA-VIEWER: one smooth action chunk, its DCT spectrum, and the
+   reconstruction overlaid on the original — driven by two sliders (# coefficients
+   kept, quantization step) that index a PRECOMPUTED {tokens, rmse, recon} grid from
+   fast.py's vizdata.json. No MuJoCo-WASM, no ONNX, no dynamic import. It hydrates
+   only to make the two sliders draggable, so the server-rendered view (both plots +
+   the token/RMSE readout at the default keep=6, q=0.05) is a complete JS-off
+   experience.
+
+   COLOUR — a data panel (not a fixed light lab instrument), so it drives every
+   colour from the FLIPPING design tokens (site/public/styles.css) and is correct in
+   light AND dark with no special-case. Mapped by MEANING:
+     · the reconstruction / kept coefficients (the live result the sliders move) → --signal (blue)
+     · the original chunk / discarded coefficients / graph paper                 → neutral --ink-mute / --rule
+     · a lossy RMSE warning                                                       → --alert (red)
+     · a clean RMSE                                                               → --entity-target-ink (green)
+   Every var carries a light fallback so the toy still renders outside the shell.
+
+   MOTION — no animation; the sole interaction is the two sliders (state, not rAF).
+   The only CSS transitions are on the controls / bars, all gated under
+   prefers-reduced-motion.
+   ======================================================================== */
+.fc {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--paper-edge, #ded3ba);
+  border-radius: 4px;
+  background: var(--paper-2, #f0e9d9);
+}
+
+.fc-head { margin-bottom: 0.1rem; }
+.fc-title {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  color: var(--ink, #23201b);
+  font-weight: 700;
+}
+.fc-sub {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--ink-mute, #6d6252);
+}
+.fc-sub b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* ---- the stage: trajectory | spectrum | readout -------------------------- */
+.fc-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.fc-cell { margin: 0; display: grid; gap: 0.3rem; }
+.fc-cell-cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  color: var(--ink-mute, #6d6252);
+  letter-spacing: 0.01em;
+}
+
+.fc-traj, .fc-spec {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid color-mix(in srgb, var(--signal, #1f56de) 26%, var(--paper-edge, #ded3ba));
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 120% at 50% 25%,
+      color-mix(in srgb, var(--paper, #f7f3ea) 94%, var(--ink-mute, #6d6252) 6%),
+      var(--paper-2, #f0e9d9));
+}
+
+/* -- trajectory lanes -- */
+.fc-lane-bg { fill: color-mix(in srgb, var(--paper, #f7f3ea) 60%, transparent); stroke: var(--rule, #d9cdb0); stroke-width: 0.5; }
+.fc-lane-zero { stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 22%, transparent); stroke-width: 0.6; stroke-dasharray: 2 2; }
+.fc-orig { fill: none; stroke: color-mix(in srgb, var(--ink-mute, #6d6252) 70%, transparent); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.fc-recon { fill: none; stroke: var(--signal, #1f56de); stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+.fc-lane-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8px; fill: var(--ink-mute, #6d6252); }
+
+/* -- spectrum bars -- */
+.fc-spec-axis { stroke: var(--rule-strong, #c8bc9e); stroke-width: 1; }
+.fc-bar { transition: fill 120ms ease, opacity 120ms ease; }
+.fc-bar--keep { fill: var(--signal, #1f56de); }
+.fc-bar--drop { fill: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); }
+.fc-cut { stroke: var(--ink, #23201b); stroke-width: 1.2; stroke-dasharray: 3 2; opacity: 0.7; }
+.fc-cut-lbl { font-family: var(--font-mono, ui-monospace, monospace); font-size: 9px; font-weight: 700; fill: var(--ink, #23201b); }
+.fc-spec-cap { font-family: var(--font-mono, ui-monospace, monospace); font-size: 8px; fill: var(--ink-mute, #6d6252); }
+
+/* -- per-plot legends -- */
+.fc-legend {
+  display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.62rem; color: var(--ink-mute, #6d6252);
+}
+.fc-leg { display: inline-flex; align-items: center; gap: 0.3rem; }
+.fc-leg::before { content: ""; width: 0.75rem; height: 0; border-top-width: 3px; border-top-style: solid; border-radius: 2px; }
+.fc-leg--orig::before { border-top-color: color-mix(in srgb, var(--ink-mute, #6d6252) 70%, transparent); }
+.fc-leg--recon::before { border-top-color: var(--signal, #1f56de); }
+.fc-leg--keep::before { border-top-color: var(--signal, #1f56de); border-top-width: 6px; }
+.fc-leg--drop::before { border-top-color: color-mix(in srgb, var(--ink-mute, #6d6252) 42%, transparent); border-top-width: 6px; }
+
+/* ---- the readout: tokens + comparison bars + stats ----------------------- */
+.fc-readout {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.fc-tok {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--rule-strong, #c8bc9e);
+  border-left: 3px solid var(--signal, #1f56de);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 82%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.fc-tok-k { font-size: 0.64rem; color: var(--ink-mute, #6d6252); }
+.fc-tok-v {
+  font-size: 1.5rem; font-weight: 700; line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--signal, #1f56de);
+}
+.fc-tok-sub { font-size: 0.64rem; color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* fast-vs-naive comparison bars */
+.fc-bars {
+  display: grid; gap: 0.3rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.fc-bars-row { display: grid; grid-template-columns: 2.6rem 1fr 1.6rem; gap: 0.4rem; align-items: center; }
+.fc-bars-k { font-size: 0.62rem; color: var(--ink-mute, #6d6252); }
+.fc-bars-track {
+  height: 0.55rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-mute, #6d6252) 12%, transparent);
+  overflow: hidden;
+}
+.fc-bars-fill { display: block; height: 100%; border-radius: 3px; transition: width 140ms ease; }
+.fc-bars-fill--naive { background: color-mix(in srgb, var(--ink-mute, #6d6252) 55%, transparent); }
+.fc-bars-fill--fast { background: var(--signal, #1f56de); }
+.fc-bars-n { font-size: 0.66rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft, #4a4437); text-align: right; }
+
+/* the stat rows */
+.fc-stat {
+  display: grid; gap: 0.28rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.fc-stat-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.fc-stat-k { font-size: 0.64rem; color: var(--ink-mute, #6d6252); }
+.fc-stat-v { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink, #23201b); }
+.fc-stat-v.fc-ok { color: var(--entity-target-ink, #0c7d5f); }
+.fc-stat-v.fc-warn { color: var(--alert, #c0362a); }
+
+/* ---- controls: the two sliders ------------------------------------------- */
+.fc-controls {
+  display: flex; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule-strong, #c8bc9e); border-radius: 5px;
+  background: color-mix(in srgb, var(--paper, #f7f3ea) 88%, transparent);
+}
+.fc-slider-group { display: inline-flex; align-items: center; gap: 0.5rem; flex: 1 1 14rem; min-width: 12rem; }
+.fc-slider-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.7rem; color: var(--ink-mute, #6d6252); white-space: nowrap;
+}
+.fc-slider {
+  flex: 1 1 6rem; min-width: 5rem;
+  accent-color: var(--signal, #1f56de);
+  cursor: pointer;
+}
+.fc-slider:focus-visible { outline: 2px solid var(--signal, #1f56de); outline-offset: 3px; }
+.fc-slider-out {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.74rem; font-variant-numeric: tabular-nums; font-weight: 700;
+  color: var(--ink, #23201b); white-space: nowrap; min-width: 2.6rem; text-align: right;
+}
+.fc-control-note {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem; color: var(--ink-mute, #6d6252);
+  flex: 1 1 100%;
+}
+
+/* ---- the honest framing note --------------------------------------------- */
+.fc-note {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem; line-height: 1.6; color: var(--ink-mute, #6d6252);
+}
+.fc-note b { color: var(--ink-soft, #4a4437); font-weight: 700; }
+
+/* visually-hidden live region for screen readers */
+.bk-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 46rem) {
+  .fc-stage { grid-template-columns: 1fr 1fr; }
+  .fc-readout { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+  .fc-tok { grid-column: 1 / -1; }
+}
+@media (max-width: 30rem) {
+  .fc-stage { grid-template-columns: 1fr; }
+  .fc-readout { grid-template-columns: 1fr; }
+  .fc-title { font-size: 0.84rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-bar, .fc-bars-fill { transition: none; }
+}

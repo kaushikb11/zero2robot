@@ -1,0 +1,128 @@
+# datasets/datasets.yaml — the dataset manifest (the in-repo POINTER).
+#
+# Sibling of checkpoints/models.yaml. Same doctrine, one difference that matters:
+# a MODEL is a single trained .onnx that only its exporter can reproduce, so the
+# model manifest is a pure fetch-from-Hub pointer. A DATASET here is almost always
+# REGENERATED from a deterministic, seeded generator that already lives in the repo
+# (gen_demos.py, vla_data.py) — same seed -> bit-identical dataset, no download
+# needed. So every entry below declares a `source:` that says HOW you get it:
+#
+#     source: regenerate     run the recorded command; deterministic, offline, free.
+#                            THIS IS THE PRIMARY PATH for zero2robot's own demo sets.
+#     source: fetch          pull from the Hugging Face Hub (an EXTERNAL upstream
+#                            dataset we do not host, or an optional convenience mirror).
+#     source: reference-only DISCUSSED at scale, never downloaded (free-tier floor,
+#                            invariant 1: OXE/DROID are multi-TB).
+#
+# Root CLAUDE.md invariant #5: "No binaries in git." Generated LeRobot datasets land
+# under outputs/ (git-ignored); the optional Hub mirrors are archives on the Hub. This
+# file is the only thing about them that is version-controlled — the pointer + the
+# provenance + the exact regenerate command.
+#
+# The TRIANGLE this manifest ties together, per dataset:
+#
+#     chapter --data path   ->  outputs/<name>        (what the chapter loads)
+#         |
+#     manifest  ->  this file: name + source + regenerate cmd + provenance
+#         |
+#     generator ->  the seeded .py that produces it   (where it comes from)
+#
+# scripts/fetch_datasets.py reads this at build time and, per entry: if the dataset
+# is already on disk it SKIPS; if it is missing it either fetches the optional Hub
+# mirror (sha256-verified) or, for a `regenerate` set with no mirror, prints the exact
+# command to rebuild it. It NEVER hard-fails — a chapter run regenerates its own data.
+#
+# ---------------------------------------------------------------------------
+# HOW TO PUBLISH A CONVENIENCE MIRROR (author, optional — skips regeneration on Colab):
+#   1. regenerate the dataset locally with its `regenerate:` command (deterministic)
+#   2. python scripts/upload_datasets_hf.py            # dry-run: archives + prints sha256
+#   3. paste each printed sha256 into that dataset's `mirror.sha256` below
+#   4. python scripts/upload_datasets_hf.py --create-repo --yes    # publish the archives
+# The sha256 recorded here is the digest of the UPLOADED ARCHIVE (a transport checksum,
+# same contract as models.yaml). The dataset's *reproducibility* is guaranteed by the
+# seed in the regenerate command, not by this digest.
+# ---------------------------------------------------------------------------
+
+# HF dataset repo the optional mirrors live in. Archives resolve at:
+#   https://huggingface.co/datasets/<hf_repo>/resolve/main/<archive>
+# NOTE: `zero2robot/datasets` is a PLACEHOLDER — the real org is author-gated. Mirrors
+# are OPTIONAL (every zero2robot demo set regenerates offline), so until the author
+# creates this repo and runs scripts/upload_datasets_hf.py, fetch simply falls back to
+# printing the regenerate command. Nothing breaks.
+hf_repo: zero2robot/datasets
+
+# Where fetch_datasets.py provisions data and where the chapters read it (repo-relative,
+# git-ignored). A dataset's on-disk location is <data_dir>/<the tail of its path>.
+data_dir: outputs
+
+datasets:
+  # --- zero2robot's own demo sets: REGENERATE (deterministic, offline, free) ----------
+  - name: pusht-demos
+    source: regenerate
+    path: outputs/pusht-demos               # chapter default --data for ch1.1 / ch1.2
+    regenerate: "python curriculum/common/envs/pusht/gen_demos.py --episodes 100 --seed 0 --out outputs/pusht-demos --no-video"
+    format: lerobot-v3                       # parquet + meta/*.json (loadable by LeRobotDataset)
+    generator: curriculum/common/envs/pusht/gen_demos.py
+    seed: 0
+    tier: cpu-laptop
+    provenance: "scripted PushT expert (curriculum/common/envs/pusht/scripted_expert.py); episode i uses env seed (seed+i) -> bit-for-bit reproducible from these CLI args alone"
+    chapters: [ch1.1-bc, ch1.2-curate]
+    # Optional Hub mirror (skip regeneration on a fresh Colab). Placeholder until the
+    # author archives + uploads; sha256 stays null until then (fetch falls back to regen).
+    mirror:
+      archive: pusht-demos.tar.gz
+      sha256: null
+      unpack_to: outputs/pusht-demos
+
+  - name: aloha-cube-demos
+    source: regenerate
+    path: outputs/aloha-cube-demos           # ch1.3 ACT bimanual cube-transfer demos
+    regenerate: "python curriculum/common/envs/aloha_cube/gen_demos.py --episodes 50 --seed 0 --out outputs/aloha-cube-demos --no-video"
+    format: lerobot-v3
+    generator: curriculum/common/envs/aloha_cube/gen_demos.py
+    seed: 0
+    tier: cpu-laptop
+    provenance: "scripted ALOHA bimanual pick->handoff->place expert (curriculum/common/envs/aloha_cube/scripted_expert.py); deterministic from CLI args"
+    chapters: [ch1.3-act]
+    mirror:
+      archive: aloha-cube-demos.tar.gz
+      sha256: null
+      unpack_to: outputs/aloha-cube-demos
+
+  - name: vla-multitask
+    source: regenerate
+    path: outputs/ch1.7-vla-data             # ch1.7 multi-task VLA training examples
+    regenerate: "python curriculum/phase1_imitation/ch1.7_vla_data/vla_data.py --seed 0"
+    format: npz                              # derived (instruction_tokens, image_features, state) -> action; NOT a LeRobot dataset
+    generator: curriculum/phase1_imitation/ch1.7_vla_data/vla_data.py
+    seed: 0
+    tier: cpu-laptop
+    provenance: "PushT + ALOHA demos mixed into one pile, tokenized + run through a seeded frozen CNN (see ch1.7 meta.yaml reference_run: 479 examples, vocab 46); fully deterministic on CPU"
+    chapters: [ch1.7-vla-data]
+    mirror: null                             # tiny + seconds to regenerate; no mirror worth hosting
+
+  # --- upstream reference dataset: FETCH from the LeRobot org (we do NOT host it) ------
+  - name: lerobot-pusht
+    source: fetch
+    external: true
+    hf_repo: lerobot/pusht                    # upstream LeRobot dataset, NOT zero2robot/*
+    hf_repo_type: dataset
+    fetch: "huggingface-cli download lerobot/pusht --repo-type dataset"
+    format: lerobot-v3
+    chapters: [ch1.1-bc, ch1.2-curate]
+    note: >
+      The learner-facing REFERENCE dataset in ch1.1/ch1.2 prose (real human PushT
+      demonstrations). Hosted by the LeRobot org — the fetch script does NOT mirror or
+      re-host it, and the chapters run end to end without it via the regenerated
+      scripted `pusht-demos` above. Listed here so provenance is documented in one place.
+
+  # --- scale datasets: REFERENCE-ONLY (never downloaded; free-tier floor, invariant 1) -
+  - name: oxe-droid
+    source: reference-only
+    external: true
+    chapters: [ch3.7-scale-data]
+    note: >
+      Open X-Embodiment (>1M trajectories, 22 robots) and DROID (76k trajectories) are
+      DISCUSSED as the scaled-up version of the exact problems ch3.7 reproduces on the
+      learner's own PushT (2-D) + ALOHA (6-D) demos. Never fetched: multi-TB, no free-tier
+      path. There is deliberately no `fetch:` and no mirror here.

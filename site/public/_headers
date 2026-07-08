@@ -1,0 +1,29 @@
+# Cloudflare Pages response headers.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Astro copies site/public/* into the build root, so this file ships INSIDE dist/
+# and the caching + MIME policy travels with the deployed artifact — no dashboard
+# config, nothing to drift. Decision: infra/decisions/017-hosting-and-deploy.md.
+
+# Content-hashed build assets. Astro/Vite emit _assets/<name>.<hash>.<ext>; the
+# hash changes whenever the bytes change, so the name is safe to cache forever.
+# This is what makes the heavy WASM (mujoco ~9.7MB, onnxruntime ~13MB) free after
+# first load — the browser never re-fetches a given hash.
+/_assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Force the WASM media type so streaming compile works regardless of the host's
+# default MIME table. Belt-and-suspenders: Cloudflare serves application/wasm by
+# default today, but we do not want the demos to depend on that.
+/_assets/*.wasm
+  Content-Type: application/wasm
+
+# Live-demo policies are fetched by STABLE filename from the HF Hub at build time
+# (checkpoints/models.yaml). A re-trained model reuses the name, so revalidate
+# rather than cache-forever — otherwise a refreshed policy is stuck behind a stale
+# year-long cache.
+/models/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# HTML entry pages are left on Cloudflare Pages' default (short, revalidated) cache
+# on purpose — they are NOT content-hashed, so immutable would pin stale pages.

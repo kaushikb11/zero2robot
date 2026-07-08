@@ -1,0 +1,433 @@
+---
+// LearningPathMap.astro — the interactive learning-path / concept map.
+//
+// WHAT IT IS: the real curriculum as a layered DAG. Phases are columns
+// (Phase 0 → Phase 5, left to right); chapters are nodes stacked by number
+// within their phase; the curving threads between columns are the CROSS-CHAPTER
+// dependencies declared in meta.yaml — nothing here is hand-authored.
+//
+// HONESTY CONTRACT (same as CurriculumArc + lib/curriculum.ts):
+//  · Nodes are discovered chapters (discoverChapters); every node links to a
+//    page that actually exists.
+//  · Edges are DERIVED from real meta.yaml fields (requires / builds_on /
+//    phase_requires / policy_reused) via lib/curriculum-graph.ts. An edge is
+//    drawn only when both endpoints resolve to a built chapter. We never invent
+//    a thread the data does not declare.
+//  · Phase 4's leaderboard capstone is graded on hidden seeds, so its remaining
+//    chapters are not built/linkable — shown as ONE honest "gated" marker (no
+//    invented titles), mirroring the landing arc.
+//
+// LAYOUT: a hand-rolled layered layout (no d3/cytoscape, no new deps). Every
+// coordinate is computed at build time in a fixed px space; nodes are absolutely
+// positioned HTML anchors and the threads are one SVG of cubic-Bézier paths
+// underneath them. Because the geometry is baked at build, the whole map —
+// nodes AND threads — renders server-side and survives a <script> strip.
+//
+// DEGRADATION / A11Y: the SVG threads are decorative (aria-hidden); the real
+// navigation is the HTML anchors (keyboard-focusable, each with an aria-label
+// summarising its prerequisites + what it unblocks). Below the map, a static
+// text outline + a flat thread table restate the exact same structure, so with
+// JavaScript off (or a screen reader) the map reads as a plain list. The only
+// <script> is progressive enhancement: focus/hover highlights a chapter's
+// prerequisite and unblocked threads. Reduced-motion is honoured in CSS.
+import { discoverChapters, chaptersByPhase, type ChapterInfo } from "../lib/curriculum.ts";
+import { buildGraph, REL_LABEL, type GraphEdge } from "../lib/curriculum-graph.ts";
+import "./learning-path.css";
+
+const chapters = discoverChapters();
+const groups = chaptersByPhase(chapters);
+const { edges, prereqOf, unblockOf } = buildGraph(chapters);
+
+const byId = new Map(chapters.map((c) => [c.id, c]));
+
+// --- main line vs optional Depth (DERIVED from meta.yaml `track:`) ----------
+// A chapter is off the main line when its meta declares `track: elective`; a
+// phase column is "optional Depth" when EVERY chapter in it is elective. We key
+// the map's understated "optional · Depth" treatment off this field — never off
+// a hard-coded phase number — so the honesty contract holds: mark Phase 3 by
+// DECLARING it in the data, not by special-casing "phase3" here.
+const isElective = (ch: ChapterInfo) => ch.track === "elective";
+const phaseIsOptional = (g: { chapters: ChapterInfo[] }) =>
+  g.chapters.length > 0 && g.chapters.every(isElective);
+const phaseNum = (phaseKey: string) => phaseKey.match(/^phase(\d+)/)?.[1] ?? "?";
+// The main line = every phase NOT wholly optional, in order → e.g. "0 → 1 → 2 → 4 → 5".
+const mainLine = groups
+  .filter((g) => !phaseIsOptional(g))
+  .map((g) => phaseNum(g.phaseKey))
+  .join(" → ");
+const hasOptional = groups.some(phaseIsOptional);
+
+// --- fixed layered geometry (px) -------------------------------------------
+const NW = 188; // node width
+const NH = 66; // node height
+const CG = 46; // gap between phase columns
+const RG = 15; // gap between chapter rows
+const HEADER = 44; // column-header band
+const PADX = 16;
+const PADY = 8;
+
+const colX = (p: number) => PADX + p * (NW + CG);
+const rowY = (r: number) => PADY + HEADER + r * (NH + RG);
+
+interface Pos {
+  x: number;
+  y: number;
+  phaseIndex: number;
+  row: number;
+}
+const pos = new Map<string, Pos>();
+groups.forEach((g, phaseIndex) => {
+  g.chapters.forEach((ch, row) => {
+    pos.set(ch.id, { x: colX(phaseIndex), y: rowY(row), phaseIndex, row });
+  });
+});
+
+// Phase 4 gets one honest "gated capstone" marker below its built chapters.
+const PHASE4_KEY = "phase4_capstone";
+const phase4Index = groups.findIndex((g) => g.phaseKey === PHASE4_KEY);
+const gatedRow = phase4Index >= 0 ? groups[phase4Index].chapters.length : 0;
+const gated =
+  phase4Index >= 0
+    ? { x: colX(phase4Index), y: rowY(gatedRow) }
+    : null;
+
+const maxRows = Math.max(
+  ...groups.map((g, i) => g.chapters.length + (i === phase4Index ? 1 : 0)),
+);
+const boardW = PADX * 2 + groups.length * NW + (groups.length - 1) * CG;
+const boardH = PADY * 2 + HEADER + maxRows * NH + (maxRows - 1) * RG;
+
+// --- edge path builder ------------------------------------------------------
+function edgePath(e: GraphEdge): string {
+  const a = pos.get(e.from)!;
+  const b = pos.get(e.to)!;
+  const y1 = a.y + NH / 2;
+  const y2 = b.y + NH / 2;
+  if (b.phaseIndex > a.phaseIndex) {
+    // forward (left → right): enter the target's LEFT edge
+    const x1 = a.x + NW;
+    const x2 = b.x;
+    const k = Math.max(38, (x2 - x1) * 0.45);
+    return `M${x1},${y1} C${x1 + k},${y1} ${x2 - k},${y2} ${x2},${y2}`;
+  }
+  // same (or backward) column: bow out on the RIGHT, right-edge → right-edge
+  const x1 = a.x + NW;
+  const x2 = b.x + NW;
+  const off = 44 + Math.abs(a.row - b.row) * 6;
+  return `M${x1},${y1} C${x1 + off},${y1} ${x2 + off},${y2} ${x2},${y2}`;
+}
+
+// short display id, e.g. "ch1.4-diffusion" -> "1.4"
+const num = (id: string) => byId.get(id)?.number ?? id;
+const titleOf = (id: string) => byId.get(id)?.title ?? id;
+
+function splitTitle(title: string): [string, string] {
+  const i = title.indexOf(":");
+  return i >= 0 ? [title.slice(0, i).trim(), title.slice(i + 1).trim()] : [title, ""];
+}
+
+// per-node aria summary of its threads (in / out)
+function ariaFor(ch: ChapterInfo): string {
+  const pre = prereqOf.get(ch.id) ?? [];
+  const unb = unblockOf.get(ch.id) ?? [];
+  const parts = [`Chapter ${ch.number}, ${ch.title}`];
+  if (isElective(ch)) parts.push("optional Depth — off the main line, not required by the capstone");
+  if (pre.length) parts.push(`prerequisites: ${pre.map((id) => num(id)).join(", ")}`);
+  if (unb.length) parts.push(`unblocks: ${unb.map((id) => num(id)).join(", ")}`);
+  return parts.join(". ") + ".";
+}
+
+const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
+  { rel: "builds_on", hint: "direct sequel — reuses the prior chapter's code" },
+  { rel: "requires", hint: "hard map prerequisite" },
+  { rel: "phase_requires", hint: "Phase-4 gate — the capstone assumes it" },
+  { rel: "policy_reused", hint: "optionally runs an earlier chapter's trained policy" },
+];
+---
+
+<section class="lp" aria-labelledby="lp-title" id="learning-path">
+  <header class="lp__head">
+    <p class="lp-kicker">The dependency map</p>
+    <h2 class="lp__title" id="lp-title">How the chapters actually connect.</h2>
+    <p class="lp__lede">
+      Every phase, left to right, one column each. Every node is a built chapter
+      that links to its page; every thread is a dependency a chapter's
+      <code>meta.yaml</code> actually declares — not a line we drew by hand. Focus
+      or hover a chapter to light up what it needs and what it unblocks.
+    </p>
+
+    {hasOptional && (
+      <p class="lp__lede lp__lede--mainline">
+        The <strong>main line runs {mainLine}</strong> — a complete “empty file →
+        real robot” journey on its own. Columns marked
+        <span class="lp-opt-chip">optional · Depth</span> sit off it: self-contained
+        electives you take when the itch strikes. The capstone requires none of them.
+      </p>
+    )}
+
+    <ul class="lp-legend" aria-label="Thread types">
+      {legend.map((l) => (
+        <li class="lp-legend__item">
+          <svg class="lp-legend__swatch" viewBox="0 0 34 8" aria-hidden="true">
+            <path class={`lp-edge lp-edge--${l.rel}`} d="M0,4 L34,4" />
+          </svg>
+          <span class="lp-legend__label">{REL_LABEL[l.rel]}</span>
+          <span class="lp-legend__hint">{l.hint}</span>
+        </li>
+      ))}
+      <li class="lp-legend__item lp-legend__item--focus">
+        <span class="lp-legend__dot lp-legend__dot--pre" aria-hidden="true"></span>
+        <span class="lp-legend__label">on focus: prerequisites</span>
+      </li>
+      <li class="lp-legend__item lp-legend__item--focus">
+        <span class="lp-legend__dot lp-legend__dot--unb" aria-hidden="true"></span>
+        <span class="lp-legend__label">on focus: what it unblocks</span>
+      </li>
+      {hasOptional && (
+        <li class="lp-legend__item">
+          <span class="lp-legend__optswatch" aria-hidden="true"></span>
+          <span class="lp-legend__label">optional · Depth</span>
+          <span class="lp-legend__hint">off the main line — a self-contained elective</span>
+        </li>
+      )}
+    </ul>
+  </header>
+
+  <p class="lp-scrollhint" aria-hidden="true">Scroll sideways to see every phase →</p>
+
+  <div class="lp-scroll">
+    <div
+      class="lp-board"
+      role="group"
+      aria-label="Curriculum dependency map — a text outline of the same structure follows below"
+      style={`width:${boardW}px;height:${boardH}px;`}
+    >
+      {/* threads: decorative — the accessible structure is the outline below */}
+      <svg
+        class="lp-threads"
+        viewBox={`0 0 ${boardW} ${boardH}`}
+        width={boardW}
+        height={boardH}
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <marker
+            id="lp-arrow"
+            viewBox="0 0 8 8"
+            refX="7"
+            refY="4"
+            markerWidth="6.5"
+            markerHeight="6.5"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L8,4 L0,8 z" fill="context-stroke"></path>
+          </marker>
+        </defs>
+        {edges.map((e) => (
+          <path
+            class={`lp-edge lp-edge--${e.rel}`}
+            d={edgePath(e)}
+            data-edge=""
+            data-from={e.from}
+            data-to={e.to}
+            marker-end="url(#lp-arrow)"
+          >
+            <title>{`${num(e.from)} → ${num(e.to)} · ${REL_LABEL[e.rel]}`}</title>
+          </path>
+        ))}
+      </svg>
+
+      {/* phase column headers — a wholly-elective phase reads "optional · Depth" */}
+      {groups.map((g, i) => (
+        <div
+          class={`lp-col${phaseIsOptional(g) ? " lp-col--optional" : ""}`}
+          style={`left:${colX(i)}px;width:${NW}px;top:${PADY}px;`}
+        >
+          <span class="lp-col__label">{g.phaseLabel}</span>
+          {phaseIsOptional(g) && <span class="lp-col__badge">optional · Depth</span>}
+        </div>
+      ))}
+
+      {/* chapter nodes — the real, keyboard-navigable navigation */}
+      {groups.map((g) =>
+        g.chapters.map((ch) => {
+          const p = pos.get(ch.id)!;
+          const [main] = splitTitle(ch.title);
+          const pre = prereqOf.get(ch.id) ?? [];
+          const unb = unblockOf.get(ch.id) ?? [];
+          const elective = isElective(ch);
+          return (
+            <a
+              class={`lp-node${elective ? " lp-node--optional" : ""}`}
+              href={`/${ch.slug}/`}
+              data-node={ch.id}
+              data-prereq={pre.join(" ")}
+              data-unblock={unb.join(" ")}
+              aria-label={ariaFor(ch)}
+              style={`left:${p.x}px;top:${p.y}px;width:${NW}px;height:${NH}px;`}
+            >
+              <span class="lp-node__num">{ch.number}</span>
+              <span class="lp-node__title">{main}</span>
+              {(elective || pre.length > 0 || unb.length > 0) && (
+                <span class="lp-node__wires" aria-hidden="true">
+                  {elective && <span class="lp-node__wire lp-node__wire--opt">optional</span>}
+                  {pre.length > 0 && <span class="lp-node__wire lp-node__wire--in">needs {pre.length}</span>}
+                  {unb.length > 0 && <span class="lp-node__wire lp-node__wire--out">feeds {unb.length}</span>}
+                </span>
+              )}
+            </a>
+          );
+        }),
+      )}
+
+      {/* honest gated-capstone marker (not a chapter, not a link) */}
+      {gated && (
+        <div
+          class="lp-node lp-node--gated"
+          role="note"
+          aria-label="Phase 4 leaderboard capstone — gated on the hidden-seed grading server; not linkable yet"
+          style={`left:${gated.x}px;top:${gated.y}px;width:${NW}px;height:${NH}px;`}
+        >
+          <span class="lp-node__num">4·▸</span>
+          <span class="lp-node__title">Leaderboard capstone</span>
+          <span class="lp-node__wires" aria-hidden="true">
+            <span class="lp-node__wire lp-node__wire--gated">coming · gated</span>
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* ===================================================================
+       STATIC BACKBONE — the same structure as plain text. This is what a
+       screen reader reads and what survives with JavaScript disabled.
+       =================================================================== */}
+  <div class="lp-static">
+    <h3 class="lp-static__title" id="lp-outline">The map as a list</h3>
+    <p class="lp-static__note">
+      Every chapter, by phase, with the threads it declares. This is the same
+      data the diagram draws — readable without JavaScript.
+    </p>
+
+    <ol class="lp-outline">
+      {groups.map((g) => (
+        <li class={`lp-outline__phase${phaseIsOptional(g) ? " lp-outline__phase--optional" : ""}`}>
+          <h4 class="lp-outline__phlabel">
+            {g.phaseLabel}
+            {phaseIsOptional(g) && <span class="lp-outline__opttag">optional · Depth</span>}
+          </h4>
+          {phaseIsOptional(g) && (
+            <p class="lp-outline__optnote">
+              Off the main line ({mainLine}) — self-contained electives; the capstone requires none of them.
+            </p>
+          )}
+          <ul class="lp-outline__list">
+            {g.chapters.map((ch) => {
+              const pre = prereqOf.get(ch.id) ?? [];
+              const unb = unblockOf.get(ch.id) ?? [];
+              return (
+                <li class="lp-outline__item">
+                  <a class="lp-outline__link" href={`/${ch.slug}/`}>
+                    <span class="lp-outline__num">{ch.number}</span>
+                    <span class="lp-outline__ttl">{ch.title}</span>
+                  </a>
+                  {(pre.length > 0 || unb.length > 0) && (
+                    <span class="lp-outline__deps">
+                      {pre.length > 0 && (
+                        <span class="lp-outline__dep">
+                          <span class="lp-outline__deplabel">needs</span>{" "}
+                          {pre.map((id) => `${num(id)} ${titleOf(id).split(":")[0]}`).join(", ")}
+                        </span>
+                      )}
+                      {unb.length > 0 && (
+                        <span class="lp-outline__dep">
+                          <span class="lp-outline__deplabel">unblocks</span>{" "}
+                          {unb.map((id) => `${num(id)} ${titleOf(id).split(":")[0]}`).join(", ")}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </li>
+      ))}
+      {gated && (
+        <li class="lp-outline__phase lp-outline__phase--gated">
+          <p class="lp-outline__gate">
+            <span class="lp-outline__gatetag">coming · gated</span>
+            Phase 4's leaderboard capstone is graded against hidden seeds, so those
+            chapters open only once the grading server ships. They aren't linkable
+            yet, and we won't pretend they are.
+          </p>
+        </li>
+      )}
+    </ol>
+
+    <h3 class="lp-static__title">Every thread</h3>
+    <ul class="lp-threadlist">
+      {edges.map((e) => (
+        <li class="lp-threadlist__item">
+          <a class="lp-threadlist__end" href={`/${byId.get(e.from)?.slug}/`}>
+            <b>{num(e.from)}</b> {titleOf(e.from).split(":")[0]}
+          </a>
+          <span class={`lp-threadlist__rel lp-threadlist__rel--${e.rel}`}>{REL_LABEL[e.rel]}</span>
+          <span class="lp-threadlist__arrow" aria-hidden="true">→</span>
+          <a class="lp-threadlist__end" href={`/${byId.get(e.to)?.slug}/`}>
+            <b>{num(e.to)}</b> {titleOf(e.to).split(":")[0]}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+{/* Progressive enhancement ONLY: highlight a chapter's prerequisite + unblocked
+    threads on focus/hover. No JS → the baked SVG threads + the outline above
+    both still show every connection. */}
+<script>
+  const board = document.querySelector<HTMLElement>(".lp-board");
+  if (board) {
+    const nodes = Array.from(board.querySelectorAll<HTMLElement>("[data-node]"));
+    const edges = Array.from(board.querySelectorAll<SVGPathElement>("[data-edge]"));
+    const byId = new Map(nodes.map((n) => [n.dataset.node!, n]));
+
+    function clear() {
+      board!.classList.remove("lp--focused");
+      for (const n of nodes) n.classList.remove("lp--active", "lp--prereq", "lp--unblock");
+      for (const e of edges) e.classList.remove("lp--e-prereq", "lp--e-unblock");
+    }
+
+    function activate(node: HTMLElement) {
+      clear();
+      board!.classList.add("lp--focused");
+      node.classList.add("lp--active");
+      const me = node.dataset.node!;
+      const pre = (node.dataset.prereq ?? "").split(" ").filter(Boolean);
+      const unb = (node.dataset.unblock ?? "").split(" ").filter(Boolean);
+      for (const id of pre) byId.get(id)?.classList.add("lp--prereq");
+      for (const id of unb) byId.get(id)?.classList.add("lp--unblock");
+      for (const e of edges) {
+        const from = e.dataset.from;
+        const to = e.dataset.to;
+        if (to === me && from && pre.includes(from)) e.classList.add("lp--e-prereq");
+        if (from === me && to && unb.includes(to)) e.classList.add("lp--e-unblock");
+      }
+    }
+
+    for (const n of nodes) {
+      n.addEventListener("mouseenter", () => activate(n));
+      n.addEventListener("focusin", () => activate(n));
+    }
+    board.addEventListener("mouseleave", clear);
+    board.addEventListener("focusout", (ev) => {
+      const to = (ev as FocusEvent).relatedTarget as Node | null;
+      if (!to || !board.contains(to)) clear();
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") clear();
+    });
+  }
+</script>

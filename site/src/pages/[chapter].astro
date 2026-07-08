@@ -54,7 +54,7 @@ const { chapter, prev, next } = Astro.props;
 const regions = extractRegions(chapter.artifactPath);
 const hashes = regionHashes(regions);
 const wall = wallclock(chapter.id, TIERS);
-const proseMarkdown = readProse(`${chapter.chapterDir}/prose/chapter.draft.md`);
+const proseMarkdown = readProse(`${chapter.chapterDir}/prose/chapter.md`);
 
 // Entity tinting is display-only and applied ONLY for PushT chapters, where the
 // pusher / T-block / target map is trivially correct. Other chapters (e.g. the
@@ -78,10 +78,9 @@ const [titleMain, titleSub] = chapter.title.includes(":")
     ]
   : [chapter.title, ""];
 
-const draftPath = `${chapter.chapterDir}/prose/chapter.draft.md`;
 ---
 
-<ChapterLayout title={`${chapter.number} — ${chapter.title}`} currentSlug={chapter.slug} draft={true}>
+<ChapterLayout title={`${chapter.number} — ${chapter.title}`} currentSlug={chapter.slug}>
   <Breadcrumb slot="breadcrumb" chapter={chapter} />
 
   <div class="bk-runninghead">
@@ -95,10 +94,6 @@ const draftPath = `${chapter.chapterDir}/prose/chapter.draft.md`;
       {titleMain}
       {titleSub && <span class="bk-title-sub">{titleSub}</span>}
     </h1>
-    <p class="bk-draftnote">
-      Draft — pending author voice pass. Rendered verbatim from <code>{draftPath}</code>; the numbers
-      carry their own provenance, the voice does not yet.
-    </p>
   </div>
 
   <Objectives objectives={chapter.objectives} />

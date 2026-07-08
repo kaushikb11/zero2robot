@@ -1,0 +1,26 @@
+---
+// map.astro — the learning-path / dependency map page.
+//
+// Wrapped in ChapterLayout so it reads as one book with the rest of the site
+// (warm ivory column, sidebar, skip-link, theme). Fully SERVER-RENDERED: the
+// diagram (nodes + threads) and the static outline are baked at build time, so
+// the page reads completely with JavaScript disabled — the only <script> is the
+// focus/hover thread-highlight enhancement inside the component.
+//
+// Everything on the page is DERIVED from the real curriculum (discoverChapters +
+// meta.yaml dependency fields via lib/curriculum-graph.ts); no edge is hand-typed.
+import ChapterLayout from "../layouts/ChapterLayout.astro";
+import LearningPathMap from "../components/LearningPathMap.astro";
+---
+
+<ChapterLayout title="Learning map — zero2robot">
+  <div class="bk-titleblock">
+    <p class="bk-kicker">Find your path</p>
+    <h1 class="bk-title">
+      The learning map
+      <span class="bk-title-sub">what to read, and what it unlocks</span>
+    </h1>
+  </div>
+
+  <LearningPathMap />
+</ChapterLayout>

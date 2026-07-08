@@ -1,0 +1,52 @@
+# Demo embed stub — ch3.9 "mpc_fanout" (planning, not learning).
+# Playground integration point: playground/ owns the embed component; this file
+# declares WHAT the embed shows. The hero is the FAN-OUT: at one planning moment,
+# the N sampled action sequences rolled forward through the model (pole-tip paths,
+# colored by cost — cheap plans faint, good plans bright) with the MPPI-chosen plan
+# drawn boldly on top. That single picture IS sampling-based MPC. Coordinate at the
+# playground contracts level before wiring (see playground/CLAUDE.md).
+demo: mpc_fanout
+scene: cartpole              # the cartpole.xml scene; the pole starts hanging DOWN (swing-up)
+runtime: numpy-inline+mujoco-wasm  # MuJoCo-WASM steps the model rollouts; the CEM/MPPI update is ~15 lines of inline numpy
+scene_default: fanout       # the hero: sampled rollouts fanning out + the chosen plan
+panels:
+  - id: fanout
+    kind: top_down_2d        # THE hero panel: 18 sampled pole-tip trajectories at one plan step, colored by cost, chosen plan bold
+    source: planning_moment
+    series: [rollouts, chosen_plan]
+    colors: [ "#b8c0e8", "#e0a020" ]   # faint blue candidates / gold chosen plan
+    annotate: "One control step of MPC: sample plans, roll each through the model, keep the good ones. The pole-tip paths fan out; the gold plan is the one MPPI picked. No learning — just a search."
+  - id: swingup
+    kind: timeseries         # the executed episode: upright-cos climbs -1 (down) -> +1 (balanced)
+    y: cos
+    source: episode
+    series: [cos]
+    annotate: "The realized swing-up: upright-cos rises from -1 (hanging down) to +1 (balanced) and stays there. Zero training runs."
+  - id: break
+    kind: timeseries         # overlay: --break horizon (H=3) never comes up — the honest ceiling
+    y: cos
+    source: break_horizon_cos
+    annotate: "--break horizon (H=3): the same loop with a myopic plan. It never finds the swing — the pole stays down. MPC needs to see far enough ahead."
+controls:
+  - id: horizon
+    kind: slider
+    min: 3                    # too short: myopic, the pole never comes up (the --break)
+    max: 40                   # long enough to see the swing pay off
+  - id: samples
+    kind: slider
+    min: 3                    # too few tries: the search rarely stumbles on the pump
+    max: 128                  # more tries = a better plan at more compute-per-step (the MPC bargain)
+  - id: method
+    kind: toggle
+    options: [cem, mppi]      # the ~15-line diff: elite refit vs softmax-weighted average
+interaction: watch-plans-fan-out-then-drag-the-horizon-down-until-it-fails
+notes: >
+  The one thing to feel here: control WITHOUT learning. Watch the candidate plans
+  fan out from the current state, the good ones (low cost) glowing, and MPC commit to
+  the first action of the best — then re-plan next tick from where it actually landed.
+  Drag the horizon slider down toward 3 and the fan-out goes blind: it can no longer
+  see that letting the pole fall further NOW buys the momentum to come up LATER, and
+  the swing-up curve flatlines at the bottom. That is the honest ceiling — MPC needs a
+  good model and enough look-ahead/compute per step. Tie it out loud to ch3.6: here the
+  model IS the world (perfect); with the sim-to-sim gap you measured there, the plan
+  optimizes an imagined trajectory the real world would not follow.

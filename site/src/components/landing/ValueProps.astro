@@ -3,9 +3,8 @@
 // the curriculum arc. Three claims that match the project's actual invariants
 // (free-tier floor, real code, honest provenance).
 //
-// COPY OWNERSHIP: authored marketing copy → DRAFT behind the shared draft band.
-// The invariants underneath are real (root CLAUDE.md), but the WORDING is a
-// placeholder for the DevRel/author voice pass. Fully server-rendered; no JS.
+// COPY: final author-owned prose, voice-checked. The invariants underneath are
+// real (root CLAUDE.md); the wording is finished. Fully server-rendered; no JS.
 import "./landing.css";
 
 const PROPS: { eyebrow: string; title: string; body: string }[] = [
@@ -13,19 +12,19 @@ const PROPS: { eyebrow: string; title: string; body: string }[] = [
     eyebrow: "the code is the product",
     title: "One file you can read top to bottom",
     body:
-      "Every chapter is a single runnable script — ~120 to ~220 lines — no framework to excavate. You read it like a textbook, then run it.",
+      "Every chapter builds a single runnable script — a few hundred lines, no framework to excavate. You read it like a textbook, and every line you read is a line that runs.",
   },
   {
     eyebrow: "runs on the free tier",
     title: "A laptop or a free Colab T4 is enough",
     body:
-      "Every learner-facing path completes on CPU or a free T4. Wall-clock times are measured and printed, never estimated.",
+      "Every learner-facing path completes on CPU or a free T4. The wall-clock times on each page are measured on real hardware, never estimated; where a tier hasn't been measured yet, the page says so.",
   },
   {
     eyebrow: "honest by construction",
     title: "Real sims, real policies, real numbers",
     body:
-      "The browser demos run the same code you train. Seeds are mandatory, results are reproducible within recorded bands, and every claim shows its provenance.",
+      "The browser demos run the same code you train locally. Seeds are mandatory, results reproduce within a recorded band, and every number you read traces back to a run — including the ones that show a method failing.",
   },
 ];
 ---
@@ -33,10 +32,6 @@ const PROPS: { eyebrow: string; title: string; body: string }[] = [
 <section class="ln-props" aria-labelledby="ln-props-title">
   <div class="ln-props__head">
     <h2 class="ln-kicker" id="ln-props-title">Why this course is built the way it is</h2>
-    <div class="ln-draft ln-draft--inline" role="note" aria-label="Draft section copy — pending DevRel and author pass">
-      <b>draft</b>
-      <span class="ln-draft__src">placeholder copy · the invariants are real, the wording isn't final</span>
-    </div>
   </div>
 
   <ul class="ln-props__grid">

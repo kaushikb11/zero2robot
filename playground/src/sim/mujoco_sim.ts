@@ -26,6 +26,29 @@ export interface Sim {
   jointQvel(name: string): number;
   /** Write the scalar qvel of a named (1-dof) joint (call forward() after). */
   setJointQvel(name: string, value: number): void;
+  /** Read qpos at a raw index (for MULTI-dof joints — e.g. a free joint's 7-slot
+   *  qpos block: [x,y,z, qw,qx,qy,qz]). Used by the quadruped obs builder. */
+  qposAt(i: number): number;
+  /** Write qpos at a raw index (call forward() after). */
+  setQposAt(i: number, value: number): void;
+  /** Read qvel at a raw index (for MULTI-dof joints — e.g. a free joint's 6-dof
+   *  block: [vx,vy,vz, wx,wy,wz], world frame). */
+  qvelAt(i: number): number;
+  /** Write qvel at a raw index (call forward() after). */
+  setQvelAt(i: number, value: number): void;
+  /** Starting qpos address of a named joint (a free joint's 7-slot block begins
+   *  here; the torso height is qpos[jointQposAdr('root') + 2]). */
+  jointQposAdr(name: string): number;
+  /** Starting qvel/dof address of a named joint (a free joint's 6-dof block; the
+   *  torso linear velocity is qvel[jointDofAdr('root') .. +3], world frame). */
+  jointDofAdr(name: string): number;
+  /** World-frame rotation matrix (row-major, 9 floats) of a named body. The
+   *  torso "up" vector is its 3rd column: [xmat[2], xmat[5], xmat[8]]. */
+  bodyXmat(name: string): number[];
+  /** World-frame position [x, y, z] of a named body's frame origin (data.xpos).
+   *  Used by the quadruped side-view render to place hips/knees/feet from the
+   *  free-floating pose — display only, never an obs input. */
+  bodyXpos(name: string): [number, number, number];
   /** Set the ctrl vector (does not step). */
   setCtrl(ctrl: Float64Array | number[]): void;
   /** mj_resetData: zero qpos/qvel/ctrl back to the model defaults. */
@@ -135,6 +158,40 @@ export async function createSim(sceneXml: string): Promise<Sim> {
     },
     setJointQvel(name, value) {
       activeData.qvel[jointQvelAdr(name)] = value;
+    },
+    qposAt(i) {
+      return activeData.qpos[i];
+    },
+    setQposAt(i, value) {
+      activeData.qpos[i] = value;
+    },
+    qvelAt(i) {
+      return activeData.qvel[i];
+    },
+    setQvelAt(i, value) {
+      activeData.qvel[i] = value;
+    },
+    jointQposAdr(name) {
+      return jointQposAdr(name);
+    },
+    jointDofAdr(name) {
+      return jointQvelAdr(name);
+    },
+    bodyXmat(name) {
+      const id = module.mj_name2id(model, module.mjtObj.mjOBJ_BODY.value, name);
+      if (id < 0) throw new Error(`body not found in scene: ${name}`);
+      const xmat = activeData.xmat;
+      const adr = id * 9;
+      const out = new Array<number>(9);
+      for (let k = 0; k < 9; k++) out[k] = xmat[adr + k];
+      return out;
+    },
+    bodyXpos(name) {
+      const id = module.mj_name2id(model, module.mjtObj.mjOBJ_BODY.value, name);
+      if (id < 0) throw new Error(`body not found in scene: ${name}`);
+      const xpos = activeData.xpos;
+      const adr = id * 3;
+      return [xpos[adr], xpos[adr + 1], xpos[adr + 2]];
     },
     setCtrl(ctrl) {
       const c = activeData.ctrl;
