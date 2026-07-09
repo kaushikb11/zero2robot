@@ -880,6 +880,23 @@ body.book > * { position: relative; z-index: 1; }
 }
 .skip-link:focus { left: 0; }
 
+/* --- source-on-GitHub corner mark (fixed; JS-off safe) ------------------- */
+.gh-corner {
+  position: fixed; right: 1.1rem; bottom: 1.1rem; z-index: 40;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.5rem; height: 2.5rem; border-radius: 999px;
+  background: var(--paper-2); color: var(--ink-mute);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.gh-corner:hover { color: var(--ink); border-color: var(--ink-mute); }
+.gh-corner:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .gh-corner { transition: color 0.15s ease, border-color 0.15s ease, transform 0.15s ease; }
+  .gh-corner:hover { transform: translateY(-1px); }
+}
+@media (max-width: 62rem) { .gh-corner { right: 0.8rem; bottom: 0.8rem; } }
+
 /* --- shell: sidebar + reading column ------------------------------------ */
 .shell {
   display: grid;
