@@ -68,6 +68,11 @@ x_t &= \sqrt{\bar{\alpha}_t}\,x_0 + \sqrt{1-\bar{\alpha}_t}\;\epsilon,
 \end{aligned}
 $$
 
+You do not need to memorize the second line; the `core` code below is the whole of
+it. Read $\tilde{\mu}_t$ as a *blend*: a weighted average of a guess at the clean
+sample $x_0$ (the first coefficient term) and where you currently are, $x_t$ (the
+second), tilted a little further toward clean at each reverse step.
+
 ```
 [include-by-region: diffusion.py#core]
 ```
@@ -226,8 +231,7 @@ the sampler begins in.
 
 The transferable lesson: in diffusion the *sampler* and the *schedule* are part of
 the model, not afterthoughts. A perfect denoiser with too few steps or a broken
-schedule samples garbage, and (the `few_steps` trap again) the training loss is
-the last thing that will tell you.
+schedule still samples garbage, exactly as the two breaks above showed.
 
 ## Read the real thing
 

@@ -1,5 +1,5 @@
 id: ch0.0-quickstart
-title: "Your First Robot Policy in Twenty Minutes"
+title: "Your First Robot Policy in a Few Minutes"
 artifact: quickstart.py     # ~205 LOC, CPU; the whole loop on one page (well under the 450 cap)
 task: pusht                 # shared PushT env; scripted-expert demos in memory (no dataset file yet, that's ch0.4)
 builds_on: []               # nothing: this is the very first thing, before any mechanics
@@ -28,8 +28,8 @@ exercise_checks:
     reference_full_success_rate: 0.48 # what the learner already saw at the default 300-demo run (seed 0)
 
 
-notebook_hash: 45a130db19fb735c2be578797c9808f20fb26205a2a6ce41b33074a702f83184        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: 2db7c8de02e8fcdfcd0772117de0fdce8c14614c5525f1247af8f748b28f4f6c   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: 181c80108904075f2e8698761295846f955a942f6b113072d82842b796b3bffb        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 3b411286b786b03e7f611b7b4795b607995dad30f50ad2871c8a35e5720e305a   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 5140fab8310f1bb85ac81d5bd906b178fd69fcda0192a054ee69e2386ec4522b

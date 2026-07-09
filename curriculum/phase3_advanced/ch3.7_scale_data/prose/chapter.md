@@ -32,7 +32,9 @@ There are two problems, and they are the whole chapter:
 Load your two datasets the way any training stack does (straight off disk, into
 plain numpy) and the heterogeneity is immediate. PushT actions live in 2 dims
 (pusher velocity); ALOHA actions live in 6 (two arms, two grippers). Both
-*observations* are ten numbers, and that symmetry is a trap: the layouts do not
+*observations* are ten numbers (the shared 10-wide state both envs were built to
+expose, the width ch1.7 first leaned on to stack the two embodiments in one tensor),
+and that symmetry is a trap: the layouts do not
 line up. Index 2 is the block's *x* in PushT and the right gripper's *closedness*
 in ALOHA: a length and a unitless open/close command that happen to share a
 slot and share nothing else. Ten-number states that mean different things,

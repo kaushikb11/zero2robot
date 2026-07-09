@@ -102,24 +102,26 @@ pixel-BC success is noisy and a bare percentage lies:
 [include-by-region: pixels.py#eval]
 ```
 
-The thing to watch is the **direction**, not an absolute number, and the reproducible one is a
+The thing to watch is the **direction**, not an absolute number. The reproducible one is a
 **probe on the frozen features**: fit a tiny linear map from the encoder's features to the
-expert's action and compare the held-out error for the *aligned* encoder against a *random* one
+expert's action, and compare the held-out error for the *aligned* encoder against a *random* one
 (`probe_val_mse`, aligned vs random). When the alignment has made the features carry the geometry,
-that action-probe error is lower: aligned beats random on every seed (+0.028 / +0.040 / +0.054).
-The closed-loop `success_rate` is the harder bar, and at this scale it **floors at 0/12 for both**
-encoders (the gap is 0.0, the Scale Lab), so the gated, honest headline is the probe: aligned
-features are more *control-useful* than random, not that either drives PushT end to end.
+that action-probe error is lower. Aligned beats random on **every seed: +0.028 / +0.040 /
++0.054.** That is the gated headline, and it stands on its own: aligned features are measurably
+more *control-useful* than random ones.
 
-Be brutally honest about the ceiling, because it is low. Toy-scale alignment gives features at
-best *modestly* better than random, nowhere near SigLIP quality, and PushT from a single
-64×64 frame, cloning a non-Markovian expert one action at a time, is genuinely hard. Absolute
-pixel-BC success is small and platform-sensitive (MuJoCo rasterization is **not bitwise across
-CPU architectures**, as chapter 1.8 documents). Whether the aligned-over-random gap clears
-the noise at pure free-tier scale is exactly what the encoder's capacity buys you, and it is
-the measurement this chapter puts in front of you rather than a number it promises. That honest
-ceiling *is* the lesson: a from-scratch encoder is a fixed, weak projection of the pixels. That
-is the whole reason the real answer (the read-the-real-thing) is a backbone aligned at internet scale.
+**What floors, and why (said once, then trusted for the rest of the chapter).** The closed-loop
+`success_rate` is a harder bar than the probe, and at free-tier scale it **floors at 0/12 for
+both** encoders: the rollout gap is 0.0. That is not the experiment failing. It is the ceiling of
+a tiny from-scratch encoder aligned to a few hundred frames, nowhere near SigLIP quality, cloning
+a non-Markovian expert one action at a time from a single 64×64 frame. Two things follow, and we
+will not repeat them each section. First, the reproducible signal is the **probe**, not a rollout
+win, so that is what the chapter gates (chapter 1.6). Second, absolute pixel-BC success is small
+and platform-sensitive: MuJoCo rasterization is **not bitwise across CPU architectures** (chapter
+1.8), so we report a **direction** under a Wilson interval, never a promised number. Driving PushT
+end to end from a scaled backbone is the **Scale Lab**. That honest ceiling *is* the lesson: a
+from-scratch encoder is a fixed, weak projection of the pixels, which is the whole reason the real
+answer (the read-the-real-thing) is a backbone aligned at internet scale.
 
 ## The payoff to `--break blind`
 
@@ -128,10 +130,9 @@ because the state made vision redundant and the random encoder added nothing. He
 is gone, and the two encoders sit at opposite ends of the same experiment: the *aligned* features
 carry enough of the geometry that a linear probe reads the expert's action out of them better than
 from *random* features, on every seed. That gap **is** the thing chapter 1.8 could only assert:
-that a pretrained, aligned backbone is what makes vision actually matter. (Full closed-loop control
-is a harder bar that floors for both encoders at free-tier scale, the Scale Lab, so the
-reproducible signal is the probe, not a rollout win.) When the state cannot bail you out, the
-encoder is the whole policy, and the quality of its features is the whole ballgame.
+that a pretrained, aligned backbone is what makes vision actually matter. When the state cannot
+bail you out, the encoder is the whole policy, and the quality of its features is the whole
+ballgame.
 
 ## Break it yourself: the trainable-encoder trap
 
@@ -139,8 +140,8 @@ You wired the encoder→policy path. The obvious next thought: *why freeze the e
 training the whole thing end-to-end beat training a thin adapter?* Predict the answer before
 you run `--train_encoder` (that is **ex2**), then run it. At free-tier scale it is a trap: a
 from-scratch ViT has enough capacity to memorize the handful of frames it trained on, so the
-pixels→action map overfits: a tiny training loss sitting over a worse held-out fit (at free-tier
-both rollouts floor, so the tell is that overfit gap, not a rollout number). Then explain it to yourself: chapter 1.1 trained
+pixels→action map overfits: a tiny training loss sitting over a worse held-out fit (the tell is
+that overfit gap, not a rollout number). Then explain it to yourself: chapter 1.1 trained
 its whole network end-to-end and was fine. Why is this different? (A ten-number state cannot
 be memorized into a lookup table; a tiny frame set can. The alignment already did the
 expensive, transferable work. Leave it frozen.)
@@ -172,8 +173,8 @@ pi0, a PaliGemma/SigLIP image path into a flow-matching action expert.)
 ## Exercises
 
 - **ex1 (predict-then-run):** aligned vs random encoder: whose frozen features are more
-  control-useful? (The gated action-probe direction; the encoder is load-bearing once the state
-  is gone. Full closed-loop rollout is the Scale Lab.)
+  control-useful? (The gated signal is the action-probe direction; the encoder is load-bearing
+  once the state is gone.)
 - **ex2 (predict-then-run + the trap):** frozen aligned encoder vs `--train_encoder`. Predict,
   run, and self-explain why unfreezing overfits here but not in chapter 1.1.
 - **ex3 (code-completion):** write the symmetric InfoNCE at the heart of the alignment.

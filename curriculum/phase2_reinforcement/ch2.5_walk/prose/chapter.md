@@ -139,15 +139,11 @@ The honest read is richer than "did it work". **A gait emerges, and it is fast.*
 speed. Nobody wrote that gait; SAC found it by maximizing the same five-term reward
 the trot was tuned against.
 
-But read the *length* column. The trot rides out the full 500-step horizon; the
-emergent gait covers more ground in about **249 steps and then falls**. So on total
-**return** the trot still wins, 307 to 247: the learned gait is faster but **less
-stable**: it has learned to sprint, not yet to sprint *and* stay up for the full ten
-seconds. That asterisk is the lesson. Emergent does not mean robust. A reward that
-pays for forward velocity gets forward velocity; keeping the body up for the whole
-episode is a harder, slower-to-learn skill on top. (Notice too that the return peaks
-around 45k and dips by 60k. RL curves are non-monotonic, and the "best" policy is
-not always the last one.)
+But read the *length* column before you celebrate: the emergent gait covers its
+distance in about **249 steps and then falls**, where the scripted trot rides out
+all 500. Hold that observation; the next section turns it into a prediction worth
+making. (Notice too that the eval return peaks around 45k and dips by 60k. RL curves
+are non-monotonic, and the "best" policy is not always the last one.)
 
 The numbers above are the measured seed-0 run. RL is noisy, so the exercises read the
 signal across several seeds and never off a single run.

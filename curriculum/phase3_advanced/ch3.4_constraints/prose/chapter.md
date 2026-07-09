@@ -109,10 +109,13 @@ the acceleration condition:
 g̈ = J a + J̇ v = 0
 ```
 
-Now substitute the equation of motion `a = M⁻¹(f_ext + Jᵀλ)`: the constraint
-force is `Jᵀλ`, where `λ` is an unknown vector of **Lagrange multipliers**, one
-per constraint. The accelerations drop out and you are left with a small linear
-system in `λ` alone:
+Now substitute the equation of motion `a = M⁻¹(f_ext + Jᵀλ)`. The total force on
+the particles is the known external `f_ext` plus the unknown constraint force `Jᵀλ`,
+where `λ` is a vector of **Lagrange multipliers**, one per constraint; read each `λ`
+as the tension the solver has to dial into that rod. Plug that `a` into
+`g̈ = J a + J̇ v = 0` and the accelerations drop out: every term is now either known
+or linear in `λ`. Collect the `λ` terms on the left, move the rest to the right, and
+you are left with a small linear system in `λ` alone:
 
 ```
 (J M⁻¹ Jᵀ) λ = −(J M⁻¹ f_ext + J̇ v)
@@ -130,7 +133,11 @@ integrators from last chapter never learn that `force` now hides a linear solve.
 
 The `J̇ v` term is the one piece of calculus you cannot skip: for a distance
 constraint it works out to `|ḋ|²`, the squared relative velocity across the link.
-Drop it and you are solving the wrong equation. (Exercise 2 makes you supply it.)
+Here is why it is there. Even with zero force along the rod, two particles closing
+(or separating) at relative velocity `ḋ` are *already* changing `|d|²` at rate
+`|ḋ|²`, so to hold the length fixed as the link swings the constraint force has to
+supply exactly the centripetal term that cancels it. Drop `J̇ v` and you enforce the
+wrong acceleration, and the rod drifts. (Exercise 2 makes you supply it.)
 
 ### The integrators, unchanged
 

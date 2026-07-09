@@ -14,8 +14,8 @@ whatever behavior makes that number as large as it can.
 That is the uncomfortable truth of reinforcement learning: **the reward function is
 the program you write for the robot.** And like any program, it does exactly what
 you *wrote*, which is frequently nothing like what you *meant*. This chapter builds
-three reward programs for one robot and measures what each actually produces. Two of
-them teach a walk. One of them cheats.
+four reward programs for one robot and measures what each actually produces. Three of
+them teach a walk (one barely, one well, one best of all). One of them cheats.
 
 ## The setup: one variable, everything else held fixed
 

@@ -38,7 +38,7 @@ Before you record anything, you declare the *shape* of what you're recording.
 [include-by-region: record.py#features]
 ```
 
-This is the schema, and it is the one promise your dataset makes to everything downstream. `observation.state` is ten floats (the pusher's position, the block's position and orientation, the target's) laid out in the order chapter 1.1's behavior cloning will slice. `action` is two floats, a target velocity. The names and shapes here are copied, deliberately and verbatim, from `gen_demos.build_features` and `pusht_env.py`. The repetition is the point: when the trainer assumes `observation.state` is `float32[10]`, this is the line that has to agree, and you can see it agree. The yaw comes in as a sin/cos pair rather than a raw angle for a reason you met in 0.3: an angle wraps at ±π and a network hates the discontinuity; sine and cosine are smooth everywhere.
+This is the schema, and it is the one promise your dataset makes to everything downstream. `observation.state` is ten floats (the pusher's position, the block's position and orientation, the target's) laid out in the order chapter 1.1's behavior cloning will slice. `action` is two floats, a target velocity. The names and shapes here are copied, deliberately and verbatim, from `gen_demos.build_features` (`gen_demos` is the shared scripted-expert generator that produced the demonstrations you trained on back in ch0.0) and `pusht_env.py`. The repetition is the point: when the trainer assumes `observation.state` is `float32[10]`, this is the line that has to agree, and you can see it agree. The yaw comes in as a sin/cos pair rather than a raw angle for a reason you met in 0.3: an angle wraps at ±π and a network hates the discontinuity; sine and cosine are smooth everywhere.
 
 ### Teleop
 
@@ -110,7 +110,7 @@ Same writer, same output layout, a dataset at `{out}/dataset` that loads with `L
 
 ## Break it
 
-The feature schema is a contract, and contracts break quietly. Change one number, declare `observation.state` as nine floats instead of ten, and watch what happens.
+The feature schema is a contract, and contracts break quietly. This is the one chapter whose break has no `--break` flag to run at the command line: you plant it yourself in Exercise 2. Walk through it here first anyway. Change one number, declare `observation.state` as nine floats instead of ten, and watch what happens.
 
 The recorder still runs. It might even write a file. But the dataset it produces no longer matches what chapter 1.1's behavior cloning expects, and the failure doesn't surface here where you made it; it surfaces three chapters later as a shape-mismatch deep inside a training loop, or worse, as a policy that trains without complaint on the wrong columns and simply never works. That distance between the mistake and the symptom is exactly why the golden-parity test exists: it writes a dataset from `record.py` and diffs its schema against a `gen_demos` dataset, so a drifted feature shape fails *now*, loudly, in CI, instead of silently downstream. Exercise 2 makes you plant this bug and feel the parity check catch it.
 

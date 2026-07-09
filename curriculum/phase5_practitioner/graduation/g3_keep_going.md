@@ -48,9 +48,10 @@ And there is a concrete on-ramp to building *with* people, not just near them:
 the **LeRobot Worldwide Hackathon**. The June 2025 edition (14–15 June) drew
 **3,000+ registered participants across 100+ local events**, and the teams left
 behind roughly **190 datasets** on the Hub under the hackathon org, a public
-pile of real teleoperation you can go learn from today. (Those numbers are a
-snapshot of one event; check the org page for the current count and the next
-edition. A hackathon is the single fastest way to go from "I finished a course"
+pile of real teleoperation you can go learn from today. Local editions have
+continued into 2026, so watch the org and the Discord for the next worldwide
+round. (Those numbers are a snapshot of one event; check the org page for the
+current count and the next edition. A hackathon is the single fastest way to go from "I finished a course"
 to "I shipped a thing with a team.")
 
 ## Benchmarks: where to prove your own policy
@@ -91,8 +92,10 @@ interval, the way 1.6 taught you, never a hero rollout.
 3.8 gave you the four moves on a stand-in; 5.4 and 5.6 put them on real
 architectures. The frontier to keep reading is the **generalist VLA foundation
 model**, and as of 2026 the open ones you can actually pull and probe are:
-**pi0 / openpi** (Physical Intelligence, the flow-matching action expert on a
-PaliGemma backbone), **NVIDIA GR00T N1 / N1.5** (the structural slow-VLM /
+**pi0 and pi0.5 / openpi** (Physical Intelligence, the flow-matching action
+expert on a PaliGemma backbone; openpi hosts both, pi0.5 the
+open-world-generalization successor and a RoboArena pool entry as pi0.5-DROID,
+with the newer pi0.6 stronger SOTA but not open), **NVIDIA GR00T N1 / N1.5** (the structural slow-VLM /
 fast-action split, humanoid-oriented, ~2–3B params), **OpenVLA** (the earlier
 open 7B autoregressive VLA), and **SmolVLA** (Hugging Face's ~450M, pi0-style
 flow head, the one small enough to fine-tune on a single consumer card, and the

@@ -70,6 +70,7 @@ export function normalize(kind: string, raw: any): Payload {
     case "reach": return normReach(raw);
     case "pusht": return normPusht(raw);
     case "contact": return normContact(raw);
+    case "swarm": return normSwarm(raw);
     default: throw new Error(`wyb: unknown kind ${kind}`);
   }
 }
@@ -188,6 +189,24 @@ function normContact(raw: any): Payload {
   };
 }
 
+// ---- ch2.3 swarm: a field of many parallel MJX cartpoles, at two checkpoints -
+// The generator (site/scripts/vizdata/ch2.3_swarm.py) records N real MJX envs at
+// two policy snapshots — EARLY (flailing) and LATE (solved) — each frame a flat
+// [dx, angle]*N over the envs (dx = cart pos in [-1,1] cell-local; angle in rad,
+// 0 = upright). Both windows start from the SAME reset, so replaying them in
+// sequence is the honest "same start, before vs after training" story. Pure
+// pass-through: the numbers are already resolution-free.
+function normSwarm(raw: any): Payload {
+  return {
+    kind: "swarm",
+    rows: raw.rows | 0,
+    cols: raw.cols | 0,
+    n: raw.n | 0,
+    early: raw.early as number[][],
+    late: raw.late as number[][],
+  };
+}
+
 /* ========================================================================== *
  *  SHAPES — pure. payload + t → primitives. Used by SSR poster AND canvas.
  * ========================================================================== */
@@ -199,6 +218,7 @@ export function shapesAt(p: Payload, t: number): Shape[] {
     case "reach": return reachShapes(p, t);
     case "pusht": return pushtShapes(p, t);
     case "contact": return contactShapes(p, t);
+    case "swarm": return swarmShapes(p, t);
     default: return [];
   }
 }
@@ -306,6 +326,48 @@ function contactShapes(p: Payload, t: number): Shape[] {
   for (let x = 0.08; x < 0.93; x += 0.09) s.push({ k: "line", x1: r3(x), y1: p.floorY, x2: r3(x - 0.05), y2: p.floorY + 0.05, c: "rule", w: 1, o: 0.5 });
   s.push({ k: "circle", x: p.laneP, y: p.penalty[idx], r: p.r, c: "alert", fill: true });
   s.push({ k: "circle", x: p.laneL, y: p.lcp[idx], r: p.r, c: "target", fill: true });
+  return s;
+}
+
+// A grid of cartpoles. The first half of t replays the EARLY (flailing) field,
+// the second half the LATE (solved) field — same reset, so it reads as "before
+// vs after training". Each pole is tinted by how upright it is, so "learning"
+// is legible at a glance: a field that topples, then a field that holds.
+function swarmShapes(p: Payload, t: number): Shape[] {
+  const late = t >= 0.5;
+  const frames: number[][] = late ? p.late : p.early;
+  const F = frames.length;
+  const lt = Math.min(1, late ? (t - 0.5) * 2 : t * 2);
+  const f = frames[frameIdx(F, lt)];
+
+  const rows = p.rows, cols = p.cols;
+  const m = 0.03; // outer margin
+  const cw = (1 - 2 * m) / cols;
+  const ch = (1 - 2 * m) / rows;
+  const railHalf = cw * 0.34;
+  const cartW = cw * 0.11, cartH = ch * 0.05;
+  const cartShift = cw * 0.2;   // dx∈[-1,1] → this much travel inside the cell
+  const poleLen = ch * 0.56;
+  const tipR = ch * 0.075;
+
+  const s: Shape[] = [];
+  for (let e = 0; e < p.n; e++) {
+    const r = (e / cols) | 0, c = e % cols;
+    const cx = m + (c + 0.5) * cw;
+    const baseY = m + r * ch + ch * 0.8;
+    const dx = f[e * 2], ang = f[e * 2 + 1];
+    const upright = Math.cos(ang) > 0.9; // within ~0.45 rad of vertical
+    const cartX = cx + dx * cartShift;
+    const pivotY = baseY - cartH;
+    const tipX = cartX + poleLen * Math.sin(ang);
+    const tipY = pivotY - poleLen * Math.cos(ang);
+    // short rail under each robot
+    s.push({ k: "line", x1: r3(cx - railHalf), y1: r3(baseY), x2: r3(cx + railHalf), y2: r3(baseY), c: "rule", w: 1, o: 0.45 });
+    // pole (tinted by uprightness) + cart body + tip
+    s.push({ k: "line", x1: r3(cartX), y1: r3(pivotY), x2: r3(tipX), y2: r3(tipY), c: upright ? "ink" : "inkmute", w: 2.4 });
+    s.push({ k: "poly", pts: [[r3(cartX - cartW), r3(baseY - cartH)], [r3(cartX + cartW), r3(baseY - cartH)], [r3(cartX + cartW), r3(baseY + cartH)], [r3(cartX - cartW), r3(baseY + cartH)]], c: "book", fill: true, close: true });
+    s.push({ k: "circle", x: r3(tipX), y: r3(tipY), r: r3(tipR), c: upright ? "signal" : "booksoft", fill: true });
+  }
   return s;
 }
 

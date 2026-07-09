@@ -78,19 +78,20 @@ that would be nonsense:
 The advantage estimate is where the termination/truncation distinction collapses
 to a single line. Generalized Advantage Estimation walks the rollout backward;
 the mask `(1 - terminated)` zeroes the bootstrap after a fall, while a truncated
-step keeps its stored `bootstrap_value`. The `--break` flag swaps `terminated`
+step keeps its stored `bootstrap_value`. The "generalized" part is a single knob,
+`gae_lambda` in [0, 1], that dials the bias/variance trade: at 0 each advantage
+trusts the critic's one-step estimate (low variance, biased when the critic is
+wrong), at 1 it trusts the full observed return (unbiased, high variance), and the
+0.95 default blends the two. The `--break` flag swaps `terminated`
 for `done` (treating a time-limit truncation like a fall), so you can measure
 what conflating them costs instead of taking my word for it.
 
 With advantages in hand, the update is PPO's defining move: the **clipped
-surrogate**. Maximize the policy ratio times the advantage, but clip the ratio
-to a narrow band so no single minibatch can shove the policy far from the data it
-was collected under. That clip is the entire reason on-policy updates are stable
-enough to repeat for ten epochs over the same rollout:
-
-Maximize the policy ratio times the advantage, but take the *pessimistic* branch
-against a clipped ratio so no minibatch can shove the policy far from the data it
-was collected under, and here it is in code:
+surrogate**. Maximize the policy ratio times the advantage, but take the
+*pessimistic* branch against a ratio clipped to a narrow band, so no single
+minibatch can shove the policy far from the data it was collected under. That
+pessimism (the `min` below) is the entire reason on-policy updates are stable
+enough to repeat for ten epochs over the same rollout, and here it is in code:
 
 $$
 L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\left[\,\min\!\big(r_t(\theta)\,\hat{A}_t,\;\; \mathrm{clip}\big(r_t(\theta),\, 1-\epsilon,\, 1+\epsilon\big)\,\hat{A}_t\big)\right],

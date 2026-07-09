@@ -1,4 +1,4 @@
-"""zero2robot 4.3 — RL Post-Training: HIL-SERL in Sim (the capstone algorithm).
+"""zero2robot 4.3 — RL Post-Training: HIL-SERL in Sim.
 
 Where the whole arc converges. You cloned demos into a base policy (BC, ch1.1),
 watched it die of covariate shift and FIXED it with CORRECTIONS on the states it
@@ -21,13 +21,13 @@ AS-PRIOR buy essentially all of the efficiency — the prior clears the threshol
 before a single online step, while from-scratch SAC needs thousands of online
 samples to catch up. Online fine-tuning on top of a prior already near this small
 dense-reward task's short-horizon ceiling mostly HOLDS rather than improves it (we
-return the best checkpoint, ch4.2's idiom); its gains show on the harder tasks of
-the real HIL-SERL paper — and on the GATED capstone suite.
+return the best checkpoint, ch4.2's idiom); its gains show on the harder,
+contact-rich tasks of the real HIL-SERL paper, where the prior is far from optimal.
 
-PUBLIC TASK, GATED LEADERBOARD: the map's capstone suite is HIDDEN-SEED graded
-(grader/hidden_seeds, off-limits). This file runs the SAME algorithm on the PUBLIC
-pusher_reach env (ch2.2's) so the mechanism is readable; the graded leaderboard
-number is the gated capstone (ch4.4).
+PUBLIC TASK, HONESTLY SCALED: this file runs the SAME algorithm on the PUBLIC
+pusher_reach env (ch2.2's) so every line is readable and reproducible on a laptop.
+It teaches the mechanism at free-tier scale; it claims no strong trained robot,
+just the algorithm shown honestly.
 
 Run:   python curriculum/phase4_capstone/ch4.3_serl/serl.py --seed 0 --device cpu
 Smoke: python .../serl.py --smoke --seed 0 --no-rerun   (fast CI config; pin --device cpu on Apple Silicon — mps diverges)
@@ -421,8 +421,8 @@ for name, k, dist in (("prior alone (offline, 0 online)", prior_k, prior_dist),
     print(f"  {name:<34s} success {k}/{n_pool}={k/n_pool:.2f} {tuple(round(x,2) for x in wilson_ci(k,n_pool))}  best_dist {dist:.4f}m")
 print(f"  diff CI (HIL-SERL - scratch): {gap[0]:+.2f}..{gap[1]:+.2f}  ({'SIGNIFICANT' if gap_real else 'not significant at this N'})")
 print(f"  (random ~{RANDOM_DIST}m; prior & HIL-SERL sit near this task's short-horizon SAC ceiling, so online fine-tuning")
-print("   HOLDS the prior rather than beating it — the corrections buy the efficiency. Online post-training on harder")
-print("   tasks is scored on the GATED capstone suite [ch4.4, hidden-seed].)")
+print("   HOLDS the prior rather than beating it: the corrections buy the efficiency. On the harder, contact-rich")
+print("   tasks of the real HIL-SERL paper the prior is far from optimal and online fine-tuning is where it gets good.)")
 
 if args.rerun:
     for name, k in (("prior", prior_k), ("scratch", scr_pk), ("hil", hil_pk)):

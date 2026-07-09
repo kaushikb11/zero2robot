@@ -1,7 +1,6 @@
 # 5.4: The Production VLA Shape: Prefix, Suffix, and the Action Expert
 
 <!-- objectives: rendered from meta.yaml, do not duplicate here -->
-<!-- DRAFT prose (agent). Voice is human-owned; the author does the voice-pass before drop. -->
 
 ## One tower was a teaching simplification
 
@@ -67,12 +66,17 @@ expert). `block_mask` fills four blocks:
   cosmetic: it makes the prefix *action-independent*, so a deployment can compute it once and
   **KV-cache** it while the action expert denoises. This is exactly `pi0`'s `make_attn_mask`.
 
-**Second, the expert as separate weights: the `pi0` "mixture."** Look at `ExpertBlock`. There is
-*one* attention: a single scaled-dot-product softmax over the joint sequence, under the mask. But
-the prefix tokens and the suffix tokens each own their `Q/K/V`, their output projection, their
-MLP, and their norms. `per_tower` is the whole trick in one line: run the prefix module on the
-first `P` positions, the expert module on the rest, re-join. Two parameter sets, one attention op.
-The action expert is a **tower with its own weights**, not a head bolted onto a pooled vector.
+**Second, the expert as separate weights: the `pi0` "mixture."** This is the hardest idea in the
+phase, so read it slowly. Picture two people in one meeting. They hear the *same* conversation
+(one shared attention), but each keeps their own notebook and speaks their own vocabulary (their
+own weights). That is the VLM and the action expert.
+
+Look at `ExpertBlock`. There is *one* attention: a single scaled-dot-product softmax over the
+joint sequence, under the mask. But the prefix tokens and the suffix tokens each own their
+`Q/K/V`, their output projection, their MLP, and their norms. `per_tower` is the whole trick in
+one line: run the prefix module on the first `P` positions, run the expert module on the rest,
+then re-join. Two parameter sets, one attention op. The action expert is a **tower with its own
+weights**, not a head bolted onto a pooled vector.
 
 The suffix tokens themselves carry only a **noised action chunk + the flow time** (`action_in` +
 `action_query` + the time embedding). They have no other access to the world. Hold onto that: it
@@ -99,22 +103,23 @@ state-dependent action. Remember that when you read the next region.
 ```
 
 We freeze the trained weights and ask one question two ways. `held_out_flow_mse(False)` measures
-the held-out velocity fit under the **full** mask; `held_out_flow_mse(True)` measures the **same
-weights** with suffix→prefix severed, the `--break cut_cross` mask, applied at inference. A fixed
+the held-out velocity fit under the **full** mask. `held_out_flow_mse(True)` measures the **same
+weights** with suffix→prefix severed: the `--break cut_cross` mask, applied at inference. A fixed
 `(t, noise)` pair makes it a clean paired comparison, and because it runs on *cached* features (no
-rendering) the numbers are stable to the last ulp, but we gate the **direction** (`gap > 0`), not an
-exact value, per the course's determinism honesty. The result, every seed:
+rendering) the numbers are stable to the last ulp. As everywhere in this course, we gate the
+**direction** (`gap > 0`), not an exact value (ch1.6). The result, every seed:
 
 ```
 held-out flow-MSE:  full 1.48   cut-cross 2.89   gap +1.42   (seed 0, default config)
 ```
 
-The gap is the headline. Deny the expert its cross-attention and it loses its only path to the
-state; the best it can do is predict the *marginal* velocity, and the held-out MSE jumps toward
-that unconditional prior. This is why ch1.8's `--break blind` did *nothing* while this one bites:
-ch1.8 zeroed only the vision, and PushT is state-solvable, so nothing moved. Here the cut severs
-the **state**, the actually load-bearing signal, because in a two-tower the state is only
-reachable *through* the mask.
+The gap is the headline, and here is why it lands where ch1.8's cut did not. In ch1.8,
+`--break blind` zeroed the vision and *nothing moved*: PushT is state-solvable, so cutting the
+pixels cost the policy nothing. **This cut bites because it severs the state itself.** In a
+two-tower the action expert has no private line to the world. The state, the pixels, and the
+words are *all* reachable only through suffix→prefix. Deny the expert that one block and it loses
+its only path to the state; the best it can do is predict the *marginal* velocity, and the
+held-out MSE jumps toward that unconditional prior.
 
 The rollout is the honest counterweight. We roll the trained policy out on PushT (Wilson 95% CI,
 ch1.6) and it **floors near zero for both masks** (0 to 1 of 12 across seeds, the Wilson interval

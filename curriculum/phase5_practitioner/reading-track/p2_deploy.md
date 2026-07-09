@@ -21,7 +21,7 @@ not going to build it end to end, because the honest parts of it aren't
 free-tier buildable: TensorRT is a closed NVIDIA SDK, and a Jetson is a $250
 board you either have on your desk or you don't. Colab's T4 can't stand in: a
 cloud A100 is not the thing you deploy *onto*. So this is a reading module. We
-read the real stack, next to the two pieces of it the course already built from
+read the real stack, next to the three pieces of it the course already built from
 scratch, and we tell you exactly where the free lunch stops.
 
 ## The chain, concretely
@@ -122,30 +122,40 @@ a shipping product. Read `src/lerobot/async_inference/policy_server.py` and
 `python -m lerobot.async_inference.robot_client` on the robot, and the client
 keeps acting from its action queue, requesting a fresh chunk when the queue drops
 below `chunk_size_threshold`, so the robot never stalls waiting for inference.
+Before you put that on a network, one security caveat: the gRPC channel
+deserializes pickle and has a known unauthenticated remote-code-execution hole
+(CVE-2026-25874, unpatched through v0.5.1), so keep the server and client on a
+trusted local network and never expose the port to something you do not control.
 That threshold is the exact knob this whole module is about: how much runway the
 chunk buys you against the p99 you measured. For *why* the seam between chunks is
 hard, read "Real-Time Execution of Action Chunking Flow Policies" (arXiv
-2506.07339), the paper behind LeRobot's real-time chunking.
+2506.07339), the paper behind LeRobot's real-time chunking; as of LeRobot v0.5.0,
+RTC is a native inference option you can switch on, not just a paper to read.
 
 ## What the course builds, and what it doesn't
 
-Two pieces of this chain are durable enough that the course builds them from
+Three pieces of this chain are durable enough that the course builds them from
 scratch, and you already have them:
 
-- **The export contract**: `curriculum/common/export_onnx.py`. The `.onnx` and
-  its parity check are the artifact the entire last mile consumes. Quantization,
-  TensorRT, and the LeRobot server all start from a file that looks like the one
-  you export.
+- **The export contract**: `curriculum/common/export_onnx.py`, driven end to end
+  by ch5.8's `real_loop.py` (the record → train → deploy → eval loop that exports
+  the `.onnx` and proves parity). The `.onnx` and its parity check are the
+  artifact the entire last mile consumes. Quantization, TensorRT, and the LeRobot
+  server all start from a file that looks like the one you export.
+- **The INT8 quantizer**: ch5.7's `quantize.py`. You built it from scratch in
+  numpy you can read: symmetric per-tensor and per-channel scales, static
+  activation calibration, and a full-integer forward pass. Not a call into a PTQ
+  library, the arithmetic itself.
 - **The real-time loop**: chapter 2.8's `runtime.py`. Sense/think/act as
   concurrent nodes, a latency budget you can violate, zero-order hold, and the
   drop counter that tells you a node is falling behind. LeRobot's async server is
   that graph with the blast radius turned up.
 
-Everything *between* those two (the INT8 calibration pass, the TensorRT engine
-build, the Jetson it runs on) is the production stack, and it is the part that
-isn't free-tier buildable. That is not a gap in the course; it is an honest line.
-The quantization *math* is three lines, and this module demystified it. The
-quantization *tooling* is a closed SDK and a $250 board, and no Colab notebook
-will change that. Knowing exactly where that line falls (what you build and own,
+Everything *beyond* those (the TensorRT engine build, the Jetson it runs on) is
+the production stack, and it is the part that isn't free-tier buildable. That is
+not a gap in the course; it is an honest line. The quantization *math* you built
+from scratch in ch5.7; the quantization *tooling* is a closed SDK and a $250
+board, and no Colab notebook will change that. Knowing exactly where that line
+falls (what you build and own,
 and what you rent from NVIDIA) is itself the practitioner skill this module is
 here to hand you.

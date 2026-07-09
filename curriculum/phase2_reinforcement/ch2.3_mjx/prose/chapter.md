@@ -118,8 +118,9 @@ iter  35/36  return  312.5     81,078 env-steps/s
 eval: mean return 407.2 over 64 envs (random ~10-30, cap 500)   # seed 0
 ```
 
-(Seed 1 solves outright at 499.7: RL is graded on the seeded band, not one run;
-chapter 1.6's determinism tiering is why.) It is honestly small: 64 envs is not
+(Seed 0 is the reference seed the book quotes, not the best one: seed 1 solves
+outright at 499.7. RL is graded on the seeded band, not one run; chapter 1.6's
+determinism tiering is why.) It is honestly small: 64 envs is not
 the 4096 in the title. Which is the whole next lesson.
 
 ## The wall-clock cliff

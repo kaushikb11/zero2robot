@@ -1,5 +1,5 @@
 /**
- * QuickstartWinToy — ch0.0 "Lesson 0: Your First Robot Policy in Twenty Minutes"
+ * QuickstartWinToy — ch0.0 "Lesson 0: Your First Robot Policy in a Few Minutes"
  * concept-toy (demo id `quickstart_first_win`).
  *
  * THE FAST WIN, made honest as a pure DATA-VIEWER over a precomputed rollout — no

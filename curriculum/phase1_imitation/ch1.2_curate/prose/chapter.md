@@ -150,7 +150,9 @@ The result, with the default stand-in:
 | raw | 500 | 8% | 2/19 | 2/31 |
 | curated (outcome) | 288 | 22% | 3/19 | 8/31 |
 
-Curating nearly tripled the success rate while *removing* 212 episodes. Read
+Both rates are low in absolute terms here (this is deliberately little data, a few
+minutes of CPU training), so read the *lift*, not the ceiling: curating nearly tripled
+the success rate while *removing* 212 episodes. Read
 the two right-hand columns before you celebrate the left one: near the goal the
 policies are about the same, and the entire gap is on the far starts, where the
 sloppy episodes had been teaching the network to shove-and-stall. The bad data
@@ -162,10 +164,9 @@ the outcome filter cut exactly that region out. Open the recording and scrub
 rerun outputs/ch1.2-curate/curate.rrd
 ```
 
-And 22% is still low: this is little data, briefly trained, so both policies
-fit on a laptop CPU in a few minutes. Scale either dataset up and both numbers
+Scale either dataset up and both numbers
 climb; the point is that at *equal* method and compute, the curated data wins,
-and it wins by fixing failures the loss curve never mentioned.
+and it wins by fixing the far-start failures the raw set was quietly teaching.
 
 ## Break it
 

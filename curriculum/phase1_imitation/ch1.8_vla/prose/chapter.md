@@ -94,7 +94,8 @@ The measured result, seed 0, default config:
   (CI [0.00, 0.24]); mean return **−48** against **−104**. Across seeds 0/1/2 the trained
   rate is 0.58 / 0.58 / 0.42, above the untrained 0.0 every time. **The from-scratch VLA
   learns PushT.**
-- **ALOHA: 0.0** on every seed. The bimanual handoff needs coordinated multi-step planning
+- **ALOHA: 0.0** on every seed. That 0.0 is expected and diagnostic, not a bug: the
+  bimanual handoff needs coordinated multi-step planning
   (the reason ch1.3's ACT chunked its actions); a tiny shared-capacity policy sampling one
   action at a time, through a random vision encoder, cannot do it.
 
@@ -128,17 +129,6 @@ tokenizer from a pretrained LM. The action head can stay a flow-matching expert,
 mechanism you built in 1.5. The Scale Lab fine-tunes SmolVLA on a consumer GPU and measures
 the other half of this tradeoff. From-scratch taught you every moving part; adapt-pretrained
 is what makes the vision and the language actually load-bearing.
-
-## A note on what fit
-
-An honest from-scratch VLA (tokenizer reuse, a rebuilt frozen encoder, a multi-head
-attention backbone, a conditioned flow head, masked multi-task training, and a two-task
-error-bar eval) fits in **one 449-line file** (hard cap 450, target 400). It is tight. Two
-things made it fit: there is no 2-D toy here (unlike ch1.5), and there is no ONNX export (a
-full VLA does not fit the stateless demo contract anyway: the browser panel is blocked on the
-same flow-sampler contract v2 as the ch1.5 policy). If a future teaching-pass needs more room,
-the honest cut is the ALOHA *eval* (keep multi-task training, evaluate only PushT), not a
-file split.
 
 ## What we cut
 

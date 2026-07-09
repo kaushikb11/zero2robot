@@ -1,7 +1,6 @@
 # 5.8: The Real Loop: Teleoperate, Record, Train, Deploy on a Real Arm's Body
 
 <!-- objectives: rendered from meta.yaml, do not duplicate here -->
-<!-- DRAFT prose (agent-authored). Voice is human-owned; author does the voice pass. -->
 
 ## The whole course, run once, on a real robot's body
 
@@ -48,12 +47,13 @@ them immediately whether the robot definition moved under them.
 
 `SO101ReachEnv` is a thin wrapper, and *thin* is the point. Unlike the Phase-1 envs we
 authored line by line, here the physics, the kinematics, and the actuators are the
-manufacturer's. We add exactly two things: a box, respawned on the floor in a reachable patch
-each reset (via its free joint, the same trick ch1.3's env used to place its cube), and an
-`obs`/`step` contract that matches PushT and ALOHA so the behavior-cloning loop below is
-*unchanged* from ch1.1. The observation is nine numbers: six joint angles and the box's
-`(x, y, z)`. The action is six **joint-position targets**: the SO-101's servos track them,
-exactly as a real STS3215 does.
+manufacturer's. We add exactly two things. First, a box, respawned on the floor in a reachable
+patch each reset (via its free joint, the same trick ch1.3's env used to place its cube).
+Second, an `obs`/`step` contract that matches PushT and ALOHA, so the behavior-cloning loop
+below is *unchanged* from ch1.1.
+
+The observation is nine numbers: six joint angles and the box's `(x, y, z)`. The action is six
+**joint-position targets**, and the SO-101's servos track them exactly as a real STS3215 does.
 
 ## Driving is teleoperation, scripted so CI can diff it
 
@@ -139,14 +139,17 @@ entire thesis of G1.
 
 **What the twin cannot give you is the reality gap**, and you must not let a clean 100% here
 paper over it. Servo backlash. Friction that isn't in the model. Latency between reading an
-observation and the motor moving. Camera noise and lighting and a background that shifts at
-6pm. Calibration drift between two "identical" arms. The Menagerie model even tells you this
-itself: its servo gains are a *calculated approximation*, **not** the real STS3215 gains. The
-MJCF says so in a comment. This chapter is **morphology plus the loop, not torque-level
-fidelity**, and it reaches for a box rather than pinching and lifting it precisely because a
-frictional grasp is where the gap bites hardest. Those gaps are not a footnote. They are the
-whole reason real hardware exists, and closing them is what your weeks on a real arm will be
-spent on. They stay reading: that is G1.
+observation and the motor moving. Camera noise, lighting, a background that shifts at 6pm.
+Calibration drift between two "identical" arms.
+
+The Menagerie model even tells you this itself: its servo gains are a *calculated approximation*,
+**not** the real STS3215 gains. The MJCF says so in a comment. This chapter is **morphology plus
+the loop, not torque-level fidelity**, and it reaches for a box rather than pinching and lifting
+it precisely because a frictional grasp is where the gap bites hardest.
+
+Those gaps are not a footnote. They are the whole reason real hardware exists, and closing them
+is what your weeks on a real arm will be spent on. Crossing them is what G1, the bridge to the
+metal, is for.
 
 ## Break it the way the metal breaks
 

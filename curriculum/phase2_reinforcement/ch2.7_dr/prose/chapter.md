@@ -95,7 +95,8 @@ gap. Here is the generalization curve on the default `--seed 0` (mean return ± 
 On this seed the two curves lie almost on top of each other: DR bought nothing.
 But hold that thought: seeds 1 and 2 tell a different story, and the difference
 between them is the point. Now read it honestly, because the honest reading is the
-whole chapter.
+whole chapter. The method itself is real; it is this substrate (a passively stable
+stand at a free-tier budget) that is honest about its limits.
 
 ## The result the map didn't promise
 

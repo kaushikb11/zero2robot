@@ -1,0 +1,395 @@
+---
+// HeroReel.astro — the landing hero's auto-cycling "reel" (feature F3).
+//
+// WHY: the hero's first job is to TEMPT. Instead of one abstract failure toy,
+// the reel cycles the course's most impressive, genuinely-robotic demos so a
+// newcomer's first impression is "whoa, I get to build all this." Each slide is
+// a LARGE replay of a chapter's real recorded trajectory (curriculum/**/demo/
+// vizdata.json), rendered through the SAME geometry engine as the "What you'll
+// build" strip (wyb-render.ts) — no WASM, no binaries, nothing scripted.
+//
+// HONESTY: every slide links to a chapter that EXISTS (slug + number derived
+// from discoverChapters(), matched by the chapter's own `demo` key, never typed)
+// and replays only that chapter's real seeded run. A demo whose chapter isn't
+// built, or whose vizdata is missing/unrenderable, is silently dropped.
+//
+// SSR / JS-OFF: the FIRST slide's static SVG poster (the run's honest end-state)
+// + its caption + its chapter link are server-rendered, so with JS off the hero
+// is a complete still. The cycling boots only on hydration.
+//
+// A11Y: pause on hover AND focus; prev/next + dots with visible focus rings and
+// aria-labels; an aria-live region announces the current demo. Under
+// prefers-reduced-motion: reduce, nothing auto-advances — the first slide stands
+// and the visitor steps through by hand.
+import { discoverChapters, REPO_ROOT } from "../../lib/curriculum.ts";
+import { normalize, shapesAt, shapesToSvg } from "./wyb-render.ts";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import "./hero-reel.css";
+
+// Slide spec. `demo` matches a chapter's meta.yaml `demo:`; `kind` selects the
+// wyb-render renderer. Ordered to LEAD with the star (the emergent quadruped
+// gait) then span the range: manipulation, a language-driven policy, a
+// from-scratch physics engine, and a planner. Titles are 2-4 words; the outcome
+// is one honest "you build this" line. No em-dashes (author preference).
+// `data` overrides the default demo/vizdata.json filename for a slide that ships
+// its own recording (the swarm reads a dedicated file so it never disturbs the
+// chapter page's own parallel-training toy).
+const SPEC: { demo: string; kind: string; title: string; outcome: string; data?: string }[] = [
+  { demo: "mjx_parallel_training", kind: "swarm", data: "swarm.vizdata.json",
+    title: "4096 robots learn at once",
+    outcome: "You write parallel PPO on MJX. Here a 48-robot sample of the real run flails, then the whole field balances." },
+  { demo: "quadruped_walk", kind: "quad",
+    title: "A quadruped walks",
+    outcome: "You train a gait nobody scripted, and the torso travels forward." },
+  { demo: "so101_reach_replay", kind: "reach",
+    title: "Deploy on a real arm",
+    outcome: "Teleoperate, record, train, deploy: the graduation loop, on the SO-101 body." },
+  { demo: "pusher_sac_reach", kind: "arm",
+    title: "An arm learns to reach",
+    outcome: "You build SAC from scratch and it solves the reach off-policy." },
+  { demo: "vla_rollout", kind: "pusht",
+    title: "A language-driven policy",
+    outcome: "You wire tokens to torques and push the T-block onto its target." },
+  { demo: "contact_quality", kind: "contact",
+    title: "A physics engine, from scratch",
+    outcome: "You write the contact solver in numpy: one holds, the naive one sinks." },
+];
+
+const chapters = discoverChapters();
+const byDemo = new Map(chapters.filter((c) => c.demo).map((c) => [c.demo as string, c]));
+
+type Slide = {
+  kind: string; title: string; outcome: string;
+  href: string; tag: string; poster: string; payload: any;
+};
+
+const slides: Slide[] = [];
+for (const s of SPEC) {
+  const ch = byDemo.get(s.demo);
+  if (!ch) continue; // defensive: chapter not built → drop the slide
+  let raw: any;
+  try {
+    raw = JSON.parse(readFileSync(resolve(REPO_ROOT, ch.chapterDir, "demo", s.data ?? "vizdata.json"), "utf-8"));
+  } catch {
+    continue; // no vizdata → drop rather than ship a broken slide
+  }
+  let payload: any;
+  try {
+    payload = normalize(s.kind, raw); // verify it renders at build time
+  } catch {
+    continue;
+  }
+  slides.push({
+    kind: s.kind,
+    title: s.title,
+    outcome: s.outcome,
+    href: `/${ch.slug}/`,
+    tag: `ch${ch.number}`,
+    poster: shapesToSvg(shapesAt(payload, 1)),
+    payload,
+  });
+}
+
+const first = slides[0];
+---
+
+{
+  first && (
+    <section
+      class="hr"
+      aria-roledescription="carousel"
+      aria-label="What you'll build — a reel of chapter demos"
+    >
+      <div class="hr-head">
+        <p class="hr-heading">See it work</p>
+        <span class="hr-live">live</span>
+      </div>
+
+      <div class="hr-frame">
+        {/* The stage is one link to the current chapter; its href is updated
+            per slide on the client. With JS off it points at the first slide. */}
+        <a class="hr-stage hr-link" href={first.href} data-hr-link>
+          {/* two cells crossfade: A resting on slide 0 (SSR poster), B empty */}
+          <div class="hr-cell is-active" data-cell="a">
+            <div class="hr-poster" set:html={first.poster} />
+            <canvas class="hr-canvas" aria-hidden="true" />
+          </div>
+          <div class="hr-cell" data-cell="b">
+            <div class="hr-poster" />
+            <canvas class="hr-canvas" aria-hidden="true" />
+          </div>
+          <span class="hr-cue" aria-hidden="true">Open chapter &rarr;</span>
+        </a>
+
+        <button class="hr-arrow hr-arrow--prev" type="button" aria-label="Previous demo" data-hr-prev>
+          <span aria-hidden="true">&#8249;</span>
+        </button>
+        <button class="hr-arrow hr-arrow--next" type="button" aria-label="Next demo" data-hr-next>
+          <span aria-hidden="true">&#8250;</span>
+        </button>
+
+        <div class="hr-progress" aria-hidden="true"><span class="hr-progress__bar" data-hr-bar /></div>
+      </div>
+
+      <a class="hr-caption hr-link" href={first.href} data-hr-link>
+        <div class="hr-caption__row">
+          <h3 class="hr-title" data-hr-title>{first.title}</h3>
+          <span class="hr-tag" data-hr-tag>{first.tag}</span>
+        </div>
+        <p class="hr-outcome" data-hr-outcome>{first.outcome}</p>
+      </a>
+
+      <div class="hr-dots" role="tablist" aria-label="Choose a demo">
+        {slides.map((s, i) => (
+          <button
+            class:list={["hr-dot", i === 0 && "is-current"]}
+            type="button"
+            role="tab"
+            aria-selected={i === 0 ? "true" : "false"}
+            aria-label={`Demo ${i + 1}: ${s.title}`}
+            data-hr-dot={i}
+          />
+        ))}
+      </div>
+
+      <p class="hr-sr-live" aria-live="polite" data-hr-announce>
+        Now showing: {first.title}. {first.outcome}
+      </p>
+
+      <script type="application/json" class="hr-data" is:inline set:html={JSON.stringify(slides)} />
+    </section>
+  )
+}
+
+<script>
+  import { shapesAt, drawShapes, COLOR_VARS } from "./wyb-render.ts";
+  import type { ColorTok } from "./wyb-render.ts";
+
+  type Slide = {
+    kind: string; title: string; outcome: string;
+    href: string; tag: string; poster: string; payload: any;
+  };
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const REPLAY = 3600; // ms per trajectory replay cycle
+  const ADVANCE = 4800; // ms each slide holds before auto-advancing
+
+  document.querySelectorAll<HTMLElement>(".hr").forEach((root) => {
+    const dataEl = root.querySelector<HTMLScriptElement>(".hr-data");
+    if (!dataEl) return;
+    let slides: Slide[];
+    try {
+      slides = JSON.parse(dataEl.textContent || "[]");
+    } catch {
+      return;
+    }
+    if (slides.length < 2) return; // nothing to cycle
+
+    const cells = Array.from(root.querySelectorAll<HTMLElement>(".hr-cell"));
+    const bar = root.querySelector<HTMLElement>("[data-hr-bar]");
+    const links = Array.from(root.querySelectorAll<HTMLAnchorElement>("[data-hr-link]"));
+    const titleEl = root.querySelector<HTMLElement>("[data-hr-title]");
+    const tagEl = root.querySelector<HTMLElement>("[data-hr-tag]");
+    const outcomeEl = root.querySelector<HTMLElement>("[data-hr-outcome]");
+    const announceEl = root.querySelector<HTMLElement>("[data-hr-announce]");
+    const dots = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-hr-dot]"));
+
+    // Two rendering cells; `front` is the visible one. We render the incoming
+    // slide into the back cell, then crossfade — a true dissolve, not a flash.
+    type CellCtx = {
+      el: HTMLElement;
+      poster: HTMLElement;
+      canvas: HTMLCanvasElement;
+      raf: number;
+      started: number;
+      dims: { ctx: CanvasRenderingContext2D; W: number; H: number } | null;
+    };
+    const ctxs: CellCtx[] = cells.map((el) => ({
+      el,
+      poster: el.querySelector<HTMLElement>(".hr-poster")!,
+      canvas: el.querySelector<HTMLCanvasElement>(".hr-canvas")!,
+      raf: 0,
+      started: 0,
+      dims: null,
+    }));
+
+    let front = 0; // index into ctxs currently showing
+    let current = 0; // index into slides currently showing
+    let advanceTimer = 0;
+    let paused = false;
+
+    const resolveFor = (canvas: HTMLElement) => (tok: ColorTok) =>
+      getComputedStyle(canvas).getPropertyValue(COLOR_VARS[tok]).trim() || "#888";
+
+    function fit(c: CellCtx) {
+      const rect = c.canvas.getBoundingClientRect();
+      if (rect.width < 2) return null;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      c.canvas.width = Math.round(rect.width * dpr);
+      c.canvas.height = Math.round(rect.height * dpr);
+      const ctx = c.canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, W: rect.width, H: rect.height };
+    }
+
+    function stopAnim(c: CellCtx) {
+      if (c.raf) { cancelAnimationFrame(c.raf); c.raf = 0; }
+    }
+
+    function drawStatic(c: CellCtx, payload: any) {
+      c.dims = fit(c);
+      if (!c.dims) return;
+      drawShapes(c.dims.ctx, shapesAt(payload, 1), c.dims.W, c.dims.H, resolveFor(c.canvas));
+    }
+
+    function animate(c: CellCtx, payload: any) {
+      stopAnim(c);
+      c.dims = fit(c);
+      if (!c.dims) return;
+      const resolve = resolveFor(c.canvas);
+      c.started = performance.now();
+      const loop = () => {
+        if (!c.dims) return;
+        const el = performance.now() - c.started;
+        // play 0->1 over 82% of the cycle, then hold the end-state, then loop
+        const t = Math.min(1, (el % REPLAY) / (REPLAY * 0.82));
+        drawShapes(c.dims.ctx, shapesAt(payload, t), c.dims.W, c.dims.H, resolve);
+        c.raf = requestAnimationFrame(loop);
+      };
+      loop();
+    }
+
+    // Render slide `i` into cell `c` (motion unless reduced-motion asks not to).
+    function render(c: CellCtx, i: number) {
+      const payload = slides[i].payload;
+      if (reduce.matches) drawStatic(c, payload);
+      else animate(c, payload);
+    }
+
+    function updateCaption(i: number) {
+      const s = slides[i];
+      for (const a of links) a.setAttribute("href", s.href);
+      if (titleEl) titleEl.textContent = s.title;
+      if (tagEl) tagEl.textContent = s.tag;
+      if (outcomeEl) outcomeEl.textContent = s.outcome;
+      if (announceEl) announceEl.textContent = `Now showing: ${s.title}. ${s.outcome}`;
+      dots.forEach((d, di) => {
+        const on = di === i;
+        d.classList.toggle("is-current", on);
+        d.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+
+    function restartBar() {
+      if (!bar) return;
+      bar.style.transition = "none";
+      bar.style.transform = "scaleX(0)";
+      // force reflow so the reset takes before we animate the fill
+      void bar.offsetWidth;
+      if (reduce.matches || paused) return;
+      bar.style.transition = `transform ${ADVANCE}ms linear`;
+      bar.style.transform = "scaleX(1)";
+    }
+
+    function clearAdvance() {
+      if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = 0; }
+    }
+
+    function scheduleAdvance() {
+      clearAdvance();
+      if (reduce.matches || paused) return;
+      advanceTimer = window.setTimeout(() => goto(current + 1, 1), ADVANCE);
+    }
+
+    // Move to slide `i` (wrapping). `dir` is +1/-1 for future use; the crossfade
+    // is direction-agnostic.
+    function goto(i: number, _dir: number) {
+      const n = slides.length;
+      const next = ((i % n) + n) % n;
+      if (next === current) { scheduleAdvance(); return; }
+
+      const frontCtx = ctxs[front];
+      const back = (front + 1) % ctxs.length;
+      const backCtx = ctxs[back];
+
+      render(backCtx, next);
+      // crossfade: back in, front out
+      backCtx.el.classList.add("is-active");
+      frontCtx.el.classList.remove("is-active");
+      // stop the outgoing animation after the fade completes
+      window.setTimeout(() => stopAnim(frontCtx), reduce.matches ? 0 : 650);
+
+      front = back;
+      current = next;
+      updateCaption(current);
+      restartBar();
+      scheduleAdvance();
+    }
+
+    // --- pause on hover AND focus ------------------------------------------
+    function pause() {
+      if (paused) return;
+      paused = true;
+      clearAdvance();
+      if (bar) {
+        // freeze the fill where it is
+        const w = bar.getBoundingClientRect().width;
+        const track = bar.parentElement?.getBoundingClientRect().width || 1;
+        bar.style.transition = "none";
+        bar.style.transform = `scaleX(${Math.max(0, Math.min(1, w / track))})`;
+      }
+    }
+    function unpause() {
+      if (!paused) return;
+      paused = false;
+      restartBar();
+      scheduleAdvance();
+    }
+
+    root.addEventListener("pointerenter", pause);
+    root.addEventListener("pointerleave", unpause);
+    root.addEventListener("focusin", pause);
+    root.addEventListener("focusout", (e) => {
+      // only resume when focus truly leaves the reel
+      if (!root.contains(e.relatedTarget as Node)) unpause();
+    });
+
+    // --- controls -----------------------------------------------------------
+    root.querySelector("[data-hr-prev]")?.addEventListener("click", () => goto(current - 1, -1));
+    root.querySelector("[data-hr-next]")?.addEventListener("click", () => goto(current + 1, 1));
+    dots.forEach((d, i) =>
+      d.addEventListener("click", () => goto(i, i > current ? 1 : -1)),
+    );
+
+    // --- boot: only once the hero is near the viewport ----------------------
+    const boot = () => {
+      root.classList.add("hr--live");
+      // paint the first slide into the visible cell (poster stays as fallback)
+      render(ctxs[front], current);
+      restartBar();
+      scheduleAdvance();
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { io.disconnect(); boot(); }
+      }
+    }, { rootMargin: "200px" });
+    io.observe(root);
+
+    // keep sizing honest on resize (re-fit the visible cell)
+    let resizeRaf = 0;
+    window.addEventListener("resize", () => {
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => render(ctxs[front], current));
+    });
+
+    // if the user flips reduced-motion on, stop auto-advancing immediately
+    reduce.addEventListener?.("change", (e) => {
+      if (e.matches) { clearAdvance(); restartBar(); render(ctxs[front], current); }
+      else scheduleAdvance();
+    });
+  });
+</script>

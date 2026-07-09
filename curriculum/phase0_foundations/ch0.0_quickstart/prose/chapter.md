@@ -1,4 +1,4 @@
-# 0.0: Your First Robot Policy in Twenty Minutes
+# 0.0: Your First Robot Policy in a Few Minutes
 
 <!-- objectives: rendered from meta.yaml, do not duplicate here -->
 
@@ -38,8 +38,9 @@ run it a few hundred times and keep what it saw and did.
 [include-by-region: quickstart.py#demos]
 ```
 
-**A tiny network.** Three linear layers. Its whole job is to map "the world
-looks like this" to "so do that". Boring on purpose.
+**A tiny network.** Three linear layers (a linear layer is just a matrix
+multiply plus an added offset). Its whole job is to map "the world looks like
+this" to "so do that". Boring on purpose.
 
 ```
 [include-by-region: quickstart.py#model]

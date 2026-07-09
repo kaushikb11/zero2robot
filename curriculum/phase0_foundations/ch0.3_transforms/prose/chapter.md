@@ -10,6 +10,8 @@ Drag the block frame around the table. Turn it, slide it into a corner. Watch th
 
 That's the whole subject of this chapter in one gesture. A robot never asks "where is the block?" in the abstract. It asks "where is the block *in the gripper's frame*", "where is the gripper *in the arm's frame*". Every one of those questions is a rotation and a translation stacked on another rotation and translation, and there are exactly three ways everyone gets it wrong. Flip the toggle marked "xyzw" and watch the block's arrows swing to a wrong orientation on a single click. That's bug number one, and by the end of this chapter you'll recognize it on sight.
 
+One heads-up before you start: this is the densest chapter in Phase 0. Go slow, and reread anything that doesn't land on the first pass; the payoff is that every frame question in the rest of the book reduces to what you build here.
+
 ## The problem
 
 In chapter 0.1 you crossed a quaternion seam without stopping to look at it. One line in the rerun logging said the quiet part out loud:
@@ -35,6 +37,8 @@ One thing to look for: the only randomness in the file is the generator that dra
 The flags match every chapter's shape (`--seed`, `--smoke`, `--out`, `--no-rerun`) plus one that's specific to this chapter: `--break`, which takes the name of a bug to inject. Its default is `none`, and when it's `none` the code is correct and agrees with MuJoCo; the whole Break It section is just this one flag set to something else. The convention decision that governs the entire chapter is stated in the docstring and never revisited: a quaternion is `[w, x, y, z]`, scalar first, the MuJoCo order. Every function below assumes it, and bug number one is what happens when a caller doesn't.
 
 ### Quaternions
+
+First, what a unit quaternion actually is, since the rest of the chapter leans on it. It's four numbers that name a 3D rotation: an axis to turn about, folded together with how far to turn. The block's yaw about the vertical axis, for instance, comes out as `[cos(yaw/2), 0, 0, sin(yaw/2)]`, with the turn axis living in the last three slots. (The half-angle, `yaw/2`, shows up because rotating a vector applies the quaternion from both sides, so each side carries half the turn.) We treat those four numbers as a validated black box: MuJoCo agrees with them to machine epsilon later in this chapter, and the deeper why is out of Phase 0 scope. What you do need to hold is the two operations below.
 
 Two operations generate every rotation you'll ever compute. Here they are.
 

@@ -8,7 +8,6 @@ import ChapterLayout from "../layouts/ChapterLayout.astro";
 import Hero from "../components/landing/Hero.astro";
 import ValueProps from "../components/landing/ValueProps.astro";
 import CurriculumArc from "../components/landing/CurriculumArc.astro";
-import WhatYouBuild from "../components/landing/WhatYouBuild.astro";
 import Newsletter from "../components/landing/Newsletter.astro";
 import ProgressOverview from "../components/progress/ProgressOverview.tsx";
 import { discoverChapters } from "../lib/curriculum.ts";
@@ -38,12 +37,6 @@ const progressChapters = discoverChapters().map((ch) => ({
   <ProgressOverview client:visible chapters={progressChapters} />
   <ValueProps />
   <CurriculumArc />
-  {/* SCOPE, below the arc: six curated things a learner actually builds, each a
-      poster-first card that replays its real recorded run on hover / focus. The
-      hero covariate-shift toy stays the single "aha" above; this strip sells
-      range. Fully SSR + JS-off readable; motion is opt-in and reduced-motion
-      safe (see WhatYouBuild.astro). */}
-  <WhatYouBuild />
   {/* A slim, script-free subscribe box below the arc: it never competes with the
       hero and is script-free / JS-off readable. Placeholder-gated until the real
       Substack URL is set (see SUBSTACK_URL in Newsletter.astro). */}

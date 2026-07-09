@@ -24,7 +24,9 @@ const pfx = idPrefix ?? variant;
 const emailId = `${pfx}-nl-email`;
 const titleId = `${pfx}-nl-title`;
 
-const PITCH = "A weekly newsletter on Physical AI.";
+const PITCH = "The field, explained from first principles.";
+const DESC =
+  "One mechanism teardown a week, plus a tight digest of what shipped. Honest, no hype.";
 ---
 
 <section
@@ -34,8 +36,9 @@ const PITCH = "A weekly newsletter on Physical AI.";
   aria-labelledby={titleId}
 >
   <div class="nl-copy">
-    <p class="nl-kicker">Newsletter</p>
+    <p class="nl-kicker">Physical AI Weekly</p>
     <p class="nl-pitch" id={titleId}>{PITCH}</p>
+    <p class="nl-desc">{DESC}</p>
   </div>
 
   <form class="nl-form" action={action} method="get" target="_blank">
@@ -54,4 +57,6 @@ const PITCH = "A weekly newsletter on Physical AI.";
     </div>
     <button class="nl-btn" type="submit">Subscribe</button>
   </form>
+
+  <p class="nl-fineprint">Free. No spam. Unsubscribe anytime.</p>
 </section>

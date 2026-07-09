@@ -10,7 +10,7 @@ Nothing in this scene is smart. There is no policy, no goal, no reward. What you
 
 You've seen simulated robots before: locomotion clips, manipulation demos, the works. Here's a question that separates watching from building: when a simulated box rests on a simulated table, what is the computer actually doing, hundreds of times a second, to keep it there?
 
-If your answer is a shrug, everything downstream stays fuzzy. When a training run in chapter 2.4 produces a quadruped that vibrates through the floor, you need to know whether to suspect your reward or the physics. When your policy in chapter 1.1 acts at 10 Hz but the simulator steps at 500 Hz, you need to know what happens in the 49 steps between decisions. Every one of those debugging sessions bottoms out in the same two data structures and one function call.
+If your answer is a shrug, everything downstream stays fuzzy. When a training run in chapter 2.4 produces a quadruped that vibrates through the floor, you need to know whether to suspect your reward or the physics. That debugging session, and a dozen like it later in the book, bottoms out in the same two data structures and one function call.
 
 So that's what we build: a complete, runnable simulation (load a world, step it through time, poke it mid-run, and read out what happened) in about 160 lines, and the loop at the heart of it is under twenty.
 

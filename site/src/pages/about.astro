@@ -117,8 +117,8 @@ uv sync
       <li>
         <strong>The reading.</strong> The prose column, with the actual code shown
         in dark panels beside it. Those panels are <em>included by region</em>
-        straight from the chapter's runnable file, never pasted, and each carries
-        the sha256 fingerprint CI re-checks, so what you read is provably what runs.
+        straight from the chapter's runnable file, never pasted, and CI re-checks a
+        sha256 of every included region on each change, so what you read is provably what runs.
       </li>
       <li>
         <strong>Run it.</strong> An honest wall-clock ledger tells you how long the
@@ -201,8 +201,8 @@ uv sync
 
     <div class="ab-cta">
       <a class="ab-btn ab-btn--primary" href={startHref}>
-        Start from the first page
-        {first && <span class="ab-btn__sub">{first.number} · {first.artifactBasename}</span>}
+        Train your first policy
+        <span class="ab-btn__sub">A few minutes, free.</span>
       </a>
       {flagship && (
         <a class="ab-btn" href={flagshipHref}>Jump to the flagship chapter →</a>
@@ -210,8 +210,20 @@ uv sync
     </div>
 
     <section class="ab-support" aria-label="About the author and support">
-      <p>Built by <strong>Kaushik Bokka</strong>, AI Research Engineer (<a href="https://x.com/kaushik_bokka" target="_blank" rel="noopener">X</a>, <a href="https://github.com/kaushikb11" target="_blank" rel="noopener">GitHub</a>, <a href="https://www.linkedin.com/in/kaushikbokka/" target="_blank" rel="noopener">LinkedIn</a>, <a href="https://huggingface.co/kaushikb11" target="_blank" rel="noopener">Hugging Face</a>, <a href="https://kaushikbokka.medium.com/" target="_blank" rel="noopener">Blog</a>). zero2robot is free and open, and always will be. If it helped you, you can <a href="https://www.buymeacoffee.com/kaushikb11" target="_blank" rel="noopener">buy me a coffee</a>.</p>
-      <p>Want the ideas as they land? Follow along by email (a weekly note on how Physical AI gets built):</p>
+      <div class="ab-author">
+        <figure class="ab-portrait">
+          <img
+            src="/kaushik-bokka.jpg"
+            alt="Kaushik Bokka skydiving, upside down in freefall over the coast"
+            width="240"
+            height="238"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>Take the leap.</figcaption>
+        </figure>
+      <p>Built by <strong>Kaushik Bokka</strong>, AI Research Engineer (<a href="https://x.com/kaushik_bokka" target="_blank" rel="noopener">X</a>, <a href="https://github.com/kaushikb11" target="_blank" rel="noopener">GitHub</a>, <a href="https://www.linkedin.com/in/kaushikbokka/" target="_blank" rel="noopener">LinkedIn</a>, <a href="mailto:kaushikbokka@gmail.com">Email</a>). zero2robot is free and open, and always will be.</p>
+      </div>
       <Newsletter variant="inline" idPrefix="about" />
     </section>
   </article>
@@ -258,5 +270,42 @@ uv sync
       color: var(--ink-soft, var(--ink));
     }
     .ab-support a { white-space: nowrap; }
+
+    /* Author card: the byline sits beside a small, book-framed personal photo
+       (a skydiving snapshot, owned with a light caption rather than faked as a
+       headshot). Modest and warm, not a loud banner. */
+    .ab-author {
+      display: flex;
+      gap: 1.4rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .ab-author > p { flex: 1 1 16rem; margin: 0; }
+    .ab-portrait {
+      flex: 0 0 auto;
+      width: 190px;
+      margin: 0;
+    }
+    .ab-portrait img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid var(--rule);
+      background: var(--paper);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    }
+    .ab-portrait figcaption {
+      margin-top: 0.5rem;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    @media (max-width: 32rem) {
+      .ab-portrait { width: 100%; max-width: 240px; margin: 0 auto; }
+    }
   </style>
 </ChapterLayout>

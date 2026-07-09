@@ -160,9 +160,16 @@ instrument that will prove whether it worked.
 
 ## Read the real thing
 
-The reading that pairs with this chapter is the transfer literature the perturbation
-knobs stand in for: the system-identification and latency work on why a policy trained
-in a clean sim meets the reality gap on hardware, and how production robot stacks
-measure and compensate for observation delay. Read it for the vocabulary that turns
-the mass, delay, and noise sliders you just swept into named, measured quantities on a
-real robot.
+Unlike its siblings, this lab was not carved from one canonical repo: there is no
+single "reality-gap benchmark" file to read against, because measuring the gap is
+done paper by paper, robot by robot. So read the two that turned these sliders into
+named, measured quantities. Tan et al., *Sim-to-Real: Learning Agile Locomotion for
+Quadruped Robots* (RSS 2018, arXiv 1804.10332), is the canonical treatment of the
+two knobs you swept here: it closes the Minitaur reality gap by *system-identifying*
+an accurate actuator model and by explicitly *modeling control latency*, the same
+delay whose cliff you just measured. Then Hwangbo et al., *Learning Agile and Dynamic
+Motor Skills for Legged Robots* (Science Robotics 2019, arXiv 1901.08652), replaces
+hand-tuned system identification with a learned *actuator network* on ANYmal, the
+production answer to the model-mismatch slider. Read them for the vocabulary that
+turns the mass, delay, and noise sliders you just swept into quantities an engineer
+measures and compensates for on a real robot.

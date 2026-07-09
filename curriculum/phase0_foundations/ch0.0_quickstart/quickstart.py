@@ -1,4 +1,4 @@
-"""zero2robot 0.0 — Your First Robot Policy in Twenty Minutes.
+"""zero2robot 0.0 — Your First Robot Policy in a Few Minutes.
 
 This is the whole loop, on one page, running in a couple of minutes on a laptop:
 generate a handful of demonstrations, train a tiny neural network to copy them,

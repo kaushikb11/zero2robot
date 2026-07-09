@@ -42,7 +42,10 @@ for the bargain with three braces, and you build all three from scratch:
 3. **The maximum-entropy objective** with an **auto-tuned temperature `alpha`**,
    which pays the policy to stay uncertain (to keep exploring) instead of
    collapsing onto whatever the current, still-imperfect Q-function happens to
-   like best.
+   like best. `alpha` is not a fixed hyperparameter: it is tuned by gradient
+   descent against a *target entropy*, rising when the policy gets too
+   deterministic and falling once it explores enough, so the exploration pressure
+   adapts itself instead of being hand-set.
 
 ## The task: dense reward is what off-policy exploits
 

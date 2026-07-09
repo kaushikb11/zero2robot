@@ -28,7 +28,12 @@ The real loop has four steps, and only the middle two involve any machine learni
 **1. Load a checkpoint and run it zero-shot.** Both stacks ship pretrained weights you pull
 by name. In LeRobot the base policy is `lerobot/smolvla_base` (the 450M model from the SmolVLA
 paper, arXiv:2506.01844); in openpi it is `pi0_base` / `pi05_base`, served straight from
-`gs://openpi-assets/checkpoints/`. Point it at your robot and run it. It will mostly fail:
+`gs://openpi-assets/checkpoints/`. (The frontier has kept moving: Physical Intelligence's
+π0.6 added RL-style self-improvement via RECAP in November 2025, but its weights are not yet
+open in openpi, so the `pi0_base` / `pi05_base` code above stays current; NVIDIA's GR00T N1.5
+is now loadable through LeRobot; and Google's Gemini Robotics On-Device, from June 2025, is
+fine-tunable through its own SDK with 50 to 100 demonstrations. Names to know; the workflow
+below is unchanged.) Point it at your robot and run it. It will mostly fail:
 your camera angle, your gripper, your lighting, your object are all off-distribution. **That
 failure is the syllabus.** The gap between the zero-shot rollout and the task you want is
 exactly the thing fine-tuning closes, and looking at *where* it fails (grasps but mis-places?
@@ -51,11 +56,23 @@ small action expert. You rarely retrain the backbone. In LeRobot's
 
 `train_expert_only=True` freezes the SmolVLM2 backbone and updates only the action expert and
 the small projections. That is what makes a 450M policy fine-tunable on a single consumer
-card. In openpi the equivalent choice is a **LoRA** `TrainConfig`: instead of freezing whole
-towers you inject low-rank adapters (the exact mechanism from the durable-core LoRA chapter)
-and train only those. bf16 weights and gradient checkpointing are the other two standard
+card. **LoRA** is the other first-class lever, and as of LeRobot v0.5.0 it is native to the
+core training pipeline too: the PEFT config lives at the policy level, so you can low-rank
+adapt SmolVLA without touching the trainer. openpi has offered the same choice all along as a
+**LoRA** `TrainConfig`: instead of freezing whole towers you inject low-rank adapters (the
+exact mechanism from the durable-core LoRA chapter) and train only those. bf16 weights and
+gradient checkpointing are the other two standard
 levers: trade compute for memory so activations fit. Grep `TrainConfig` in
 `src/openpi/training/config.py` to see the registered LoRA-vs-full variants side by side.
+
+The recipe those knobs sit inside has a name worth reading: **OpenVLA-OFT**
+(Optimized Fine-Tuning, arXiv:2502.19645). It replaces autoregressive token-by-token decoding
+with parallel decoding of a whole action chunk fed to a continuous L1-regression head, and
+reports the LIBERO average climbing from 76.5% to 97.1% at ~26x higher action throughput.
+Those three moves (parallel decoding, action chunking, a regression head instead of
+discretized action tokens) are now effectively the default in SmolVLA and the π-class models
+you fine-tune here, so OFT is the single best paper for *why* these policies fine-tune the way
+they do.
 
 **4. Train, then eval on your robot.** The real command, from the LeRobot SmolVLA docs (run
 it if you have a 24 GB GPU):
@@ -75,7 +92,7 @@ cd lerobot && lerobot-train \
 20k steps is ~4 hours on a single A100; start `--batch_size` small and raise it while loading
 stays fast. `lerobot-train --help` is the real menu of knobs. Then evaluate on the actual
 hardware (`lerobot-rollout --policy.path=${HF_USER}/my_smolvla --robot.type=so101_follower
---task="..."`) because a held-out *simulation* number is not the deliverable here; a robot
+--robot.port=/dev/ttyACM0 --strategy.type=base --task="..."`) because a held-out *simulation* number is not the deliverable here; a robot
 that does the task is. (The 1.6 discipline still applies: report a rate with its interval,
 not a hero rollout.)
 

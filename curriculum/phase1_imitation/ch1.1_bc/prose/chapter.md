@@ -251,6 +251,11 @@ Now look at what training reports:
 | final val loss | 0.0345 | 0.0355 |
 | rollout success | 29/50 (58%) | 23/50 (46%) |
 
+The `full` column lands at 58%, below Run It's 62%, because these two ablation
+runs use the smaller 256-wide net and shorter 300-epoch schedule from the commands
+above; the comparison that matters is the two columns against each other, not
+against the default.
+
 Read the loss rows first. Nothing flags the narrow run: train loss is
 marginally LOWER, val loss is a wash. Both splits are normalized with the
 same skewed stats, so both fit and both agree with each other. Every curve

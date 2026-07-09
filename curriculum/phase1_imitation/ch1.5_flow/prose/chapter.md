@@ -197,7 +197,7 @@ flips the target to `noise - data`, so the net learns to flow *away* from the da
 The ODE then integrates outward: the toy explodes off the ring to radius **4.12**, the
 policy drops to **0%**. And the training loss stays *low* (**0.935**), because the net
 fits the flipped target perfectly well. Low loss, wrong direction: the sign of the
-velocity *is* the direction of the flow, and the loss curve will not warn you. (The
+velocity *is* the direction of the flow. (The
 ch1.4 `wrong_schedule` trap, in flow's language.)
 
 ## Read the real thing

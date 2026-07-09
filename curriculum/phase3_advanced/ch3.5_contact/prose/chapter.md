@@ -77,7 +77,9 @@ the drop height by a couple of centimeters, so that ordering is robust to it.
 We drop to **two dimensions** and model bodies as **point masses with a radius**:
 pucks, effectively. No rotation, which means no friction cone: this chapter is
 about the *normal* direction, the push perpendicular to the surface. Friction and
-sliding are chapter 3.6's problem. Being honest about that scope is part of the
+sliding stay out of scope for the whole from-scratch arc: chapter 3.6 fakes PushT's
+surface friction as a viscous drag rather than model it, and the real friction cone
+shows up only when you read MuJoCo's own contact solver. Being honest about that scope is part of the
 lesson; contact is hard enough one axis at a time.
 
 ### The scenes
@@ -258,7 +260,9 @@ not a finished solver:
 
 - **No friction.** Bodies are frictionless pucks; there is no rotation and no
   friction cone. The whole chapter is the *normal* direction. Sliding, stiction,
-  and the friction pyramid are chapter 3.6's job.
+  and the friction pyramid stay out of scope for the whole engine arc: chapter 3.6
+  fakes surface friction as drag, and you meet the real cone only when you read
+  MuJoCo's own solver.
 - The LCP-flavored solve is a fixed-iteration **projected Gauss-Seidel**, not a true
   LCP pivot. It is enough to hold a small stack; it is not a research contact solver.
 - Even the LCP contact **penetrates on fast impact** (about one step of approach
@@ -318,9 +322,11 @@ at any contact artifact and name its cause.
 Chapter 3.6 cashes this in. **PushT** (a circular pusher shoving a T-shaped block
 across a table) is nothing but bodies in contact: the pusher contacting the block
 is exactly the body-body path the `stack` scene exercised, `detect_contacts` and
-`solve_contacts` reused wholesale. With a contact model in hand, you can build the
-environment, generate demonstrations, and train behavior cloning on it, closing the
-loop from raw dynamics back to the policies of Phase 1.
+`solve_contacts` reused wholesale. With a contact model in hand, you re-create the
+whole PushT environment inside your engine and *reload* the behavior-cloning policy
+you trained back in chapter 1.1 (no retraining), then run it in both your engine and
+MuJoCo to measure exactly how far the two sims drift apart. That closes the loop from
+raw dynamics back to the policies of Phase 1.
 
 The print table this report region produces *is* the deliverable: the two rows
 that say, in order, "sinks and can explode" and "holds":
@@ -333,7 +339,9 @@ One closing distinction worth carrying into 3.6. The contact solve here works at
 **velocity** level (it computes an impulse that corrects the velocity in a single
 step) where chapter 3.4's joint constraint worked at the **acceleration** level.
 That is not an accident: an impact is a sudden jump in velocity, and an
-acceleration-level solve cannot represent a jump. Impulses can. And friction, when
-you meet it in 3.6, is a *second* complementarity problem stacked on this one, the
-friction cone, solved in the same projected sweep. The spine you built here is the
-one the next chapter extends.
+acceleration-level solve cannot represent a jump. Impulses can. And real friction
+would be a *second* complementarity problem stacked on this one, the friction cone,
+solved in the same projected sweep. This little engine never builds it, and neither
+does 3.6, which fakes PushT's surface friction as a viscous drag; you meet the real
+cone only when you read MuJoCo's own contact solver. The velocity-level impulse spine
+you built here is exactly what 3.6 reuses, wholesale, to push a T-block around.

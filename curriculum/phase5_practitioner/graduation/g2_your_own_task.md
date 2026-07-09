@@ -45,7 +45,10 @@ part 1.6 drills) report a rate *with its interval*, never a hero rollout. A
 success rate over twenty episodes is a coin flipped twenty times; the band around
 it is embarrassingly wide, and "0.40 beat 0.25" may be pure noise. Build the
 Wilson interval into your eval on day one and every later claim you make about
-your own policy carries its error bar for free.
+your own policy carries its error bar for free. And on real hardware there is no
+seed to fix the start: a held-out start is only as held-out as your physical
+reset makes it, so decide camera placement and a repeatable reset procedure up
+front. Your physical reset protocol is part of the eval (see **G1**).
 
 **3. Collect and curate data, because the data is the policy.** You produce the
 demos with the **G1** arm or the ch0.4 teleop loop, in the same LeRobot format

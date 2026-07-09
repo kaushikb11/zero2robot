@@ -93,8 +93,8 @@ demo: serl_sample_efficiency   # hero: the sample-efficiency CURVE (eval dist vs
 # generated notebook bytes, written by notebook-tier-test. Drift => regenerate;
 # a file-hash mismatch => the notebook was hand-edited.
 
-notebook_hash: ca5ba93b5d1a31b62d796d9c7d085ceb928f142bd2a945ef36df69d267f96f12        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: bae1f5d59f1a953769d76a63d4f37aef43180832ef423f7045dd362bcf0ac4c1   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_hash: e43a2057afc0595a334d08f97e8e939243b28c7a6188f4796088d364086dafaa        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
+notebook_file_hash: 34e352c218c1bccb93e45f08fa8ccb98ad045c250ea20d121473965e9d74ca88   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: 986219171467d0ff2c1a8ab11d613d382a947245a2fafd762b39e7cf324c0595
@@ -105,4 +105,4 @@ region_hashes:
   prior: 7a2a96fc154c3bc6845c49fd2bcfcf01067bff78a9e78f2f2f46974843f36641
   online: 2fe6c52ac76d1e6807a8ebb70956a53d71f7f191297e6c5958e7c1f7e29383b3
   eval: 7aef2649da3e1aa397ec18a23c53c00bfdcba1e340c31bd24e94a6cf326ec212
-  report: 3acdcdcb595fad2edd04b16b95008d4131ddca36398fa0661d0c853e4045e3ce
+  report: 65f062cbb8040a051f48872817425e08b0f50dc52417b45b1a8876a1992b2e85

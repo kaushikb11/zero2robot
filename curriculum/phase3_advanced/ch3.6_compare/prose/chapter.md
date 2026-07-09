@@ -177,8 +177,7 @@ monotonically:
 | 60             | **0.076 m**              | **0.877 rad**         |
 
 More than a **1.6× reduction** in the position gap, from nothing but making your block as
-sluggish as MuJoCo's. The gap was never a fixed fact about "your engine versus the real one"; it
-was a consequence of specific choices, and here is one of them with a slider on it.
+sluggish as MuJoCo's. Here is one of the modeling choices with a slider on it.
 (Exercise 3 has you move that slider and read the divergence off it yourself.)
 
 ## Matching MuJoCo would be a bug
@@ -224,8 +223,7 @@ Say plainly what this engine and this comparison do *not* claim:
   pusher, no continuous collision. It is a *worse* PushT than MuJoCo on purpose. The
   point is the gap, not a competitive physics engine.
 - The transfer is **partial, and the success number is noisy**. 0.20 is one seed's coarse
-  count; the divergence is the number to trust. We do not sell a clean transfer, and we
-  do not tune the knobs until the two successes match. That would be faking it.
+  count; the divergence is the number to trust. We do not sell a clean transfer.
 - The comparison uses MuJoCo as **ground truth**, which it is not (MuJoCo has its own
   sim-to-real gap). Here it is only the more-faithful reference. The arc's "read the
   real thing" segment points at what MuJoCo itself leaves out: the Coulomb friction, the

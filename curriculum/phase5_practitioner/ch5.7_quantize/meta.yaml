@@ -17,7 +17,7 @@ objectives:
   - "Kill the misconception \"quantizing = rounding weights to int8.\" Rounding with NO scale collapses a policy whose weights live in (-0.5, 0.5): ~95% of them round to zero. The SCALE, not the rounding, is the whole idea."
   - "Build the static-activation path: run a CALIBRATION set through the fp32 net, collect each layer's activation range (min-max, then a percentile clip that ignores one freak outlier), derive an activation scale, and run the WHOLE forward pass in integers (int8 @ int8 -> int32 accumulate)."
   - "Measure the deployment triangle honestly: model size (KB) vs action-error-vs-fp32 (MSE) vs CPU latency (ms), across FP32 -> per-tensor INT8 -> per-channel INT8, each rolled out with ch1.6 rigor (a task-success delta only counts once its Wilson interval clears fp32's). State the two honest limits: the SIZE win is guaranteed (~4x); the LATENCY win is NOT (naive int8 on a laptop CPU without a fused kernel is often SLOWER: dequant overhead)."
-  - "Feel why calibration is fragile: `--break bad_calib` calibrates activation scales on a narrow near-goal slice the policy never deploys in; the scales come out too small, real activations saturate at +-127, and the full-integer error explodes (measured 14-53x). The fix is calibrating on representative data (and a percentile clip for the outlier flavor)."
+  - "Feel why calibration is fragile: `--break bad_calib` calibrates activation scales on a narrow near-goal slice the policy never deploys in; the scales come out too small, real activations saturate at +-127, and the full-integer error explodes (measured 4.5-24x at the chapter's default config). The fix is calibrating on representative data (and a percentile clip for the outlier flavor)."
 
 scale_lab: true
 scale_lab_ref: "infra/scale_labs/ch5.7_quantize_scale.py (optional Modal runner; needs a Modal account and may cost; the free CPU/Colab default is the required path)."
@@ -127,7 +127,7 @@ exercise_checks:
 # at startup (root invariant: never estimate wall-clock).
 
 notebook_hash: 44fcb239da87e21b3920d8afdbb13ff6a2a9e41edd70ad4b0aa7edae6bd0bcfa        # sha256 of the artifact at generation; drift => regenerate (notebook-tier-test)
-notebook_file_hash: d589d50c2bfd9fd3fa6b403dec1c284532532c5e6677b116c79ccc45afd2e94b   # sha256 of the generated notebook bytes; mismatch => hand-edited
+notebook_file_hash: 40aa8a164feceac6026b1d3cfc794b19f5fb5a4b541c08ed670f02c5005e1444   # sha256 of the generated notebook bytes; mismatch => hand-edited
 
 region_hashes:
   setup: f60c9c06ee002ec89ab0796bda9417e29a4c96c1a994fe1f61f76b1119dea556

@@ -377,21 +377,6 @@ const legend: { rel: keyof typeof REL_LABEL; hint: string }[] = [
       ))}
     </ol>
 
-    <h3 class="lp-static__title">Every thread</h3>
-    <ul class="lp-threadlist">
-      {edges.map((e) => (
-        <li class="lp-threadlist__item">
-          <a class="lp-threadlist__end" href={`/${byId.get(e.from)?.slug}/`}>
-            <b>{num(e.from)}</b> {titleOf(e.from).split(":")[0]}
-          </a>
-          <span class={`lp-threadlist__rel lp-threadlist__rel--${e.rel}`}>{REL_LABEL[e.rel]}</span>
-          <span class="lp-threadlist__arrow" aria-hidden="true">→</span>
-          <a class="lp-threadlist__end" href={`/${byId.get(e.to)?.slug}/`}>
-            <b>{num(e.to)}</b> {titleOf(e.to).split(":")[0]}
-          </a>
-        </li>
-      ))}
-    </ul>
   </div>
 </section>
 

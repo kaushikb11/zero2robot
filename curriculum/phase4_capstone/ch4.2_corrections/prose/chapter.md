@@ -115,7 +115,7 @@ round 0 (BC    ) success  13/200 = 0.065  CI [0.038, 0.108]   <- covariate shift
 round 1 (DAgger) success  17/200 = 0.085  CI [0.054, 0.132]
 round 2 (DAgger) success  31/200 = 0.155  CI [0.111, 0.212]
 round 3 (DAgger) success  43/200 = 0.215  CI [0.164, 0.277]   <- recovered
-round 4 (DAgger) success  17/200 = 0.085  CI [0.054, 0.132]   <- over-iterated
+round 4 (DAgger) success  17/200 = 0.085  CI [0.054, 0.132]   <- over-iterated (next section)
 
 BC 0.065 -> best DAgger3 0.215;  recovery diff CI [+0.08, +0.22]  (excludes 0)
 ```

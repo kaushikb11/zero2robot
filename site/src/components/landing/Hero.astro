@@ -10,9 +10,17 @@
 // reused verbatim, and it degrades to its SSR poster with JS off.
 //
 // SSR / JS-OFF: this component is fully server-rendered. The headline, CTAs and
-// the toy's poster + caption survive a <script> strip. Only the live sim (inside
-// HeroDemo/PlateIsland) needs JS, and it is hydration-gated + lazy by contract.
-import HeroDemo from "../HeroDemo.astro";
+// the reel's first-slide poster + caption survive a <script> strip. Only the
+// cycling (inside HeroReel) needs JS, and it is hydration-gated + lazy by
+// contract.
+//
+// CENTREPIECE: the hero used to lead with the abstract covariate-shift toy — an
+// academic failure demo. It now leads with HeroReel, an auto-cycling reel of the
+// course's most impressive, genuinely-robotic demos (real recorded trajectories,
+// reused through the same wyb-render engine as the "What you'll build" strip), so
+// a newcomer's first impression is "I get to build all this." The covariate-shift
+// toy still lives on ch1.1, where it teaches.
+import HeroReel from "./HeroReel.astro";
 import { discoverChapters } from "../../lib/curriculum.ts";
 import "./landing.css";
 
@@ -20,24 +28,15 @@ import "./landing.css";
 // never point at a chapter that doesn't exist.
 const chapters = discoverChapters();
 const first = chapters[0] ?? null;
-const flagship = chapters.find((c) => c.demo === "pusht_bc_recovery") ?? null;
 
 const startHref = first ? `/${first.slug}/` : "#curriculum";
-
-// The toy's "See it work" caption. On the landing this is ONE sentence — the
-// first impression is the toy itself, not the copy — with a link into ch1.1 for
-// the "why". Instructional + factual, in the house voice; no marketing.
-const heroLedeHtml = `
-  <p>Drag the block out of the region the demos covered, and watch a confident
-  policy fail. <a href="/ch1.1-bc/">Why it fails &rarr;</a></p>
-`;
 
 ---
 
 <section class="ln-hero" aria-labelledby="ln-hero-title">
   <div class="ln-hero__grid">
     <div class="ln-hero__lead">
-      <p class="ln-kicker">Interactive textbook · embodied AI, from scratch</p>
+      <p class="ln-kicker">Interactive textbook</p>
 
       <h1 class="ln-title" id="ln-hero-title">
         Build a robot brain.
@@ -45,9 +44,9 @@ const heroLedeHtml = `
       </h1>
 
       <p class="ln-subhead">
-        Embodied AI from scratch, one runnable file per chapter, from a bare
-        simulation loop to a policy you train, export, and drive in your browser.
-        No framework to excavate, no black boxes. Free on a Colab T4 or your laptop.
+        You start from a blank simulation loop and build up, all the way to
+        vision-language-action policies, your own physics engine, and a real robot
+        arm. No framework to excavate, no black boxes. Free on a Colab T4 or your laptop.
       </p>
 
       <!-- ONE primary action. The landing used to offer three competing entry
@@ -55,8 +54,8 @@ const heroLedeHtml = `
            the whole point of the declutter is a single obvious thing to do. -->
       <div class="ln-cta">
         <a class="ln-btn ln-btn--primary" href={startHref}>
-          Start from the first page
-          {first && <span class="ln-btn__sub">{first.number} · {first.artifactBasename}</span>}
+          Train your first policy
+          <span class="ln-btn__sub">A few minutes, free.</span>
         </a>
       </div>
 
@@ -66,7 +65,7 @@ const heroLedeHtml = `
     </div>
 
     <div class="ln-hero__demo">
-      <HeroDemo demo="pusht_bc_recovery" task="pusht" variant="hero" ledeHtml={heroLedeHtml} />
+      <HeroReel />
     </div>
   </div>
 </section>

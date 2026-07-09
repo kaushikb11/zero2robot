@@ -4,7 +4,7 @@
 
 Every learning method so far got to *act*. Behavior cloning (1.1) had a dataset,
 but PPO and SAC (2.1, 2.2) learned by stepping the env millions of times, and
-even the corrections chapter (4.2) closes the loop: you fly the policy, catch it
+DAgger-style corrections (4.2) close the loop the same way: you fly the policy, catch it
 failing, and record the fix. Now take that away. **You have a fixed pile of
 logged data (some good demonstrations, some clumsy or failed attempts) and you
 cannot collect one more transition while you learn.** No rollouts, no
@@ -138,8 +138,9 @@ across seeds 0, 1, 2: BC jumps to ~0.2 success (there is no bad action left to
 average in, so cloning the expert *is* the right move) and actually holds a
 slightly *lower* final distance than AWAC (~0.053 m vs ~0.076 m); the success-rate
 difference CI is marginal and not seed-robust: a tie on seed 0, a hair above zero
-on 1 and 2. AWAC lost nothing; it simply had nothing left to reweight. That is the
-real headline, stated carefully: **offline RL beats cloning when the log carries
+on 1 and 2. AWAC lost nothing; it simply had nothing left to reweight.
+
+That is the real headline, stated carefully: **offline RL beats cloning when the log carries
 suboptimal actions worth down-weighting**, the mixed, correction-shaped data of
 the real world. On a pristine expert log, cloning already does the reweighting for
 free, and the honest reading is a wash. This is why the default dataset is a mix,

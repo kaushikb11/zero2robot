@@ -22,7 +22,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 1rem 1.6rem;
 }
 
@@ -49,6 +49,25 @@
   letter-spacing: -0.005em;
   color: var(--ink);
   text-wrap: balance;
+}
+
+.nl-desc {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 40rem;
+  text-wrap: pretty;
+}
+/* free + trust microcopy, its own row under the form */
+.nl-fineprint {
+  flex: 1 0 100%;
+  margin: 0.1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-mute);
 }
 
 /* --- the form: input + button on one line, wrapping on narrow screens ------ */

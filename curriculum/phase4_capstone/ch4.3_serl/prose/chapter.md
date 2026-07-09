@@ -105,8 +105,10 @@ the sample axis is the sample efficiency, and it is large and seed-robust. On th
 pooled held-out eval, HIL-SERL's success rate is at least from-scratch's on all
 three seeds, and the difference interval excludes zero on two of them.
 
-And the honest part, which is itself the lesson: on this small dense-reward task,
-online fine-tuning **holds** the prior rather than beating it. The prior already
+And the honest part, which is itself the lesson, stated up front: **on this small
+dense-reward task the online phase does essentially nothing; the win is entirely
+the corrections-as-prior.** Online fine-tuning **holds** the prior rather than
+beating it. The prior already
 sits near what SAC can reach on this task in a short horizon (2.2's own SAC needs
 ~18k steps just to solve it), so there is little headroom left for online RL to
 add, and the offline-to-online transition can wobble the policy before it
