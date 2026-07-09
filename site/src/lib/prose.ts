@@ -143,11 +143,11 @@ function missingPanelHtml(name: string): string {
 }
 
 /**
- * The canonical wall-clock ledger markup — an honest instrument. Measured tiers
- * show the rendered line + a "measured" pill; PENDING/absent tiers show the
- * verbatim "not yet measured" line + a "pending" pill — NEVER an estimate.
- * Shared by WallclockTable.astro and the prose injection below, so there is one
- * source of markup.
+ * The canonical wall-clock ledger markup — an honest instrument. Only MEASURED
+ * tiers are shown (the rendered line + a "measured" pill); a tier with no
+ * measured number for this chapter is simply omitted, not shown as "pending".
+ * NEVER an estimate. Shared by WallclockTable.astro and the prose injection
+ * below, so there is one source of markup.
  */
 // Display-only tier labels: the ledger key stays "cpu-laptop" (so the wall-clock
 // gate and provenance are untouched), but the table shows the shorter "cpu".
@@ -155,6 +155,7 @@ const TIER_LABEL: Record<string, string> = { "cpu-laptop": "cpu" };
 
 export function wallclockTableHtml(rows: WallclockRow[]): string {
   const body = rows
+    .filter((w) => w.minutes !== null)
     .map((w) => {
       const measured = w.minutes !== null;
       return (
@@ -170,7 +171,7 @@ export function wallclockTableHtml(rows: WallclockRow[]): string {
     `<div class="bk-wall" role="table" aria-label="Measured wall-clock by tier">` +
     `<div class="bk-wall-head">` +
     `<span class="bk-wall-eyebrow">wall-clock · rendered from wallclock.csv</span>` +
-    `<span class="bk-wall-eyebrow">one source · every tier</span>` +
+    `<span class="bk-wall-eyebrow">one source · measured tiers</span>` +
     `</div><table><tbody>${body}</tbody></table></div>`
   );
 }
