@@ -149,13 +149,17 @@ function missingPanelHtml(name: string): string {
  * Shared by WallclockTable.astro and the prose injection below, so there is one
  * source of markup.
  */
+// Display-only tier labels: the ledger key stays "cpu-laptop" (so the wall-clock
+// gate and provenance are untouched), but the table shows the shorter "cpu".
+const TIER_LABEL: Record<string, string> = { "cpu-laptop": "cpu" };
+
 export function wallclockTableHtml(rows: WallclockRow[]): string {
   const body = rows
     .map((w) => {
       const measured = w.minutes !== null;
       return (
         `<tr data-tier="${escapeHtml(w.tier)}" data-measured="${measured}">` +
-        `<td class="bk-tier">${escapeHtml(w.tier)}</td>` +
+        `<td class="bk-tier">${escapeHtml(TIER_LABEL[w.tier] ?? w.tier)}</td>` +
         `<td class="bk-line">${escapeHtml(w.line)}</td>` +
         `<td><span class="bk-pill" data-measured="${measured}">${measured ? "measured" : "pending"}</span></td>` +
         `</tr>`
