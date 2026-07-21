@@ -12,6 +12,12 @@ jobs:
         with: { fetch-depth: 0 }   # full history so --changed-only can diff origin/main
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - name: FFmpeg libs for torchcodec (lerobot video decode/ingest tripwire)
+        # tests/suggested/ch0.4/test_record.py decodes video through lerobot ->
+        # torchcodec, which dlopen's the system libav* (libavutil et al.). Runners
+        # ship none, so the load fails; pyav's bundled ffmpeg does NOT satisfy
+        # torchcodec. Install the system codec set.
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: pip install -e ".[dev,export]" --quiet   # export: onnx for tests/common/test_export_parity.py
       - name: Lint + ALL pedagogy gates + unit (identical to `make check`)
         # Single source of truth: invoke `make check` so this per-PR lane can never
