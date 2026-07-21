@@ -8,7 +8,7 @@
 # for this draft (spike doctrine: no browser demo/site embed yet).
 demo: cartpole_runtime_graph
 scene: cartpole             # curriculum/common/envs/cartpole/cartpole.xml, verbatim
-policy: ppo_agent.onnx      # reuse ch2.1's export; contract v1: obs float32[1,5] -> action float32[1,1]
+policy: ppo_agent.onnx      # PENDING wiring — reuse ch2.1's export; embed out of scope for this draft. contract v1: obs float32[1,5] -> action float32[1,1]
 camera:
   lookat: [0.0, 0.0, 0.3]
   distance: 3.0

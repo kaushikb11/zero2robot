@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test:contract": "node scripts/contract_gate_test.mjs",
     "test:sampler": "node scripts/flow_sampler_parity_check.mjs",
+    "test:ddpm": "node scripts/ddpm_sampler_parity_check.mjs",
     "test:golden": "node scripts/golden_interchange_test.mjs",
     "test:obs": "node scripts/obs_parity_check.mjs",
     "test:telemetry": "node scripts/telemetry_test.mjs",

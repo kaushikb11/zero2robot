@@ -12,11 +12,23 @@ jobs:
     # so a missing key no longer masks the real notebook pass/fail signal.
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Headless software GL for MuJoCo's classic renderer: CI runners have no GPU
+      # and no X DISPLAY, so mjr_makeContext needs OSMesa (the same reason the
+      # Modal/scale-lab runners set a headless MUJOCO_GL backend). Kernels inherit
+      # this process env (run_notebooks.py), so rendering chapters (ch1.7/1.8,
+      # ch5.3/5.4) get a valid context instead of a FatalError.
+      MUJOCO_GL: osmesa
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install -e ".[dev,notebooks]" ipykernel --quiet   # ipykernel: nbclient needs a kernel at execution time
+      - name: Headless GL libs (OSMesa software renderer for MuJoCo)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libosmesa6 libgl1
+      # export: onnxruntime for curriculum.common.assert_parity (imported by every
+      # chapter artifact). mjx: jax + mujoco-mjx for the ch2.3 MJX excursion. Both
+      # are needed to even IMPORT those artifacts headless — ci-cpu already pulls
+      # `export`; the notebook lane must too. ipykernel: nbclient needs a kernel.
+      - run: pip install -e ".[dev,notebooks,export,mjx]" ipykernel --quiet
       - name: Hash-sync check (notebook <-> chapter artifact)
         run: python infra/ci/check_notebook_hashes.py
       - name: Execute all notebooks headless (CPU-sim smoke profile)

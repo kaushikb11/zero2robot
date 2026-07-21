@@ -7,8 +7,8 @@
 demo: pusht_curate_quality
 scene: pusht                 # curriculum/common/envs/pusht/pusht.xml, verbatim
 policies:                    # TWO policies on the SAME held-out start, side by side
-  raw: bc_policy_raw.onnx        # contract v1: observation float32[1,10] -> action float32[1,2]
-  curated: bc_policy_curated.onnx
+  raw: bc_policy_raw.onnx        # PENDING export — raw-data BC variant not yet exported; contract v1: observation float32[1,10] -> action float32[1,2]
+  curated: bc_policy_curated.onnx  # PENDING export — curated-data BC variant not yet exported
 camera:
   lookat: [0.0, 0.0, 0.02]
   distance: 1.1
